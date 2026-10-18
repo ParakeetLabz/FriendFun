@@ -8,7 +8,8 @@ import { createHacker } from './hacker.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { templates, hwMansion, hwPumpkin, hwWitch, hwGhost, hwBase, shooterArena, shooterFort, shooterRooftop, spookyRivals } from './public/js/worlds.js';
+import { templates, hwMansion, hwPumpkin, hwWitch, hwGhost, hwBase, shooterArena, shooterFort, shooterRooftop } from './public/js/worlds.js';
+import { HALLOWEEN_GAMES, seedHalloweenGames } from './halloween.js';
 import { ITEM, CATALOG, DEFAULT_AVATAR, ECON, BADGES, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT } from './public/js/catalog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -26,7 +27,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { realtime: { transpor
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const supabaseAdmin = SUPABASE_SERVICE_KEY ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } }) : supabase;
 
-// ---- Custom badges (admin-created) ----
 let CUSTOM_BADGES = {};
 async function loadCustomBadges() {
   try {
@@ -35,7 +35,6 @@ async function loadCustomBadges() {
     (data || []).forEach(b => { CUSTOM_BADGES[b.id] = b; });
   } catch (e) { console.error('Failed to load custom badges:', e.message); }
 }
-// ---- UGC (player-created avatar items) ----
 // UGC state lives in ugc.js (ugcState)
 function ugcDef(row) {
   return { id: 'ugc_' + row.id, type: row.type, name: row.name, price: Number(row.price) || 0, color: row.color, template: row.template, model_url: row.model_url || null, model_transform: row.model_transform || null, creator: row.creator, sales: Number(row.sales) || 0, ugc: true };
@@ -133,7 +132,6 @@ async function discoverGames(q) {
   return (data || []).filter(g => !g.unpublished).map(gameSummary);
 }
 
-// ---------- add-ons ----------
 const ADDONS = [
   {
     id: 'funworx',
@@ -186,9 +184,9 @@ async function statusOf(name) {
 
 // helpers
 function isAdmin(u) { return ADMINS.includes(u.name.toLowerCase()) || !!u.admin; }
-// Staff tiers: owner (env admins) > admin (DB flag) > moderator (named group) > player.
-// Owners can do everything including granting/revoking admin. Admins get the full
-// admin panel except managing other admins. Moderators get mute/kick/review only.
+// Staff tiers: owner > admin > moderator > player.
+// Owners: full access incl. admin grants.
+// Admins: full panel except managing admins.
 function isOwner(u) { const n = String(u?.name || '').toLowerCase(); return n === 'fun' || n === 'bro' || ADMINS.includes(n) || !!u?.owner || extraOwners.has(n); }
 function roleOf(u) { if (isOwner(u)) return 'owner'; if (u && u.admin) return 'admin'; if (isMod(u)) return 'moderator'; return 'player'; }
 function isClub(u) { return isAdmin(u) || !!u.clubForever || (u.clubUntil || 0) > Date.now(); }
@@ -354,7 +352,6 @@ app.get('/api/me', auth, async (req, res) => {
     await supabase.from('users').update({ earnedBadges: badges }).eq('name', u.name);
     u.earnedBadges = badges;
   }
-  // Looney farewell prize (event deleted Oct 6, 2026): every user keeps the prize
   const missPrize = LOONEY_PRIZE.filter(id => !u.inventory.includes(id));
   if (missPrize.length) {
     u.inventory = [...u.inventory, ...missPrize];
@@ -427,7 +424,6 @@ app.put('/api/me/bio', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- add-ons ----------
 app.get('/api/addons', auth, async (req, res) => {
   const settings = getAddonSettings(req.user);
   res.json({ addons: ADDONS.map(a => ({ ...a, settings: { enabled: false, avatar: true, name: true, presence: true, ...(settings[a.id] || {}) } })) });
@@ -759,7 +755,6 @@ app.get('/api/admin/users/:name/inventory', auth, async (req, res) => {
   res.json({ name: u.name, items: (u.inventory || []).map(id => { const it = CATALOG.find(i => i.id === id); return { id, name: it ? it.name : id }; }) });
 });
 
-// ---------- Game management (admin panel) ----------
 app.get('/api/admin/games', auth, adminOnly, async (req, res) => {
   const q = key(String(req.query.q || ''));
   try { res.json(await adminGamesList(q)); }
@@ -796,7 +791,6 @@ app.post('/api/admin/games/:id/command', auth, adminOnly, async (req, res) => {
   res.json({ ok: true, message });
 });
 
-// ---------- Owner site controls ----------
 let siteAnnounce = null, maintenance = false;
 app.post('/api/admin/site/command', auth, async (req, res) => {
   if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
@@ -862,7 +856,6 @@ app.post('/api/admin/farms/:gameId/delete', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- Moderation ----------
 // Named moderator group (seeded by Zayd). Moderators can mute, kick and review
 // flagged content. Bans always need two separate confirmations from two people.
 const MODERATORS = ['bro', 'fun', 'nsc9510alt', 'nsc9510ft'];
@@ -1055,7 +1048,7 @@ app.post('/api/mod/announce', auth, modOnly, async (req, res) => {
   res.json({ ok: true });
 });
 
-// Send a whitelisted realtime message to a player's live sessions (bring/freeze).
+// Send realtime msg to player's sessions.
 app.post('/api/mod/send', auth, modOnly, async (req, res) => {
   const target = await modTarget(req.body?.name);
   if (!target) return res.status(404).json({ error: 'User not found' });
@@ -2234,7 +2227,6 @@ app.post('/api/ai/chat', auth, async (req, res) => {
   } catch (e) { res.status(502).json({ error: 'AI request failed: ' + e.message }); }
 });
 
-// ---------- iknow easter egg (horror link) ----------
 app.get('/iknow', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -2315,7 +2307,6 @@ addEventListener('resize', () => {
   res.send(html);
 });
 
-// Looney farewell prize (event deleted Oct 6, 2026 - everyone keeps the prize)
 const LOONEY_PRIZE = ['hat_bunnyears', 'face_buckteeth', 'hat_ducktuft', 'face_beak', 'head_bugs', 'head_daffy'];
 
 // Halloween event (Oct 6 - Nov 2)
@@ -2323,36 +2314,9 @@ const HALLOWEEN_EVENT = { id: 'halloween', name: 'Halloween',
   starts: Date.parse('2026-10-06T00:00:00Z'), ends: Date.parse('2026-11-02T00:00:00Z') };
 const halloweenActive = () => Date.now() >= HALLOWEEN_EVENT.starts && Date.now() <= HALLOWEEN_EVENT.ends;
 
-const HALLOWEEN_GAMES = [
-  { id: 'g_hwmansion', name: 'Haunted Mansion Escape', desc: 'Escape the haunted mansion room by room... if you dare! 👻', build: hwMansion },
-  { id: 'g_hwpumpkin', name: 'Pumpkin Patch Hunt', desc: 'Hunt candy corn among giant pumpkins and the corn maze! 🎃', build: hwPumpkin },
-  { id: 'g_hwwitch', name: 'Witch\u2019s Crooked Tower', desc: 'Climb the crooked tower: potions, broomsticks and spellbooks! 🧙', build: hwWitch },
-  { id: 'g_hwghost', name: 'Ghost Town Hangout', desc: 'Hang out in the spooky old west town. Mind the graveyard... 💀', build: hwGhost },
-  { id: 'g_hwbase', name: 'Spooky Baseplate', desc: 'Build on a haunted baseplate with its own mini castle. 🦇', build: hwBase },
-];
-
-async function seedHalloweenGames() {
-  try {
-    const { data: ex } = await supabase.from('games').select('id').eq('event', 'halloween');
-    const haveIds = new Set((ex || []).map(g => g.id));
-    const wantIds = HALLOWEEN_GAMES.map(g => g.id);
-    if (!process.env.HALLOWEEN_RESEED && wantIds.every(id => haveIds.has(id))) return { created: 0 };
-    await supabase.from('games').delete().eq('event', 'halloween');
-    let created = 0;
-    for (const cfg of HALLOWEEN_GAMES) {
-      const world = cfg.build();
-      const { error } = await supabase.from('games').insert({ id: cfg.id, name: cfg.name, creator: 'Funtopia',
-        description: cfg.desc, world: sanitizeWorld(world), event: 'halloween',
-        visits: 0, likes: 0, dislikes: 0, max_players: 30, created: Date.now(), updated: Date.now(), thumbnail: '', unpublished: false });
-      if (error) console.warn('hw fail', cfg.id, error.message); else created++;
-    }
-    return { created };
-  } catch (e) { console.warn('hw err', e.message); return { created: 0 }; }
-}
-
 app.post('/api/admin/event/seed-halloween', auth, async (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin only' });
-  res.json(await seedHalloweenGames());
+  res.json(await seedHalloweenGames(supabase, sanitizeWorld));
 });
 app.get('/api/event/halloween', auth, async (req, res) => {
   const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'halloween').order('id');
@@ -2386,9 +2350,9 @@ async function seedShooterGames() {
 loadCustomBadges().then(() => console.log('Custom badges loaded:', Object.keys(CUSTOM_BADGES).length));
 loadUgcItems().then(() => console.log('UGC items loaded:', Object.keys(ugcState.items).length));
 ensureUgcBucket().then(() => console.log('UGC bucket ready:', ugcState.bucketOk));
-// Looney event deleted Oct 6, 2026: remove its games from the DB (prize kept via LOONEY_PRIZE grant)
+// Remove Looney games (event deleted Oct 6)
 supabase.from('games').delete().eq('event', 'looney').then(() => console.log('looney games removed'));
-seedHalloweenGames().then(r => console.log('hw:', r.created));
+seedHalloweenGames(supabase, sanitizeWorld).then(r => console.log('hw:', r.created));
 seedShooterGames().then(r => console.log('shooter:', r.created));
 server.listen(PORT, () => console.log(`Funtopia running on http://localhost:${PORT}`));
 
