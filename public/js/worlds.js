@@ -633,3 +633,128 @@ export function hwBase() {
   for (let i = 0; i < 3; i++) candy(w, -50 + (i - 1) * 3, 17.5, 50);
   return w;
 }
+
+// 6. HAUNTED FOREST OBBY - jump between twisted trees and glowing mushrooms
+export function hwForest() {
+  const w = startWorld('#0d1420');
+  w.parts.push(part([0, -20, -150], [400, 1, 400], '#050a05', { name: 'Abyss', k: 'kill', m: 'neon' }));
+  w.parts.push(part([0, 0.25, 10], [6, 0.5, 6], '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  w.parts.push(part([0, -1, 0], [20, 2, 20], '#1b2a1b', { name: 'Clearing', m: 'grass' }));
+  // Stage 1: stump hops
+  const stumps = [[0, -15, 0], [4, -25, 1], [-3, -35, 2], [2, -45, 3], [0, -55, 4]];
+  for (const [x, z, i] of stumps) {
+    const y = i * 1.5;
+    w.parts.push(part([x, y - 0.5, z], [5, 1, 5], '#4a3728', { name: 'Stump' + i, m: 'wood' }));
+    w.parts.push(part([x, y + 1.5, z], [1, 3, 1], '#2e1f14', { name: 'DeadTrunk' + i, m: 'wood' }));
+    candy(w, x, y + 1, z);
+  }
+  w.parts.push(part([0, 6.75, -65], [8, 1, 8], '#1b2a1b', { name: 'Landing1', m: 'grass' }));
+  w.parts.push(part([0, 7.5, -65], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' }));
+  // Stage 2: glowing mushroom platforms
+  const shrooms = [[-4, -80], [3, -90], [-2, -100], [4, -110], [0, -120]];
+  let my = 8;
+  for (const [x, z] of shrooms) {
+    my += 2;
+    w.parts.push(part([x, my - 0.5, z], [1, my, 1], '#e8e0d0', { name: 'ShroomStem', m: 'plastic' }));
+    w.parts.push(part([x, my, z], [7, 1.5, 7], '#e53935', { name: 'ShroomCap', m: 'neon' }));
+    w.parts.push(part([x + 1, my + 1, z], [1, 0.5, 1], '#fff', { name: 'ShroomSpot', m: 'neon', cc: false }));
+    candy(w, x, my + 1.5, z);
+  }
+  w.parts.push(part([0, my + 0.75, -132], [10, 1, 10], '#1b2a1b', { name: 'Landing2', m: 'grass' }));
+  w.parts.push(part([0, my + 1.5, -132], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint2', k: 'checkpoint', m: 'neon' }));
+  // Stage 3: twisted branch bridge
+  const by = my + 1;
+  for (let i = 0; i < 8; i++) {
+    const z = -142 - i * 5, x = Math.sin(i * 0.8) * 4;
+    w.parts.push(part([x, by + Math.sin(i) * 0.5, z], [4, 0.8, 4], '#3a2e22', { name: 'Branch' + i, m: 'wood' }));
+    if (i % 2 === 0) candy(w, x, by + 1.5, z);
+  }
+  // Finish: ancient treehouse
+  const fy = by + 1;
+  w.parts.push(part([0, fy, -190], [16, 2, 16], '#4a3728', { name: 'Treehouse', m: 'wood' }));
+  w.parts.push(part([0, fy + 6, -190], [3, 12, 3], '#2e1f14', { name: 'BigTrunk', m: 'wood' }));
+  w.parts.push(part([0, fy + 13, -190], [10, 2, 10], '#1b2a1b', { name: 'Canopy', m: 'grass' }));
+  w.parts.push(part([0, fy + 1.5, -190], [6, 1, 6], '#ffd400', { name: 'Finish', k: 'checkpoint', m: 'neon' }));
+  for (let i = 0; i < 5; i++) candy(w, -6 + i * 3, fy + 2, -190);
+  return w;
+}
+
+// 7. CANDY CORN CLIMB - vertical climb up giant candy corn towers
+export function hwCandy() {
+  const w = startWorld('#1a0f2e');
+  w.parts.push(part([0, -20, 0], [200, 1, 200], '#0a0515', { name: 'Abyss', k: 'kill', m: 'neon' }));
+  w.parts.push(part([0, 0.25, 10], [6, 0.5, 6], '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  w.parts.push(part([0, -1, 0], [24, 2, 24], '#2d1b4e', { name: 'Base', m: 'concrete' }));
+  // Three candy corn towers (orange/white/yellow stripes)
+  const towers = [[-20, -30], [20, -30], [0, -60]];
+  const stripeColors = ['#ff9800', '#fff3e0', '#ffeb3b'];
+  for (const [tx, tz] of towers) {
+    for (let s = 0; s < 10; s++) {
+      const y = s * 3;
+      w.parts.push(part([tx, y, tz], [8 - s * 0.5, 3, 8 - s * 0.5], stripeColors[s % 3], { name: 'CandyStripe' + s, m: 'plastic' }));
+    }
+    // spiral platforms around each tower
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2, rad = 8;
+      const px = tx + Math.cos(a) * rad, pz = tz + Math.sin(a) * rad, py = 4 + i * 3.5;
+      w.parts.push(part([px, py, pz], [4, 0.8, 4], '#e1bee7', { name: 'Spiral' + i, m: 'plastic' }));
+      candy(w, px, py + 1.5, pz);
+    }
+    w.parts.push(part([tx, 33, tz], [6, 1, 6], '#2ec4ff', { name: 'TowerTop', k: 'checkpoint', m: 'neon' }));
+  }
+  // Bridge between towers
+  w.parts.push(part([-10, 32, -30], [12, 1, 4], '#ce93d8', { name: 'Bridge1', m: 'plastic' }));
+  w.parts.push(part([10, 32, -45], [4, 1, 16], '#ce93d8', { name: 'Bridge2', m: 'plastic' }));
+  // Final: giant candy corn peak
+  w.parts.push(part([0, 36, -60], [12, 2, 12], '#ff9800', { name: 'Peak', m: 'plastic' }));
+  w.parts.push(part([0, 38.5, -60], [8, 3, 8], '#fff3e0', { name: 'PeakMid', m: 'plastic' }));
+  w.parts.push(part([0, 41, -60], [4, 3, 4], '#ffeb3b', { name: 'PeakTip', m: 'neon' }));
+  w.parts.push(part([0, 43, -60], [6, 1, 6], '#ffd400', { name: 'Finish', k: 'checkpoint', m: 'neon' }));
+  for (let i = 0; i < 5; i++) candy(w, -4 + i * 2, 44, -60);
+  return w;
+}
+
+// 8. CRYPT CRAWLER - underground tomb with traps and treasure
+export function hwCrypt() {
+  const w = startWorld('#0a0a12');
+  w.parts.push(part([0, 0.25, 10], [6, 0.5, 6], '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  // Entrance hall
+  w.parts.push(part([0, -1, 0], [30, 2, 40], '#2a2a35', { name: 'CryptFloor', m: 'concrete' }));
+  for (const sx of [-1, 1])
+    w.parts.push(part([sx * 13, 5, 0], [3, 12, 30], '#1a1a24', { name: 'CryptWall', m: 'brick' }));
+  w.parts.push(part([0, 11, 0], [30, 2, 40], '#1a1a24', { name: 'CryptCeiling', m: 'brick' }));
+  // Coffins (decorative + platforms)
+  for (let i = 0; i < 4; i++) {
+    const z = -10 - i * 8;
+    w.parts.push(part([-8, 1, z], [4, 2, 7], '#4a3728', { name: 'Coffin' + i, m: 'wood' }));
+    w.parts.push(part([8, 1, z], [4, 2, 7], '#4a3728', { name: 'CoffinR' + i, m: 'wood' }));
+    candy(w, 0, 2, z);
+  }
+  // Stage 1: spike pit jumps (kill bricks between platforms)
+  for (let i = 0; i < 5; i++) {
+    const z = -50 - i * 10;
+    w.parts.push(part([0, 0, z], [8, 1, 6], '#3a3a4a', { name: 'SafePlat' + i, m: 'concrete' }));
+    if (i < 4) {
+      w.parts.push(part([0, 0.2, z - 5], [8, 0.5, 3], '#ff1744', { name: 'Spikes' + i, k: 'kill', m: 'neon' }));
+    }
+    candy(w, 0, 2, z);
+  }
+  w.parts.push(part([0, 0.75, -100], [8, 1, 8], '#3a3a4a', { name: 'Landing1', m: 'concrete' }));
+  w.parts.push(part([0, 1.5, -100], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' }));
+  // Stage 2: sarcophagus climb
+  let cy = 1;
+  for (let i = 0; i < 6; i++) {
+    const z = -112 - i * 6, x = (i % 2 === 0 ? -1 : 1) * 4;
+    cy += 2;
+    w.parts.push(part([x, cy - 0.5, z], [6, 1, 5], '#5d4037', { name: 'Sarcoph' + i, m: 'stone' }));
+    w.parts.push(part([x, cy + 0.8, z], [4, 0.6, 3], '#8d6e63', { name: 'SarcophLid' + i, m: 'stone' }));
+    candy(w, x, cy + 1.5, z);
+  }
+  // Treasure chamber
+  w.parts.push(part([0, cy, -152], [24, 2, 20], '#2a2a35', { name: 'TreasureFloor', m: 'concrete' }));
+  w.parts.push(part([0, cy + 1.5, -158], [6, 3, 4], '#ffd400', { name: 'GoldChest', m: 'neon' }));
+  w.parts.push(part([0, cy + 1.5, -158], [6, 0.5, 4], '#8d6e63', { name: 'ChestLid', m: 'wood' }));
+  for (let i = 0; i < 8; i++) candy(w, -9 + (i % 4) * 6, cy + 2, -152 - Math.floor(i / 4) * 4);
+  w.parts.push(part([0, cy + 1, -146], [6, 1, 6], '#ffd400', { name: 'Finish', k: 'checkpoint', m: 'neon' }));
+  return w;
+}
