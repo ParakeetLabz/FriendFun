@@ -124,71 +124,6 @@ function mat(color) { return new THREE.MeshStandardMaterial({ color, roughness: 
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
 // Rounded box — same blocky proportions, softened edges that catch the light.
 function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
-function shade(hex, f) { return '#' + new THREE.Color(hex).multiplyScalar(f).getHexString(); }
-
-// ---------- segmented limbs (v2 player models) ----------
-// An arm is a shoulder pivot holding: sleeve cap + upper arm, then an elbow
-// pivot holding forearm + hand. Total length stays 2 (shoulder y=4 -> hand
-// ends ~y=2), so every existing animation/gear anchor keeps working.
-// userData joints are exposed as limbs.lelbow / relbow for animateCharacter.
-function makeArm(x, y, color, handColor, sleeveColor, w = 1, smooth = false) {
-  const p = new THREE.Group(); p.position.set(x, y, 0);
-  if (smooth) {
-    const cap = (r, len, c, rough = 0.5) => { const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 14), new THREE.MeshStandardMaterial({ color: c, roughness: rough })); m.castShadow = true; return m; };
-    const upper = cap(0.31 * w, 0.5 * w, color); upper.position.y = -0.55 * w; p.add(upper);
-    const sleeve = cap(0.35 * w, 0.12 * w, sleeveColor); sleeve.position.y = -0.22 * w; p.add(sleeve);
-    const elbow = new THREE.Group(); elbow.position.y = -1.12 * w; p.add(elbow);
-    const fore = cap(0.27 * w, 0.3 * w, color); fore.position.y = -0.3 * w; elbow.add(fore);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.3 * w, 14, 12), new THREE.MeshStandardMaterial({ color: handColor, roughness: 0.5 }));
-    hand.position.y = -0.78 * w; hand.castShadow = true; elbow.add(hand);
-    p.userData.joint = elbow;
-  } else {
-    const sleeve = rbox(w * 1.04, 0.4, w * 1.04, sleeveColor, 0.07); sleeve.position.y = -0.2; p.add(sleeve);
-    const upper = rbox(w * 0.94, 1.06, w * 0.94, color, 0.09); upper.position.y = -0.64; p.add(upper);
-    const elbow = new THREE.Group(); elbow.position.y = -1.16; p.add(elbow);
-    const fore = rbox(w * 0.87, 0.56, w * 0.87, color, 0.08); fore.position.y = -0.28; elbow.add(fore);
-    const hand = rbox(w * 0.82, 0.36, w * 0.82, handColor, 0.08); hand.position.y = -0.73; elbow.add(hand);
-    p.userData.joint = elbow;
-  }
-  return p;
-}
-// A leg is a hip pivot holding: thigh, then a knee pivot holding shin + shoe
-// (darkened pants color, white sole, toe forward). Total length stays 2, sole
-// lands exactly on y=0. opts.shoe=false for characters with their own feet.
-function makeLeg(x, y, color, w = 1, opts = {}) {
-  const p = new THREE.Group(); p.position.set(x, y, 0);
-  const smooth = !!opts.smooth;
-  if (smooth) {
-    const capM = (r, len, c) => { const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 6, 14), new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 })); m.castShadow = true; return m; };
-    const thigh = capM(0.35 * w, 0.34 * w, color); thigh.position.y = -0.5 * w; p.add(thigh);
-  } else {
-    const thigh = rbox(w * 0.96, 1.04, w * 0.96, color, 0.09); thigh.position.y = -0.52; p.add(thigh);
-  }
-  const knee = new THREE.Group(); knee.position.y = smooth ? -1.04 * w : -1.04; p.add(knee);
-  if (smooth) {
-    const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.3 * w, 0.26 * w, 6, 14), new THREE.MeshStandardMaterial({ color, roughness: 0.5 }));
-    shin.position.y = -0.3 * w; shin.castShadow = true; knee.add(shin);
-  } else {
-    const shin = rbox(w * 0.9, 0.62, w * 0.9, color, 0.08); shin.position.y = -0.31; knee.add(shin);
-  }
-  if (opts.shoe !== false) {
-    const shoe = rbox(w * 0.98, 0.3, w * 1.42, shade(color, 0.42), 0.1);
-    shoe.position.set(0, -0.78, 0.21 * w); knee.add(shoe);
-    const sole = box(w * 1.0, 0.07, w * 1.48, '#f2f2f2'); sole.position.set(0, -0.925, 0.21 * w); knee.add(sole);
-  }
-  p.userData.joint = knee;
-  return p;
-}
-// Shared waist + neck so torsos don't float straight into heads/legs.
-function addWaistNeck(root, C, torsoColor, smooth = false) {
-  const pelvis = smooth ? rbox(1.78, 0.62, 0.9, C.lleg, 0.26, 0.5) : rbox(1.92, 0.56, 0.97, shade(torsoColor, 0.82), 0.08);
-  pelvis.position.y = 2.06; root.add(pelvis);
-  const belt = box(1.94, 0.14, 0.99, shade(torsoColor, 0.55)); belt.position.y = 2.3; root.add(belt);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.31, 0.42, 14), new THREE.MeshStandardMaterial({ color: C.head, roughness: smooth ? 0.45 : 0.7 }));
-  neck.position.y = 4.02; neck.castShadow = true; root.add(neck);
-  return pelvis;
-}
-// Pet + held gear, shared by the blocky and smooth builders.
 function attachExtras(root, avatar, opts = {}) {
   const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
   if (petSpec) {
@@ -478,17 +413,26 @@ const HEADS = {
 
 // Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
 const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody: '#66bb6a' };
-export function buildCharacter(avatar, opts = {}) {
+
+// ---------- R6 player rig ----------
+// Classic R6 shape language: exactly SIX rigid parts — Head, Torso,
+// Left Arm, Right Arm, Left Leg, Right Leg. Single-piece blocky limbs that
+// pivot at the shoulder/hip, torso 2x2x1, head sitting straight on the
+// torso (no neck, no waist, no elbows/knees, no separate hands/shoes).
+// smooth=true only softens the finish (tiny edge bevel + glossier material,
+// the classic parts have a slight bevel too) — the shapes stay R6.
+function buildR6(avatar, opts = {}, smooth = false) {
   const C = { ...avatar.colors };
   const suitColor = BODY_SUITS[avatar.head];
   if (suitColor) for (const k of Object.keys(C)) C[k] = suitColor;
   const suit = avatar.shirt === 'shirt_suit' && !suitColor;
   const isBugs = avatar.head === 'head_bugs', isDaffy = avatar.head === 'head_daffy';
   const root = new THREE.Group();
+  const part = smooth
+    ? (w, h, d, color) => rbox(w, h, d, color, 0.045, 0.5)
+    : box;
   const torsoW = isBugs ? 1.8 : 2;
-  const torsoColor = suit ? '#263238' : C.torso;
-  const torso = rbox(torsoW, 2, 1, torsoColor, 0.12); torso.position.y = 3; root.add(torso);
-  addWaistNeck(root, C, torsoColor);
+  const torso = part(torsoW, 2, 1, suit ? '#263238' : C.torso); torso.position.y = 3; root.add(torso);
   const shirtIt = ITEM[avatar.shirt];
   if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
   else if (avatar.shirt && avatar.shirt !== 'shirt_none') {
@@ -500,7 +444,8 @@ export function buildCharacter(avatar, opts = {}) {
   const H = HEADS[avatar.head] || HEADS.head_classic;
   if (H.custom) { H.custom(headPivot); }
   else {
-    const head = new THREE.Mesh(H.geo(), mat(H.color || C.head)); head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
+    const head = new THREE.Mesh(H.geo(), smooth ? new THREE.MeshStandardMaterial({ color: H.color || C.head, roughness: 0.4, metalness: 0.05 }) : mat(H.color || C.head));
+    head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
     const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
     const face = H.round
       ? new THREE.Mesh(new THREE.SphereGeometry(H.r + 0.01, 24, 16, Math.PI / 2 - 0.75, 1.5, Math.PI / 2 - 0.75, 1.5), faceMat)
@@ -510,12 +455,14 @@ export function buildCharacter(avatar, opts = {}) {
   const hatIt = ITEM[avatar.hat];
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
   else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
+  // R6 limbs: ONE rigid block per limb, pivot at the top.
+  const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
   let larm, rarm, lleg, rleg;
   if (isBugs) {
-    larm = makeArm(-1.35, 4, C.larm, C.head, C.torso, 0.8); rarm = makeArm(1.35, 4, C.rarm, C.head, C.torso, 0.8);
-    lleg = makeLeg(-0.45, 2, C.lleg, 0.9, { shoe: false }); rleg = makeLeg(0.45, 2, C.rleg, 0.9, { shoe: false });
+    larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
+    lleg = limb(-0.45, 2, C.lleg, 0.9); rleg = limb(0.45, 2, C.rleg, 0.9);
     for (const leg of [lleg, rleg]) {
-      const foot = box(0.95, 0.45, 1.7, '#9e9e9e');
+      const foot = part(0.95, 0.45, 1.7, '#9e9e9e');
       foot.position.set(0, -1.85, 0.45); foot.castShadow = true; leg.add(foot);
     }
     const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
@@ -523,10 +470,10 @@ export function buildCharacter(avatar, opts = {}) {
     const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
     belly.position.set(0, 2.9, 0.5); root.add(belly);
   } else if (isDaffy) {
-    larm = makeArm(-1.35, 4, C.larm, '#ff9800', C.torso, 0.75); rarm = makeArm(1.35, 4, C.rarm, '#ff9800', C.torso, 0.75);
-    lleg = makeLeg(-0.4, 2, '#ff9800', 0.55, { shoe: false }); rleg = makeLeg(0.4, 2, '#ff9800', 0.55, { shoe: false });
+    larm = limb(-1.35, 4, C.larm, 0.75); rarm = limb(1.35, 4, C.rarm, 0.75);
+    lleg = limb(-0.4, 2, '#ff9800', 0.55); rleg = limb(0.4, 2, '#ff9800', 0.55);
     for (const leg of [lleg, rleg]) {
-      const foot = box(1.15, 0.28, 1.5, '#ff9800');
+      const foot = part(1.15, 0.28, 1.5, '#ff9800');
       foot.position.set(0, -1.9, 0.5); foot.castShadow = true; leg.add(foot);
     }
     for (let i = -1; i <= 1; i++) {
@@ -534,112 +481,39 @@ export function buildCharacter(avatar, opts = {}) {
       f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
     }
   } else {
-    larm = makeArm(-1.5, 4, suit ? '#263238' : C.larm, C.head, torsoColor);
-    rarm = makeArm(1.5, 4, suit ? '#263238' : C.rarm, C.head, torsoColor);
-    lleg = makeLeg(-0.5, 2, C.lleg); rleg = makeLeg(0.5, 2, C.rleg);
+    larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
+    lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
-  for (const l of [larm, rarm, lleg, rleg]) root.add(l);
-  root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso, lelbow: larm.userData.joint, relbow: rarm.userData.joint, lknee: lleg.userData.joint, rknee: rleg.userData.joint };
+  root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso };
+  if (smooth) { root.userData.headPivot = headPivot; root.userData.smooth = true; }
   attachExtras(root, avatar, opts);
   return root;
 }
 
-// ✨ Advanced: smooth Roblox-style humanoid (original design, not a copy).
-// v2: same proportions and equipment as the blocky model — real head shapes,
-// shirt (front + back), hats, segmented capsule limbs with elbows/knees,
-// hands, shoes, waist + neck, pets and gear — just rounded and glossy.
-export function buildCharacterSmooth(avatar, opts = {}) {
-  const C = { ...avatar.colors };
-  const suitColor = BODY_SUITS[avatar.head];
-  if (suitColor) for (const k of Object.keys(C)) C[k] = suitColor;
-  const suit = avatar.shirt === 'shirt_suit' && !suitColor;
-  const isBugs = avatar.head === 'head_bugs', isDaffy = avatar.head === 'head_daffy';
-  const root = new THREE.Group();
-  const smooth = (color, rough = 0.45) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.05 });
+// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
+export function buildCharacter(avatar, opts = {}) { return buildR6(avatar, opts, false); }
 
-  // Torso: deeply rounded box + waist/neck
-  const torsoColor = suit ? '#263238' : C.torso;
-  const torso = rbox(1.92, 2, 0.96, torsoColor, 0.34, 0.45); torso.position.y = 3; root.add(torso);
-  addWaistNeck(root, C, torsoColor, true);
-  const shirtIt = ITEM[avatar.shirt];
-  if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
-  else if (avatar.shirt && avatar.shirt !== 'shirt_none') {
-    const d = new THREE.Mesh(new THREE.PlaneGeometry(1.92, 2), new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), transparent: true, roughness: 0.6 }));
-    d.position.z = 0.486; torso.add(d);
-    const back = d.clone(); back.rotation.y = Math.PI; back.position.z = -0.486; torso.add(back);
-  }
-
-  // Head: the player's real head shape, smooth-shaded
-  const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
-  const H = HEADS[avatar.head] || HEADS.head_classic;
-  if (H.custom) { H.custom(headPivot); }
-  else {
-    const head = new THREE.Mesh(H.geo(), smooth(H.color || C.head, 0.35)); head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
-    const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
-    const face = H.round
-      ? new THREE.Mesh(new THREE.SphereGeometry(H.r + 0.01, 24, 16, Math.PI / 2 - 0.75, 1.5, Math.PI / 2 - 0.75, 1.5), faceMat)
-      : new THREE.Mesh(new THREE.PlaneGeometry(H.fw || 1, H.fw || 1), faceMat);
-    face.position.set(0, H.h / 2, H.round ? 0 : (H.fz || 0.63)); headPivot.add(face);
-  }
-  const hatIt = ITEM[avatar.hat];
-  if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
-  else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
-
-  // Limbs: capsules with elbow/knee joints, sphere hands, rounded shoes
-  let larm, rarm, lleg, rleg;
-  if (isBugs) {
-    larm = makeArm(-1.32, 4, C.larm, C.head, C.torso, 0.85, true); rarm = makeArm(1.32, 4, C.rarm, C.head, C.torso, 0.85, true);
-    lleg = makeLeg(-0.45, 2, C.lleg, 0.95, { shoe: false, smooth: true }); rleg = makeLeg(0.45, 2, C.rleg, 0.95, { shoe: false, smooth: true });
-    for (const leg of [lleg, rleg]) {
-      const foot = rbox(0.95, 0.42, 1.7, '#9e9e9e', 0.16, 0.5);
-      foot.position.set(0, -1.82, 0.45); leg.add(foot);
-    }
-    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), smooth('#ffffff'));
-    tail.position.set(0, 2.3, -0.6); tail.castShadow = true; root.add(tail);
-  } else if (isDaffy) {
-    larm = makeArm(-1.32, 4, C.larm, '#ff9800', C.torso, 0.8, true); rarm = makeArm(1.32, 4, C.rarm, '#ff9800', C.torso, 0.8, true);
-    lleg = makeLeg(-0.4, 2, '#ff9800', 0.6, { shoe: false, smooth: true }); rleg = makeLeg(0.4, 2, '#ff9800', 0.6, { shoe: false, smooth: true });
-    for (const leg of [lleg, rleg]) {
-      const foot = rbox(1.15, 0.26, 1.5, '#ff9800', 0.1, 0.5);
-      foot.position.set(0, -1.88, 0.5); leg.add(foot);
-    }
-  } else {
-    larm = makeArm(-1.42, 4, suit ? '#263238' : C.larm, C.head, torsoColor, 1, true);
-    rarm = makeArm(1.42, 4, suit ? '#263238' : C.rarm, C.head, torsoColor, 1, true);
-    lleg = makeLeg(-0.48, 2, C.lleg, 1, { smooth: true }); rleg = makeLeg(0.48, 2, C.rleg, 1, { smooth: true });
-  }
-  for (const l of [larm, rarm, lleg, rleg]) root.add(l);
-  root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, headPivot, torso, lelbow: larm.userData.joint, relbow: rarm.userData.joint, lknee: lleg.userData.joint, rknee: rleg.userData.joint };
-  root.userData.smooth = true;
-  attachExtras(root, avatar, opts);
-  return root;
-}
-
+// Advanced graphics: same R6 shapes, smoother finish (slight bevel + gloss).
+export function buildCharacterSmooth(avatar, opts = {}) { return buildR6(avatar, opts, true); }
 
 export function animateCharacter(ch, state, t, dt) {
   const L = ch.userData.limbs; if (!L) return;
+  // R6 animation: limbs are rigid — they swing as single parts, no joint bends.
   // Classic Roblox style: idle is statue-still, walk swings big, jump = arms straight up, fall = arms out
   // rotation.x > 0 swings a limb backwards (character faces +z); arms up ~ -PI
   if (L.torso.userData.baseY === undefined) L.torso.userData.baseY = L.torso.position.y;
   let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0;
-  // v2 joints: elbows bend slightly forward (negative x = forearm swings
-  // forward/up), knees bend backwards (positive x = shin folds back).
-  let le = -0.14, re = -0.14, lk = 0, rk = 0, headPitch = 0;
   if (state === 'walk') {
     const s = Math.sin(t * 10);
     la = s * 1.05; ra = -s * 1.05; ll = -s * 1.05; rl = s * 1.05;
     laz = 0.14; raz = -0.14;
     bob = Math.abs(Math.cos(t * 10)) * 0.14;
-    le = -0.5 + s * 0.3; re = -0.5 - s * 0.3;
-    lk = Math.max(0, Math.sin(t * 10 + 1.9)) * 0.85;
-    rk = Math.max(0, -Math.sin(t * 10 + 1.9)) * 0.85;
-    headPitch = Math.sin(t * 20) * 0.03;
   }
-  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; le = re = -0.25; lk = rk = 0.4; headPitch = -0.12; }
-  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; le = re = -0.35; lk = rk = 0.2; headPitch = 0.18; }
-  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); re = -0.3 + Math.sin(t * 12) * 0.25; le = -0.14; }
-  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; le = -0.7 - s * 0.3; re = -0.7 + s * 0.3; lk = 0.25 + Math.max(0, s) * 0.3; rk = 0.25 + Math.max(0, -s) * 0.3; headPitch = Math.sin(t * 8) * 0.06; }
-  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.6; lk = rk = Math.PI / 2; le = re = -0.3; }
+  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; }
+  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; }
+  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); }
+  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; }
+  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.6; }
   // idle: perfectly still, like classic Roblox
   const k = Math.min(1, dt * 15);
   L.larm.rotation.x += (la - L.larm.rotation.x) * k;
@@ -648,11 +522,6 @@ export function animateCharacter(ch, state, t, dt) {
   L.rleg.rotation.x += (rl - L.rleg.rotation.x) * k;
   L.larm.rotation.z += (laz - L.larm.rotation.z) * k;
   L.rarm.rotation.z += (raz - L.rarm.rotation.z) * k;
-  if (L.lelbow) L.lelbow.rotation.x += (le - L.lelbow.rotation.x) * k;
-  if (L.relbow) L.relbow.rotation.x += (re - L.relbow.rotation.x) * k;
-  if (L.lknee) L.lknee.rotation.x += (lk - L.lknee.rotation.x) * k;
-  if (L.rknee) L.rknee.rotation.x += (rk - L.rknee.rotation.x) * k;
-  if (L.head) L.head.rotation.x += (headPitch - L.head.rotation.x) * k;
   L.torso.position.y += ((L.torso.userData.baseY + bob) - L.torso.position.y) * k;
 }
 
