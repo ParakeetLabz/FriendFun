@@ -506,7 +506,7 @@ function loginPage() {
   <div class="landing-bg"></div>
   <div class="landing-inner">
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
-      <h1>Play, build and hang out with friends.</h1><p>Join millions of blocky adventurers. Jump into games, customize your avatar, and build your own worlds in Funtopia Studio.</p></div>
+      <h1>Play, build… and survive the night.</h1><p>Join millions of blocky adventurers — if you dare. Jump into haunted games, dress your avatar for the dark, and build your own cursed worlds in Funtopia Studio. Enter… if you dare. 🎃</p></div>
     <div class="auth-card">
       <div class="auth-tabs"><button data-m="signup" class="active">Sign Up</button><button data-m="login">Log In</button></div>
       <form class="auth-form">
