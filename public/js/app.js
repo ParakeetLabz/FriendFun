@@ -66,7 +66,7 @@ function buildCharacter(avatar) {
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=collab26';
 import { templates } from './worlds.js?v=collab26';
-import { startSpooky, stopSpooky, sfx } from './sound.js?v=89850e26';
+import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
 const app = document.getElementById('app');
@@ -406,7 +406,7 @@ function initEasterEggs() {
 setTimeout(initEasterEggs, 1000);
 
 function mount(active, html, after) {
-  document.body.classList.toggle('halloween', halloweenActive());
+  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
   app.className = ''; app.innerHTML = shell(active, html);
   refreshPartyBar();
   refreshSiteBanner();
@@ -500,13 +500,14 @@ function dailyToast(r) {
 
 // ---------- pages ----------
 function loginPage() {
-  document.body.classList.toggle('halloween', halloweenActive());
+  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
   app.className = 'landing';
   app.innerHTML = `
   <div class="landing-bg"></div>
   <div class="landing-inner">
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
-      <h1>Play, build… and survive the night.</h1><p>Join millions of blocky adventurers — if you dare. Jump into haunted games, dress your avatar for the dark, and build your own cursed worlds in Funtopia Studio. Enter… if you dare. 🎃</p></div>
+      <h1>Play, build… and survive the night.</h1><p>Join millions of blocky adventurers — if you dare. Jump into haunted games, dress your avatar for the dark, and build your own cursed worlds in Funtopia Studio. Enter… if you dare. 🎃</p>
+      ${blockverseActive() ? `<a class="bv-strip" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">🟩 <b>Funtopia × Blockverse is LIVE!</b> Free collab gifts, a portal-run course & the World Hopper badge — visit Blockverse ↗</a>` : ''}</div>
     <div class="auth-card">
       <div class="auth-tabs"><button data-m="signup" class="active">Sign Up</button><button data-m="login">Log In</button></div>
       <form class="auth-form">
@@ -540,14 +541,16 @@ function loginPage() {
 async function homePage() {
   const [games, fr] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends')]);
   const byId = Object.fromEntries(games.map(g => [g.id, g]));
+  const bvGames = games.filter(g => g.id === 'g_bvportal' || g.id === 'g_bvplaza');
   const recent = me.recent.map(id => byId[id]).filter(Boolean);
   const favs = me.favorites.map(id => byId[id]).filter(Boolean);
   const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
-  mount('home', `    ${blockverseActive() ? `<a class="collab-banner" href="#/blockverse">🟩 <b>Funtopia × Blockverse is LIVE!</b> Portal Run, free collab gifts & the World Hopper badge &rsaquo;</a>` : ''}
+  mount('home', `    ${blockverseActive() ? `<div class="bv-hero home-bv"><div class="hw-hero-emoji">🟩</div><div class="hw-hero-text"><h1>Funtopia × Blockverse</h1><p class="muted">The portal is open! Two crossover worlds, <b>free gifts</b> in your inventory, and the <b>World Hopper badge</b>.</p><p><a class="btn-primary" href="#/play/g_bvportal">▶ Play Portal Run</a> <a class="btn-secondary" href="#/blockverse">Collab Hub</a> <a class="btn-secondary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p></div></div>` : ''}
     ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
     <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
     <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
       <div class="friends-row">${friends.length ? friends.map(userTile).join('') : `<a class="add-friends" href="#/friends"><span>+</span>Add Friends</a>`}</div></section>
+    ${blockverseActive() && bvGames.length ? `<section><div class="sec-h"><h2>🟩 Blockverse Collab Games</h2><a href="#/blockverse">Collab Hub &rsaquo;</a></div><div class="game-row">${bvGames.map(gameCard).join('')}</div></section>` : ''}
     ${recent.length ? `<section><div class="sec-h"><h2>Continue</h2></div><div class="game-row">${recent.map(gameCard).join('')}</div></section>` : ''}
     <section><div class="sec-h"><h2>Recommended For You</h2><a href="#/discover">See All &rsaquo;</a></div><div class="game-row">${games.slice(0, 12).map(gameCard).join('')}</div></section>
     ${favs.length ? `<section><div class="sec-h"><h2>Favorites</h2></div><div class="game-row">${favs.map(gameCard).join('')}</div></section>` : ''}
@@ -1555,6 +1558,13 @@ async function route() {
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'));
+      case 'create': return await createPage();
+      case 'users': return await profilePage(decodeURIComponent(seg[1] || ''));
+      case 'friends': return await friendsPage();
+      case 'messages': return seg[1] ? await dmPage(decodeURIComponent(seg[1])) : await messagesPage();
+      case 'groups': return groupsPage();
+      case 'halloween': return await halloweenPage();
+      case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
       case 'ugc': { const m = await import('./ugc-studio.js?v=07967ed1'); return m.ugcPage(ugcDeps); }

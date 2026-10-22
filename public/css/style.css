@@ -742,3 +742,13 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .github-sync input { width: 100%; padding: 8px; margin: 4px 0; background: #0a0a18; border: 1px solid rgba(124,108,245,.3); border-radius: 6px; color: #fff; font-size: 13px; }
 .farm-report { background: rgba(255,60,60,.08); border: 1px solid rgba(255,60,60,.3); border-radius: 10px; padding: 12px; margin: 8px 0; }
 .farm-report .row { display: flex; gap: 8px; margin-top: 8px; }
+
+/* ---------- Blockverse takeover (while the collab is live) ---------- */
+body.collab { --grad: linear-gradient(135deg, #2ee06f, #17b657); --glow: 0 0 18px rgba(46,224,111,.5); }
+body.collab .topbar { border-bottom-color: #17b657; }
+body.collab .logo-text { text-shadow: 0 0 18px rgba(46,224,111,.6), 0 0 46px rgba(232,17,45,.35), 3px 3px 0 #26030a; }
+body.collab .sidebar a.active { background: linear-gradient(135deg, #17b657, #0a5c2c); }
+body.collab .tb-nav a:hover { color: #7dffab; }
+.home-bv { margin-bottom: 18px; }
+.bv-strip { display: inline-block; margin-top: 16px; background: linear-gradient(135deg, #0a2e18, #17b657 60%, #2ee06f); color: #04150a; font-weight: 700; text-decoration: none; padding: 10px 16px; border-radius: 999px; box-shadow: 0 4px 22px #17b65788; border: 1px solid #7dffab88; }
+.bv-strip:hover { filter: brightness(1.12); }

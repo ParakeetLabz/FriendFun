@@ -5,7 +5,7 @@ const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) :
 import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=20261021r6';
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
 import { VoiceChat } from './voice.js?v=9d41bd66';
-import { sfx } from './sound.js?v=89850e26';
+import { sfx } from './sound.js?v=music26';
 import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=collab26';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
