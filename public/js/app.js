@@ -262,7 +262,7 @@ function shell(active, content) {
   <header class="topbar">
     <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
     <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
-    <nav class="tb-nav"><a href="#/discover">Discover</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
+    <nav class="tb-nav"><a href="#/discover">Charts</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
     <form class="tb-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search"></form>
     <div class="tb-right">
       <div class="tb-user-wrap">
@@ -283,7 +283,8 @@ function shell(active, content) {
     </div>
   </header>
   <aside class="sidebar">
-    ${[['home', 'Home', icons.home], ['discover', 'Discover', icons.discover], ['avatar', 'Avatar', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
+    <a class="sb-user" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, "headshot")}<span class="sb-user-txt"><b>${esc(me.name)}</b><span>@${esc(me.name)}</span></span></a>
+    ${[['home', 'Lobby', icons.home], ['dashboard', 'Dashboard', icons.discover], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
       .map(([h, l, i, badge]) => h.startsWith('http') ? `<a href="${h}" target="_blank" rel="noopener"><span class="sb-ico">${i}</span>${l}<span class="badge">↗</span></a>` : `<a href="#/${h}" class="${active === h.split('/')[0] ? 'active' : ''}"><span class="sb-ico">${i}</span>${l}${badge ? `<span class="badge">${badge}</span>` : ''}</a>`).join('')}
     <button class="sidebar-logout"><span class="sb-ico">&#9094;</span>Log Out</button>
     <div class="sidebar-footer">Made by <a href="https://parakeetlabz.vercel.app" target="_blank" rel="noopener">Parakeet Labz</a></div>
@@ -545,7 +546,7 @@ async function homePage() {
   const recent = me.recent.map(id => byId[id]).filter(Boolean);
   const favs = me.favorites.map(id => byId[id]).filter(Boolean);
   const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
-  mount('home', `    ${blockverseActive() ? `<div class="bv-hero home-bv"><div class="hw-hero-emoji">🟩</div><div class="hw-hero-text"><h1>Funtopia × Blockverse</h1><p class="muted">The portal is open! Two crossover worlds, <b>free gifts</b> in your inventory, and the <b>World Hopper badge</b>.</p><p><a class="btn-primary" href="#/play/g_bvportal">▶ Play Portal Run</a> <a class="btn-secondary" href="#/blockverse">Collab Hub</a> <a class="btn-secondary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p></div></div>` : ''}
+  mount('dashboard', `    ${blockverseActive() ? `<div class="bv-hero home-bv"><div class="hw-hero-emoji">🟩</div><div class="hw-hero-text"><h1>Funtopia × Blockverse</h1><p class="muted">The portal is open! Two crossover worlds, <b>free gifts</b> in your inventory, and the <b>World Hopper badge</b>.</p><p><a class="btn-primary" href="#/play/g_bvportal">▶ Play Portal Run</a> <a class="btn-secondary" href="#/blockverse">Collab Hub</a> <a class="btn-secondary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p></div></div>` : ''}
     ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
     <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
     <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
@@ -562,7 +563,7 @@ async function discoverPage(q) {
   const top = [...games].sort((a, b) => (b.likes / (b.likes + b.dislikes || 1)) - (a.likes / (a.likes + a.dislikes || 1)));
   const fresh = [...games].sort((a, b) => b.updated - a.updated);
   mount('discover', q ? `<h1>Results for "${esc(q)}"</h1><div class="game-grid">${games.map(gameCard).join('') || '<p class="muted">No games found.</p>'}</div>`
-    : `<h1>Discover</h1>
+    : `<h1>Charts</h1>
     <section><div class="sec-h"><h2>Most Popular</h2></div><div class="game-grid">${games.map(gameCard).join('')}</div></section>
     <section><div class="sec-h"><h2>Top Rated</h2></div><div class="game-row">${top.map(gameCard).join('')}</div></section>
     <section><div class="sec-h"><h2>Recently Updated</h2></div><div class="game-row">${fresh.map(gameCard).join('')}</div></section>`);
@@ -1438,6 +1439,7 @@ async function ugcGlbModal(u) {
 const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN, ensureAvatar3d, get me() { return me; }, get BADGE_DEFS() { return BADGE_DEFS; } };
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
+const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
   const m = await import('./admin.js?v=d572c4e4');
   return m.adminPage(adminDeps, q);
@@ -1555,6 +1557,8 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
+      case 'home': case 'lobby': { const m = await import('./lobby.js?v=fnlobby1'); return m.lobbyPage(lobbyDeps); }
+      case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'));
