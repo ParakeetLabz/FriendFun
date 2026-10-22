@@ -362,7 +362,7 @@ export function garden() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, gauntlet };
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, gauntlet, blockverse: bvPortal, bvPlaza };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');
@@ -908,5 +908,114 @@ export function hwCrypt() {
   w.parts.push(part([0, cy + 1.5, -158], [6, 0.5, 4], '#8d6e63', { name: 'ChestLid', m: 'wood' }));
   for (let i = 0; i < 8; i++) candy(w, -9 + (i % 4) * 6, cy + 2, -152 - Math.floor(i / 4) * 4);
   w.parts.push(part([0, cy + 1, -146], [6, 1, 6], '#ffd400', { name: 'Finish', k: 'checkpoint', m: 'neon' }));
+  return w;
+}
+
+// ---------- Funtopia × Blockverse collab worlds (Oct 2026) ----------
+export function bvPortal() {
+  const w = startWorld('#0d0d26');
+  w.light = { tod: 20, ambient: 0.95, fog: 0.3 };
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  const coin = (x, y, z) => P(x, y, z, 1.2, 1.2, 1.2, '#2ee06f', { name: 'Cubit', k: 'coin' });
+  P(0, -25, -120, 520, 1, 460, '#160404', { name: 'The Void', k: 'kill', m: 'neon' });
+  // --- Zone A: Funtopia side ---
+  P(0, 0, 0, 28, 2, 28, '#3a2a2e', { name: 'StartPlatform', m: 'concrete' });
+  P(0, 1.25, 0, 6, 0.5, 6, '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' });
+  P(6, 3.5, 6, 2, 5, 2, '#5c6bc0', { name: 'Greeter', k: 'npc', dialog: 'Welcome to the Funtopia × Blockverse collab! Cross the portal, beat the run, and earn the World Hopper badge! 🟩' });
+  P(-8, 2, -6, 1, 4, 1, '#8d6e63', { name: 'SignPost', m: 'wood' });
+  P(-8, 4.4, -6, 8, 2.4, 0.4, '#2ee06f', { name: 'CollabSign', m: 'neon' });
+  for (let i = 0; i < 5; i++) { // stepping stones with cubit trail
+    const z = -16 - i * 11, x = (i % 2 ? 3 : -3), y = 1 + (i % 3);
+    P(x, y, z, 6, 1, 6, i % 2 ? '#17b657' : '#e53935', { name: 'Step' + i });
+    coin(x, y + 2.4, z);
+  }
+  P(0, 2, -70, 7, 1, 7, '#26c6da', { name: 'PortalFerry', mv: { a: 'z', d: 6, s: 0.9 } });
+  coin(0, 4.4, -70);
+  P(0, 2, -92, 12, 1, 12, '#3a2a2e', { name: 'PortalLanding', m: 'concrete' });
+  P(0, 2.75, -92, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' });
+  // --- The Portal ---
+  P(-7, 8, -104, 2, 16, 2, '#2ee06f', { name: 'PortalPillarL', m: 'neon' });
+  P(7, 8, -104, 2, 16, 2, '#2ee06f', { name: 'PortalPillarR', m: 'neon' });
+  P(0, 16.5, -104, 16, 2, 2, '#2ee06f', { name: 'PortalBeam', m: 'neon' });
+  P(0, 8, -104, 12, 14, 0.4, '#2ee06f', { name: 'PortalGlow', m: 'glass', cc: false, tr: 0.55 });
+  P(0, 2, -104, 10, 1, 8, '#17b657', { name: 'PortalDeck', m: 'neon' });
+  P(-5, 3.5, -98, 2, 5, 2, '#5c6bc0', { name: 'Blox', k: 'npc', dialog: 'You made it through! I am Blox, from Blockverse (blockverse-one.vercel.app). Our worlds are connected now! 🟩' });
+  // --- Zone B: Blockverse side ---
+  P(0, 2, -118, 14, 1, 14, '#1c2140', { name: 'BV Landing', m: 'concrete' });
+  P(0, 2.75, -118, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint2', k: 'checkpoint', m: 'neon' });
+  let cy = 2;
+  for (let i = 0; i < 6; i++) { // cubit climb
+    cy += 2; const z = -132 - i * 7, x = (i % 2 ? 4 : -4);
+    P(x, cy, z, 6, 1, 5, '#232950', { name: 'BV Step' + i });
+    if (i % 2 === 0) coin(x, cy + 2.4, z);
+  }
+  P(0, cy + 1, -178, 12, 1, 12, '#1c2140', { name: 'BlinkLanding', m: 'concrete' });
+  P(0, cy + 1.75, -178, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint3', k: 'checkpoint', m: 'neon' });
+  for (let i = 0; i < 4; i++) { // blink bridge over the void
+    P((i % 2 ? 2 : -2), cy + 1, -190 - i * 9, 5, 1, 5, '#ab47bc', { name: 'Blink' + i, blink: { on: 2.2, off: 1.4, ph: i * 0.9 } });
+  }
+  P(0, cy + 1, -232, 10, 1, 44, '#232950', { name: 'SweeperWalkway' }); // sweeper corridor
+  for (const sz of [-220, -240]) P(0, cy + 2, sz, 4, 1, 2, '#ff2020', { name: 'Sweeper', k: 'kill', m: 'neon', mv: { a: 'x', d: 3.5, s: 1.6 } });
+  P(4, cy + 2.2, -232, 1.6, 1.6, 1.6, '#ff5b5b', { name: 'HealPack', k: 'heal', m: 'neon' });
+  P(0, cy + 1, -262, 16, 1, 16, '#1c2140', { name: 'GuardPlatform', m: 'concrete' });
+  P(0, cy + 1.75, -262, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint4', k: 'checkpoint', m: 'neon' });
+  P(5, cy + 3.5, -266, 2, 5, 2, '#c4281c', { name: 'BlockGuard', k: 'npc', enemy: true, dialog: 'None shall pass... without style! ⚔️' });
+  P(0, cy + 1, -276, 6, 1, 6, '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' });
+  const topY = cy + 24;
+  P(0, topY, -292, 20, 1, 20, '#14532d', { name: 'Summit', m: 'grass' });
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; coin(Math.cos(a) * 7, topY + 2.4, -292 + Math.sin(a) * 7); }
+  P(0, topY + 0.75, -292, 8, 0.5, 8, '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' });
+  P(0, topY + 4, -300, 3, 6, 3, '#2ee06f', { name: 'CubitCrystal', m: 'neon' });
+  return w;
+}
+
+export function bvPlaza() {
+  const w = startWorld('#0d0d26');
+  w.light = { tod: 20.5, ambient: 1, fog: 0.25 };
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  P(0, -0.5, 0, 220, 1, 220, '#171b36', { name: 'PlazaGround', m: 'concrete' });
+  P(0, 0.25, 0, 6, 0.5, 6, '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' });
+  P(0, 0.3, 0, 34, 0.6, 34, '#14532d', { name: 'PlazaPad', m: 'grass' });
+  // portal arch centerpiece (north)
+  P(-8, 9, -40, 2.5, 18, 2.5, '#2ee06f', { name: 'ArchL', m: 'neon' });
+  P(8, 9, -40, 2.5, 18, 2.5, '#2ee06f', { name: 'ArchR', m: 'neon' });
+  P(0, 19, -40, 19, 2.5, 2.5, '#2ee06f', { name: 'ArchTop', m: 'neon' });
+  P(0, 9, -40, 13, 16, 0.4, '#2ee06f', { name: 'ArchGlow', m: 'glass', cc: false, tr: 0.55 });
+  P(0, 1, -40, 12, 1, 10, '#17b657', { name: 'ArchDeck', m: 'neon' });
+  // cubit fountain (south)
+  P(0, 0.5, 34, 12, 1, 12, '#232950', { name: 'FountainBase' });
+  P(0, 3, 34, 2, 4, 2, '#2ee06f', { name: 'FountainCubit', m: 'neon' });
+  P(0, 1.6, 34, 9, 0.4, 9, '#22d3ee', { name: 'FountainWater', m: 'glass', tr: 0.4 });
+  // stalls: Funtopia (west, red) & Blockverse (east, green)
+  for (const [sx, col, nm] of [[-30, '#e53935', 'FT Stall'], [30, '#17b657', 'BV Stall']]) {
+    P(sx, 1.5, -8, 10, 3, 6, '#5d4037', { name: nm + ' Counter', m: 'wood' });
+    P(sx - 4.5, 4, -8, 1, 8, 1, '#4e342e', { name: nm + ' PostL', m: 'wood' });
+    P(sx + 4.5, 4, -8, 1, 8, 1, '#4e342e', { name: nm + ' PostR', m: 'wood' });
+    P(sx, 8.4, -8, 12, 0.6, 8, col, { name: nm + ' Roof' });
+  }
+  // foam-sword duel ring (east court)
+  P(38, 0.3, 30, 24, 0.6, 24, '#3a2a2e', { name: 'DuelRing', m: 'concrete' });
+  for (const [px, pz] of [[27, 19], [49, 19], [27, 41], [49, 41]]) P(px, 2.5, pz, 1, 5, 1, '#ffd400', { name: 'RingPost', m: 'neon' });
+  P(38, 2, 30, 1.6, 1.6, 1.6, '#ff5b5b', { name: 'RingHeal', k: 'heal', m: 'neon' });
+  // parkour blocks to a lookout
+  let py = 0;
+  for (let i = 0; i < 6; i++) { py += 2.2; P(-38 + i * 3, py, 30 - i * 5, 4, 1, 4, i % 2 ? '#2ee06f' : '#e53935', { name: 'Parkour' + i }); }
+  P(-20, py + 1, -2, 10, 1, 10, '#232950', { name: 'Lookout' });
+  P(-20, py + 3.4, -2, 1.2, 1.2, 1.2, '#2ee06f', { name: 'LookoutCoin', k: 'coin' });
+  // blocky trees, alternating worlds' colors
+  for (const [tx, tz, cc] of [[-52, -30, '#1b5e20'], [52, -30, '#2ee06f'], [-52, 44, '#2ee06f'], [52, 52, '#1b5e20'], [-14, -58, '#1b5e20'], [16, 58, '#2ee06f']]) {
+    P(tx, 3, tz, 1.6, 6, 1.6, '#5d4037', { name: 'Trunk', m: 'wood' });
+    P(tx, 8, tz, 6, 4, 6, cc, { name: 'Canopy' });
+  }
+  // paths + speed pads
+  P(0, 0.1, -20, 4, 0.2, 26, '#232950', { name: 'PathN' });
+  P(0, 0.1, 20, 4, 0.2, 22, '#232950', { name: 'PathS' });
+  P(0, 0.35, -14, 4, 0.5, 4, '#ff9800', { name: 'SpeedPad', k: 'speed', m: 'neon' });
+  // NPCs
+  P(4, 3.5, -34, 2, 5, 2, '#5c6bc0', { name: 'Blox', k: 'npc', dialog: 'I came from Blockverse (blockverse-one.vercel.app) — your horror update is terrifying. Love it. 🟩' });
+  P(-5, 3.5, 8, 2, 5, 2, '#5c6bc0', { name: 'Greeter', k: 'npc', dialog: 'Collab gifts are FREE while the event lasts: Blockverse Cap, Tee, Foam Sword and Cubit Bot — check your inventory & the Marketplace! 🎁' });
+  P(34, 3.5, 24, 2, 5, 2, '#c4281c', { name: 'Foam Knight', k: 'npc', dialog: 'The Foam Sword is a Blockverse legend — soft, safe, and 100% bonk-certified. ⚔️' });
+  P(-30, 3.5, -2, 2, 5, 2, '#287f47', { name: 'Builder', k: 'npc', dialog: 'Want your own crossover? Grab the Blockverse templates in Create and remix them! 🔨' });
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; P(Math.cos(a) * 16, 2.2, Math.sin(a) * 16, 1.2, 1.2, 1.2, '#2ee06f', { name: 'Cubit', k: 'coin' }); }
   return w;
 }

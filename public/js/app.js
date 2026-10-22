@@ -64,8 +64,8 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=1d24a70d';
-import { templates } from './worlds.js?v=complex26';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=collab26';
+import { templates } from './worlds.js?v=collab26';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=89850e26';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
@@ -543,7 +543,8 @@ async function homePage() {
   const recent = me.recent.map(id => byId[id]).filter(Boolean);
   const favs = me.favorites.map(id => byId[id]).filter(Boolean);
   const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
-  mount('home', `    ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
+  mount('home', `    ${blockverseActive() ? `<a class="collab-banner" href="#/blockverse">🟩 <b>Funtopia × Blockverse is LIVE!</b> Portal Run, free collab gifts & the World Hopper badge &rsaquo;</a>` : ''}
+    ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
     <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
     <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
       <div class="friends-row">${friends.length ? friends.map(userTile).join('') : `<a class="add-friends" href="#/friends"><span>+</span>Add Friends</a>`}</div></section>
@@ -683,7 +684,7 @@ async function playPage(id, server) {
   const g = await api('GET', '/api/games/' + id);
   me = await api('GET', '/api/me');
   app.className = 'fullscreen'; app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=complex26');
+  const { Game } = await import('./game.js?v=collab26');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -931,6 +932,35 @@ function paintPetVoxels(root) {
   });
 }
 const halloweenActive = () => { const n = Date.now(); return n >= HALLOWEEN_DATES.starts && n <= HALLOWEEN_DATES.ends; };
+const BV_DATES = { starts: Date.parse('2026-10-22T00:00:00Z'), ends: Date.parse('2026-12-06T00:00:00Z') };
+const blockverseActive = () => { const n = Date.now(); return n >= BV_DATES.starts && n <= BV_DATES.ends; };
+const BV_EMOJI = { g_bvportal: '🌌', g_bvplaza: '🟩' };
+async function blockversePage() {
+  let ev = null;
+  try { ev = await api('GET', '/api/event/blockverse'); } catch { ev = { games: [], active: blockverseActive() }; }
+  const daysLeft = Math.max(0, Math.ceil((BV_DATES.ends - Date.now()) / 86400000));
+  const gifts = ['hat_bv_cap', 'shirt_bv_tee', 'gear_foamsword', 'pet_cubit'].map(id => ITEM[id]).filter(Boolean);
+  mount('blockverse', `
+    <div class="bv-hero">
+      <div class="hw-hero-emoji">🟩</div>
+      <div class="hw-hero-text">
+        <h1>Funtopia × Blockverse</h1>
+        <p class="muted">${ev.active ? `Two worlds, one portal! A crossover course, a plaza hangout, <b>free collab gifts</b> and the <b>World Hopper badge</b> — ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}!` : 'The portal has closed... for now. Thanks for hopping worlds with us!'}</p>
+        <p><a class="btn-primary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p>
+      </div>
+    </div>
+    <section><div class="sec-h"><h2>Collab Games (${ev.games.length})</h2></div>
+      <div class="game-row">${ev.games.map(g => `
+        <a class="game-card" href="#/play/${g.id}">
+          <div class="gc-thumb bv-thumb">${BV_EMOJI[g.id] || '🟩'}</div>
+          <b>${esc(g.name)}</b><span class="muted small">${fmt(g.visits)} plays</span>
+        </a>`).join('') || '<p class="muted">The portal is still warming up…</p>'}</div></section>
+    <section><div class="sec-h"><h2>Free Collab Gifts 🎁</h2></div>
+      <p class="muted">Free for everyone while the collab lasts — they're already in your inventory! Find them in the <a href="#/avatar">Avatar Editor</a> and <a href="#/catalog">Marketplace</a>.</p>
+      <div class="game-row">${gifts.map(it => `<div class="game-card"><div class="gc-thumb bv-thumb">${it.emoji || '🎁'}</div><b>${esc(it.name)}</b><span class="muted small">FREE · Limited</span></div>`).join('')}</div></section>
+    <section><div class="sec-h"><h2>World Hopper Badge 🏅</h2></div>
+      <p class="muted">Beat the <a href="#/play/g_bvportal">Blockverse Portal Run</a> to earn the <b>World Hopper</b> badge — only available during the collab!</p></section>`);
+}
 const HALLOWEEN_EMOJI = { g_halloween01: '👻', g_halloween02: '🎃', g_halloween03: '🧙', g_halloween04: '💀', g_halloween05: '🦇' };
 async function halloweenPage() {
   let ev = null;
@@ -1196,7 +1226,7 @@ async function profilePage(name) {
 
 async function createPage() {
   const mine = await api('GET', '/api/mygames');
-  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.']];
+  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.'], ['blockverse', '🌌 Blockverse Portal Run', 'The Funtopia × Blockverse collab course — moving platforms, blink bridges, sweepers!'], ['bvPlaza', '🟩 Blockverse Plaza', 'Collab hangout plaza with the great portal, duel ring and parkour.']];
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button></div>
@@ -1215,17 +1245,17 @@ function tplThumb(k) { return tplCache[k] ||= worldThumbnail(templates[k]()); }
 
 async function studioPage(id, tpl) {
   let g;
-  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
+  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet', blockverse: 'Blockverse Portal Run', bvPlaza: 'Blockverse Plaza' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
   else { g = await api('GET', '/api/games/' + id); if (g.creator.toLowerCase() !== me.name.toLowerCase()) { toast('You can only edit your own games', true); location.hash = '#/games/' + id; return; } }
   app.className = 'fullscreen'; app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=complex26');
+  const { Studio } = await import('./studio.js?v=collab26');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=complex26');
+      const { Game: GameClass } = await import('./game.js?v=collab26');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1532,6 +1562,7 @@ async function route() {
       case 'scripts': { const m = await import('./scripts-page.js?v=e67b220b'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
       case 'club': return clubPage();
+      case 'blockverse': return await blockversePage();
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
       case 'owner': return await ownerPage();

@@ -68,6 +68,11 @@ export const CATALOG = [
   { id: 'pet_pumpkincat', type: 'pet', name: 'Pumpkin Cat', price: 400, emoji: '🎃', color: '#ef6c00' },
   { id: 'pet_skelebone', type: 'pet', name: 'Skeleton Pup', price: 450, emoji: '💀', color: '#e0e0e0' },
   { id: 'gear_broom', type: 'gear', name: 'Witch Broom', price: 550, emoji: '🧹', color: '#8d6e63' },
+  // ---- Funtopia × Blockverse collab (Oct 22 – Dec 6, 2026): free gifts, auto-granted during the event ----
+  { id: 'hat_bv_cap', type: 'hat', name: 'Blockverse Cap', price: 0, limited: true, color: '#2ee06f' },
+  { id: 'shirt_bv_tee', type: 'shirt', name: 'Blockverse Tee', price: 0, limited: true, color: '#17b657' },
+  { id: 'gear_foamsword', type: 'gear', name: 'Foam Sword', price: 0, limited: true, emoji: '⚔️', color: '#2ee06f' },
+  { id: 'pet_cubit', type: 'pet', name: 'Cubit Bot', price: 0, limited: true, emoji: '🟩', color: '#2ee06f' },
   { id: 'gear_none', type: 'gear', name: 'No Gear', price: 0, free: true, emoji: '🚫' },
   { id: 'gear_sword', type: 'gear', name: 'Sword', price: 300, emoji: '🗡️', color: '#cfd8dc' },
   { id: 'gear_slingshot', type: 'gear', name: 'Slingshot', price: 400, emoji: '🎯', color: '#8d6e63' },
@@ -622,6 +627,13 @@ export const PET_MODELS = {
 // ---------- gear voxel models (classic Roblox-style tools) ----------
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at grip, faces +z.
 export const GEAR_MODELS = {
+  gear_foamsword: { boxes: [
+    [0, 1.7, 0, 0.34, 2.4, 0.34, '#2ee06f'],
+    [0, 3.0, 0, 0.36, 0.3, 0.36, '#7dffab'],
+    [0, 0.45, 0, 0.8, 0.16, 0.32, '#17b657'],
+    [0, 0.12, 0, 0.19, 0.55, 0.19, '#0c2417'],
+    [0, -0.2, 0, 0.26, 0.16, 0.26, '#0c2417'],
+  ] },
   gear_sword: { boxes: [
     [0, 1.7, 0, 0.18, 2.4, 0.18, '#cfd8dc'],
     [0, 3.0, 0, 0.12, 0.35, 0.12, '#90a4ae'],
@@ -755,6 +767,7 @@ export const BADGES = {
   creator: { name: 'Creator', desc: 'Published a game.', color: '#00b06f', path: 'M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z' },
   champ: { name: 'Obby Champ', desc: 'Beat an obby.', color: '#4aa3ff', path: 'M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3zM6 7v1a2 2 0 0 0 2 2V7zm10 0v3a2 2 0 0 0 2-2V7z' },
   looney: { name: 'Looney Tunes', desc: 'Collected all 20 Looney Coins in the Looney Tunes event.', color: '#ff6d00', path: 'M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 12.2l7.1-.6z' },
+  blockverse: { name: 'World Hopper', desc: 'Beat the Blockverse Portal Run during the Funtopia × Blockverse collab.', color: '#2ee06f', path: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   streak7: { name: 'Week Warrior', desc: 'Logged in 7 days in a row.', color: '#ff4757', path: 'M13 2L3 14h7l-1 8 10-12h-7z' },
   streak30: { name: 'Dedicated', desc: 'Logged in 30 days in a row.', color: '#a55eea', path: 'M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 12.2l7.1-.6z' },
   tycoon: { name: 'FunTix Tycoon', desc: 'Held 5,000 FunTix at once.', color: '#ffd400', path: 'M12 2v20M17 7H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H6' },

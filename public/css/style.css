@@ -432,6 +432,12 @@ button.badge-card { cursor: pointer; } button.badge-card:hover { border-color: #
 
 /* ---------- Halloween event extras (Oct 6 - Nov 2): the horror, turned up ---------- */
 .halloween-banner { display: block; background: linear-gradient(135deg, #4a0208, #a30f1d 55%, #ff7518); color: #fff; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; text-decoration: none; font-size: 16px; box-shadow: 0 4px 22px #a30f1d88; border: 1px solid #ff751866; }
+/* ---------- Funtopia × Blockverse collab ---------- */
+.collab-banner { display: block; background: linear-gradient(135deg, #0a2e18, #17b657 55%, #2ee06f); color: #04150a; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; text-decoration: none; font-size: 16px; font-weight: 700; box-shadow: 0 4px 22px #17b65788; border: 1px solid #7dffab88; }
+.collab-banner:hover { filter: brightness(1.12); }
+.bv-hero { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; background: linear-gradient(135deg, #0d0d26, #0c2417); border: 1px solid #17b657; border-radius: 16px; padding: 22px; margin-bottom: 18px; }
+.bv-hero .hw-hero-text h1 { margin: 0 0 6px; color: #7dffab; }
+.bv-thumb { aspect-ratio: 1; display: grid; place-items: center; font-size: 64px; background: radial-gradient(circle at 50% 35%, #173d27, #0d0d26); border-radius: 8px; }
 .halloween-banner:hover { filter: brightness(1.15); }
 body.halloween .topbar { background: linear-gradient(180deg, #1c0207, #0d0104); }
 body.halloween .sidebar a { color: #c9a3ad; }
