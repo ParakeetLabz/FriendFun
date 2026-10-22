@@ -1442,6 +1442,8 @@ function sanitizeWorld(w) {
     ...(p.cc === false ? { cc: false } : {}), ...(p.tr ? { tr: Math.max(0, Math.min(1, num(p.tr))) } : {}),
     ...(sanitizeScript(p.script) ? { script: sanitizeScript(p.script) } : {}),
     ...(p.folder ? { folder: String(p.folder).slice(0, 20) } : {}),
+    ...(p.mv && ['x', 'y', 'z'].includes(p.mv.a) && Math.abs(num(p.mv.d)) >= 1 ? { mv: { a: p.mv.a, d: Math.max(-120, Math.min(120, num(p.mv.d))), s: Math.max(0.2, Math.min(4, num(p.mv.s) || 1)), ...(num(p.mv.ph) ? { ph: num(p.mv.ph) } : {}) } } : {}),
+    ...(p.blink ? { blink: { on: Math.max(0.3, Math.min(30, num(p.blink.on) || 2)), off: Math.max(0.3, Math.min(30, num(p.blink.off) || 1.5)), ...(num(p.blink.ph) ? { ph: num(p.blink.ph) } : {}) } } : {}),
   }));
   const htmlScripts = Array.isArray(w?.htmlScripts) ? w.htmlScripts.slice(0, 20).map((s, i) => ({
     id: String(s.id || 'hs' + i).slice(0, 20),

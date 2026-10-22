@@ -25,20 +25,34 @@ export function obby() {
   w.parts.push(part([0, 0, 0], [24, 2, 24], '#d9d9d9', { name: 'StartPlatform' }));
   w.parts.push(part([0, 1.25, 0], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
   let z = -12, y = 0, x = 0;
-  for (let stage = 1; stage <= 10; stage++) {
+  for (let stage = 1; stage <= 16; stage++) {
     const col = colors[stage % colors.length];
-    const type = stage % 5;
-    if (type === 1) { // jumps
-      for (let i = 0; i < 6; i++) { z -= 8 + r() * 3; x += (r() - 0.5) * 8; y += r() < 0.4 ? 2 : 0; w.parts.push(part([x, y, z], [5, 1, 5], col)); }
-    } else if (type === 2) { // kill brick walkway
+    const type = stage % 7;
+    if (type === 1) { // jumps + coin arc
+      for (let i = 0; i < 6; i++) { z -= 8 + r() * 3; x += (r() - 0.5) * 8; y += r() < 0.4 ? 2 : 0; w.parts.push(part([x, y, z], [5, 1, 5], col)); if (i % 2 === 0) w.parts.push(part([x, y + 3, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' })); }
+    } else if (type === 2) { // kill brick walkway + moving sweeper
       z -= 22; w.parts.push(part([x, y, z], [8, 1, 36], col, { name: 'Walkway' }));
       for (let i = 0; i < 5; i++) w.parts.push(part([x + (i % 2 ? 2 : -2), y + 0.75, z - 14 + i * 7], [4, 0.5, 1.5], '#ff2020', { name: 'KillBrick', k: 'kill', m: 'neon' }));
+      w.parts.push(part([x, y + 1.5, z + 6], [2.5, 2, 3], '#ff2020', { name: 'Sweeper', k: 'kill', m: 'neon', mv: { a: 'x', d: 3, s: 1.3 } }));
       z -= 18;
     } else if (type === 3) { // truss climb / stairs up
       for (let i = 0; i < 7; i++) { z -= 5; y += 2.2; w.parts.push(part([x, y, z], [6, 1, 3], col, { name: 'Step' })); }
     } else if (type === 4) { // bounce pads
       z -= 10; w.parts.push(part([x, y, z], [6, 1, 6], '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
       z -= 14; y += 10; w.parts.push(part([x, y, z], [8, 1, 8], col));
+    } else if (type === 5) { // moving platforms over the lava — ride them!
+      for (let i = 0; i < 3; i++) {
+        z -= 12;
+        w.parts.push(part([x, y, z], [6, 1, 6], col, { name: 'Mover' + i, mv: { a: 'x', d: 6, s: 0.8 + i * 0.15, ph: i * 1.3 } }));
+        w.parts.push(part([x, y + 3, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
+      }
+      z -= 4;
+    } else if (type === 6) { // blink bridge — platforms that vanish, time your steps!
+      for (let i = 0; i < 5; i++) {
+        z -= 9;
+        w.parts.push(part([x, y, z], [5, 1, 5], col, { name: 'Blink' + i, blink: { on: 2.4, off: 1.2, ph: i * 0.9 } }));
+      }
+      z -= 4;
     } else { // thin beams
       for (let i = 0; i < 3; i++) { z -= 12; w.parts.push(part([x, y, z], [1.5, 1, 14], col, { name: 'Beam' })); }
       z -= 10;
@@ -47,10 +61,148 @@ export function obby() {
     w.parts.push(part([x, y, z], [12, 1, 12], '#efefef', { name: 'Stage' + stage }));
     w.parts.push(part([x, y + 0.75, z], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint' + stage, k: 'checkpoint', m: 'neon' }));
     w.parts.push(part([x + 4, y + 2.5, z + 4], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
+    w.parts.push(part([x - 5, y + 2, z - 5], [0.6, 4, 0.6], '#546e7a', { name: 'LampPost', m: 'metal' }));
+    w.parts.push(part([x - 5, y + 4.4, z - 5], [1.4, 0.8, 1.4], '#ffecb3', { name: 'Lamp', m: 'neon' }));
+    if (stage % 4 === 0) w.parts.push(part([x + 3, y + 3, z - 3], [2, 5, 2], '#7c4dff', { name: 'Stage Guard', k: 'npc', enemy: true, dialog: '👹 No passing! This is MY stage!' }));
   }
   z -= 14;
   w.parts.push(part([x, y, z], [20, 1, 20], '#ffd700', { name: 'WinPlatform', m: 'neon' }));
   w.parts.push(part([x, y + 0.75, z], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  return w;
+}
+
+export function gauntlet() {
+  const w = startWorld('#0b0512');
+  w.light = { tod: 0.5, ambient: 0.8, fog: 0.6 };
+  const stone = '#3a3a4a', stone2 = '#2a2a35', blood = '#8f0f16', pumpkin = '#ff7518';
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  const coin = (x, y, z) => P(x, y, z, 1.2, 1.2, 1.2, '#ffd400', { name: 'Coin', k: 'coin' });
+  const tomb = (x, top, z) => { P(x, top + 1.5, z, 2, 3, 0.6, '#6b6f7a', { name: 'Tombstone', m: 'concrete' }); P(x, top + 3.4, z, 2.6, 0.8, 0.7, '#7d818c', { name: 'TombTop', m: 'concrete' }); };
+  const tree = (x, top, z) => { P(x, top + 3.5, z, 1.2, 7, 1.2, '#3a2a1e', { name: 'DeadTrunk', m: 'wood' }); P(x, top + 8, z, 6, 2.5, 6, '#10130c', { name: 'DeadCanopy' }); };
+  const zoneEnd = (x, z, n) => { P(x, 4, z, 14, 1, 14, stone2, { name: 'ZoneEnd' + n, m: 'concrete' }); P(x, 4.75, z, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint' + n, k: 'checkpoint', m: 'neon' }); };
+
+  // ---- the blood lake (fall in = doom) ----
+  P(0, -30, -330, 700, 1, 900, blood, { name: 'BloodLake', k: 'kill', m: 'neon' });
+
+  // ---- start: the gate ----
+  P(0, 0, 12, 26, 2, 26, stone2, { name: 'StartPlatform', m: 'concrete' });
+  P(0, 1.25, 14, 6, 0.5, 6, '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' });
+  P(-8, 6.5, 2, 2, 11, 2, stone, { name: 'GatePillar', m: 'concrete' });
+  P(8, 6.5, 2, 2, 11, 2, stone, { name: 'GatePillar', m: 'concrete' });
+  P(-8, 12.4, 2, 1.6, 0.8, 1.6, pumpkin, { name: 'PumpkinLamp', m: 'neon' });
+  P(8, 12.4, 2, 1.6, 0.8, 1.6, pumpkin, { name: 'PumpkinLamp', m: 'neon' });
+  P(0, 12, 2, 18, 1.5, 2, stone, { name: 'GateBeam', m: 'concrete' });
+  P(-11, 3, 20, 0.5, 4, 0.5, '#4a3226', { name: 'SignPost', m: 'wood' });
+  P(-11, 5.5, 20, 5, 2, 0.4, '#4a3226', { name: 'Sign', m: 'wood' });
+  P(5, 3.5, 18, 2, 5, 2, '#5c6bc0', { name: 'Gatekeeper', k: 'npc', dialog: '🎃 Welcome to the Horror Gauntlet, mortal. Five zones of terror await — few return!', wander: false });
+  for (let fx = -12; fx <= 12; fx += 4) P(fx, 2, 25, 0.5, 2, 0.5, '#23202c', { name: 'FencePost', m: 'wood' });
+  tree(-10, 1, 6); tree(11, 1, 20);
+
+  // ---- Zone 1: Graveyard Steps ----
+  const steps = [[0, 0, -10], [-3, 1, -20], [3, 1, -30], [0, 2, -40], [-4, 2, -50], [4, 3, -60], [0, 3, -70], [0, 4, -80]];
+  steps.forEach(([sx, sy, sz], i) => {
+    P(sx, sy, sz, 7, 1, 7, i % 2 ? stone : stone2, { name: 'GraveStep' + i, m: 'concrete' });
+    tomb(sx + (i % 2 ? 2.4 : -2.4), sy + 0.5, sz + 2.4);
+    if (i === 2 || i === 5) tree(sx - 2.4, sy + 0.5, sz - 2.4);
+    if (i % 2 === 1) coin(sx, sy + 3.5, sz);
+  });
+  // side graveyard island (optional loot detour)
+  P(24, -0.5, -45, 34, 1, 44, '#23202c', { name: 'Graveyard', m: 'concrete' });
+  for (let gx = 0; gx < 3; gx++) for (let gz = 0; gz < 3; gz++) tomb(14 + gx * 9, 0, -30 - gz * 10);
+  P(24, 3, -64, 14, 6, 1, stone, { name: 'CryptWall', m: 'concrete' });
+  P(17.5, 3, -58, 1, 6, 12, stone, { name: 'CryptWall', m: 'concrete' });
+  P(30.5, 3, -58, 1, 6, 12, stone, { name: 'CryptWall', m: 'concrete' });
+  P(19, 3, -52, 4, 6, 1, stone, { name: 'CryptWall', m: 'concrete' });
+  P(29, 3, -52, 4, 6, 1, stone, { name: 'CryptWall', m: 'concrete' });
+  P(24, 5.25, -52, 14, 1.5, 1, stone, { name: 'CryptLintel', m: 'concrete' });
+  P(24, 6.5, -58, 15, 1, 13, '#1c1a24', { name: 'CryptRoof', m: 'concrete' });
+  P(24, 1, -60, 4, 2, 3, '#ffd400', { name: 'GoldChest', m: 'neon' });
+  coin(21, 2.5, -58); coin(27, 2.5, -58); coin(24, 2.5, -55);
+  tree(38, 0, -28); tree(10, 0, -62);
+  for (let fx = 9; fx <= 39; fx += 6) P(fx, 1, -24, 0.5, 2, 0.5, '#23202c', { name: 'FencePost', m: 'wood' });
+  zoneEnd(0, -92, 1);
+  tomb(-5, 4.5, -95); tree(5, 4.5, -89);
+
+  // ---- Zone 2: Blood Lake Crossing (moving platforms) ----
+  const movers = [
+    { a: 'x', d: 6, s: 0.9, ph: 0 }, { a: 'x', d: 6, s: 1.1, ph: 2 }, { a: 'y', d: 2, s: 0.8, ph: 0 },
+    { a: 'x', d: 7, s: 1.25, ph: 4 }, { a: 'x', d: 5, s: 1.0, ph: 1 },
+  ];
+  movers.forEach((mv, i) => {
+    const mz = -108 - i * 11;
+    P(0, 4, mz, 7, 1, 7, i % 2 ? '#4a4a5e' : stone, { name: 'LakeMover' + i, m: 'concrete', mv });
+    coin(0, 7.5, mz);
+  });
+  zoneEnd(0, -166, 2);
+  tree(-4, 4.5, -169); tomb(4, 4.5, -163); coin(-4, 7.5, -160); coin(4, 7.5, -172);
+
+  // ---- Zone 3: Blink Bridge ----
+  const blinks = [[-181, 0], [-192, 0.85], [-203, 1.7], [-230, 2.55], [-241, 3.4], [-252, 4.25]];
+  blinks.forEach(([bz, ph], i) => P(0, 4, bz, 6, 1, 6, i % 2 ? '#5e4a6e' : '#4a3a5e', { name: 'Blink' + i, blink: { on: 2.6, off: 1.3, ph } }));
+  coin(0, 7.5, -192); coin(0, 7.5, -241);
+  P(0, 4, -216, 12, 1, 12, stone, { name: 'MidPlatform', m: 'concrete' });
+  P(0, 5.25, -216, 3, 1.5, 4, '#ff2020', { name: 'MidSweeper', k: 'kill', m: 'neon', mv: { a: 'x', d: 3.2, s: 1.5 } });
+  coin(0, 8, -216);
+  for (const fx of [-5, 5]) for (const fz of [-221, -211]) P(fx, 5.5, fz, 0.5, 2, 0.5, '#23202c', { name: 'FencePost', m: 'wood' });
+  zoneEnd(0, -266, 3);
+  tree(-5, 4.5, -269); tomb(5, 4.5, -263);
+
+  // ---- Zone 4: Sweeper Corridor ----
+  P(0, 4, -306, 10, 1, 56, stone2, { name: 'Corridor', m: 'concrete' });
+  [-292, -308, -324].forEach((sz, i) => P(0, 5.25, sz, 3, 1.5, 4, '#ff2020', { name: 'Sweeper' + i, k: 'kill', m: 'neon', mv: { a: 'x', d: 3.2, s: 1.4 + i * 0.2, ph: i * 1.1 } }));
+  P(-2.5, 4.75, -300, 3, 0.5, 2, '#ff2020', { name: 'KillStrip', k: 'kill', m: 'neon' });
+  P(2.5, 4.75, -316, 3, 0.5, 2, '#ff2020', { name: 'KillStrip', k: 'kill', m: 'neon' });
+  for (let rz = -282; rz >= -330; rz -= 8) { P(-4.6, 5.75, rz, 0.5, 2.5, 0.5, '#23202c', { name: 'RailPost', m: 'wood' }); P(4.6, 5.75, rz, 0.5, 2.5, 0.5, '#23202c', { name: 'RailPost', m: 'wood' }); }
+  P(-4.6, 7, -306, 0.4, 0.4, 54, '#4a3226', { name: 'Rail', m: 'wood' });
+  P(4.6, 7, -306, 0.4, 0.4, 54, '#4a3226', { name: 'Rail', m: 'wood' });
+  for (const az of [-288, -306, -324]) {
+    P(-5.4, 8, az, 0.6, 7, 0.6, stone, { name: 'ArchPost', m: 'concrete' });
+    P(5.4, 8, az, 0.6, 7, 0.6, stone, { name: 'ArchPost', m: 'concrete' });
+    P(0, 11.6, az, 11.4, 0.8, 0.8, stone, { name: 'ArchBeam', m: 'concrete' });
+  }
+  P(9, 4, -308, 6, 1, 6, stone, { name: 'HealAlcove', m: 'concrete' });
+  P(9, 5.6, -308, 1.6, 1.6, 1.6, '#ff5b5b', { name: 'HealPack', k: 'heal', m: 'neon' });
+  tomb(10.5, 4.5, -311);
+  coin(0, 7.5, -296); coin(0, 7.5, -312); coin(0, 7.5, -328);
+  zoneEnd(0, -346, 4);
+  tomb(-5, 4.5, -349); tree(5, 4.5, -343);
+
+  // ---- Zone 5: The Haunted Tower ----
+  P(0, 4, -368, 20, 1, 20, stone2, { name: 'TowerBase', m: 'concrete' });
+  P(0, 4.75, -368, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint5', k: 'checkpoint', m: 'neon' });
+  tomb(-7, 4.5, -374); tree(7, 4.5, -362);
+  P(0, 4, -380, 16, 1, 10, stone, { name: 'TowerBridge', m: 'concrete' });
+  for (const fx of [-7, 7]) for (const fz of [-376, -384]) P(fx, 5.5, fz, 0.5, 2, 0.5, '#23202c', { name: 'FencePost', m: 'wood' });
+  P(0, 30, -388, 9, 56, 9, '#26222e', { name: 'TowerCore', m: 'concrete' });
+  for (const cx of [-4.5, 4.5]) for (const cz of [-392.5, -383.5]) P(cx, 30, cz, 1.2, 56, 1.2, stone, { name: 'TowerTrim', m: 'concrete' });
+  P(4.65, 20, -388, 0.3, 2, 1.2, '#b366ff', { name: 'Window', m: 'neon' });
+  P(4.65, 40, -388, 0.3, 2, 1.2, '#b366ff', { name: 'Window', m: 'neon' });
+  P(-4.65, 30, -388, 0.3, 2, 1.2, pumpkin, { name: 'Window', m: 'neon' });
+  P(-4.65, 48, -388, 0.3, 2, 1.2, pumpkin, { name: 'Window', m: 'neon' });
+  // elevator (bonus coin ride up the front side — hop on from the bridge)
+  P(13, 4, -380, 6, 1, 6, stone, { name: 'ElevatorLedge', m: 'concrete' });
+  P(13, 20, -380, 6, 1, 6, '#4a4a5e', { name: 'Elevator', m: 'metal', mv: { a: 'y', d: 13, s: 0.5 } });
+  coin(13, 22, -380); coin(13, 30, -380);
+  // spiral climb
+  const landings = {};
+  for (let i = 0; i <= 16; i++) {
+    const a = i * 0.62, sx = Math.cos(a) * 9, sz = -388 + Math.sin(a) * 9, sy = 7.5 + i * 3.3;
+    const big = i === 5 || i === 11;
+    P(sx, sy, sz, big ? 8 : 5, 1, big ? 8 : 5, i % 2 ? stone : '#4a4a5e', { name: 'TowerStep' + i, m: 'concrete' });
+    if (big) landings[i] = [sx, sy, sz];
+    if (i % 3 === 0) coin(sx, sy + 3, sz);
+  }
+  P(landings[5][0] + 1.5, landings[5][1] + 3, landings[5][2] + 1.5, 2, 5, 2, '#7c4dff', { name: 'Tower Guard', k: 'npc', enemy: true, dialog: '👹 The tower is MINE!' });
+  P(landings[11][0] - 1.5, landings[11][1] + 3, landings[11][2] - 1.5, 2, 5, 2, '#c4281c', { name: 'Tower Warden', k: 'npc', enemy: true, dialog: '👹 Almost there... too bad you will NOT make it!' });
+  P(landings[11][0], landings[11][1] + 0.75, landings[11][2], 4, 0.5, 4, '#2ec4ff', { name: 'CheckpointMid', k: 'checkpoint', m: 'neon' });
+  // summit
+  P(0, 60, -388, 6, 4, 6, '#26222e', { name: 'Pedestal', m: 'concrete' });
+  P(0, 62, -388, 18, 1, 18, '#1c1a24', { name: 'WinPlatform', m: 'concrete' });
+  P(0, 62.75, -388, 8, 0.5, 8, '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' });
+  for (let k = 0; k < 8; k++) coin(Math.cos(k * Math.PI / 4) * 6.5, 65, -388 + Math.sin(k * Math.PI / 4) * 6.5);
+  for (const bx of [-8, 8]) for (const bz of [-396, -380]) P(bx, 64, bz, 1, 3, 1, stone, { name: 'Battlement', m: 'concrete' });
+  P(0, 62.6, -379.5, 18, 0.3, 0.6, pumpkin, { name: 'Trim', m: 'neon' });
+  P(0, 62.6, -396.5, 18, 0.3, 0.6, pumpkin, { name: 'Trim', m: 'neon' });
   return w;
 }
 
@@ -210,7 +362,7 @@ export function garden() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden };
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, gauntlet };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');

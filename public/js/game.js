@@ -884,6 +884,17 @@ export class Game {
       const m = this.meshes.get(p.id); if (m) { this.scene.remove(m); this.meshes.delete(p.id); }
       this.spawnNPC(p);
     }
+    // dynamic parts: moving platforms/hazards (mv) + blinking platforms (blink)
+    this.movers = []; this.blinkers = [];
+    for (const p of this.world.parts) {
+      if (p.k === 'npc') continue;
+      if (p.mv && ['x', 'y', 'z'].includes(p.mv.a)) this.movers.push({ p, base: [...p.p] });
+      if (p.blink) {
+        const m = this.meshes.get(p.id);
+        if (m) { m.material = m.material.clone(); m.material.transparent = true; }
+        this.blinkers.push({ p, on: true });
+      }
+    }
     this.char = buildChar(this.me.avatar, { pet: false, gear: false });
     this.scene.add(this.char);
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3();
@@ -1402,6 +1413,36 @@ export class Game {
       }
     }
   }
+  // Moving + blinking parts. Runs before physics so a player standing on a
+  // mover is carried by exactly the distance it moved this frame.
+  updateDynamics() {
+    const t = this.t;
+    for (const mv of this.movers) {
+      const p = mv.p;
+      const sp = Math.max(0.2, Math.min(4, Number(p.mv.s) || 1));
+      const d = Math.max(-120, Math.min(120, Number(p.mv.d) || 10));
+      const off = Math.sin(t * sp * 1.6 + (Number(p.mv.ph) || 0)) * d;
+      const nx = mv.base[0] + (p.mv.a === 'x' ? off : 0);
+      const ny = mv.base[1] + (p.mv.a === 'y' ? off : 0);
+      const nz = mv.base[2] + (p.mv.a === 'z' ? off : 0);
+      const dx = nx - p.p[0], dy = ny - p.p[1], dz = nz - p.p[2];
+      if (!dx && !dy && !dz) continue;
+      p.p = [nx, ny, nz];
+      const m = this.meshes.get(p.id); if (m) m.position.set(nx, ny, nz);
+      this.syncPartBoxes(p);
+      if (this.ground && this.ground.p === p) { this.pos.x += dx; this.pos.y += dy; this.pos.z += dz; }
+    }
+    for (const bl of this.blinkers) {
+      const p = bl.p;
+      const onT = Math.max(0.3, Math.min(30, Number(p.blink.on) || 2));
+      const offT = Math.max(0.3, Math.min(30, Number(p.blink.off) || 1.5));
+      const cyc = (t + (Number(p.blink.ph) || 0)) % (onT + offT);
+      const on = cyc < onT;
+      const m = this.meshes.get(p.id);
+      if (on !== bl.on) { bl.on = on; if (m) m.visible = on; this.setPartActive(p, on); }
+      if (m && on) m.material.opacity = cyc > onT - 0.45 ? 0.35 : 1; // flicker warning before it vanishes
+    }
+  }
   physics(dt) {
     if (this.frozen) { this.vel.set(0, 0, 0); this.carSpeed = 0; this.anim = 'idle'; return; }
     if (this.vehicleId && !this.dead) { this.drivePhysics(dt); return; }
@@ -1505,6 +1546,7 @@ export class Game {
     if (this.emote === 'wave' && (this.emoteT -= dt) <= 0) this.emote = null;
     for (const fn of (this._scriptState?.tickFns || [])) { try { fn(dt, this.t); } catch (e) { console.warn('onTick error:', e); } }
     if (!this.dead) {
+      this.updateDynamics();
       this.physics(dt);
       if (this.firing && this.rivals && this.rivalsWeapon().auto) this.fireRivals();
       this.char.position.copy(this.pos);

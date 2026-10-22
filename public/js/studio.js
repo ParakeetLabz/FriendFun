@@ -21,6 +21,9 @@ const PRESETS = {
   npc: { name: 'NPC', s: [2, 5, 2], c: '#ffd400', k: 'npc', m: 'plastic' },
   jump: { name: 'JumpPad', s: [4, 0.5, 4], c: '#b366ff', k: 'jump', m: 'neon' },
   heal: { name: 'HealPack', s: [1.6, 1.6, 1.6], c: '#ff5b5b', k: 'heal', m: 'neon' },
+  mover: { name: 'Moving Platform', s: [6, 1, 6], c: '#26c6da', k: 'part', m: 'plastic', mv: { a: 'x', d: 12, s: 1 } },
+  blink: { name: 'Blink Platform', s: [6, 1, 6], c: '#ab47bc', k: 'part', m: 'plastic', blink: { on: 2, off: 1.5 } },
+  sweeper: { name: 'Sweeper (moving KillBrick)', s: [4, 1, 2], c: '#ff2020', k: 'kill', m: 'neon', mv: { a: 'x', d: 10, s: 1.4 } },
   gem: { name: 'Gem', s: [1.5, 1.5, 1.5], c: '#00ffcc', k: 'coin', m: 'neon' },
   pillar: { name: 'Pillar', s: [2, 12, 2], c: '#a3a2a5', k: 'part', m: 'concrete' },
 };
@@ -572,6 +575,14 @@ export class Studio {
       <div class="pr-sec">Behavior</div>
       <div class="pr-row"><span>Type</span><select data-f="k">${KINDS.map(k => `<option ${k === p.k ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
       <div class="pr-row"><span>CanCollide</span><input type="checkbox" data-f="cc" ${p.cc !== false ? 'checked' : ''}></div>
+      <div class="pr-sec">Motion</div>
+      <div class="pr-row"><span>Moving</span><input type="checkbox" data-mv="on" ${p.mv ? 'checked' : ''}></div>
+      ${p.mv ? `<div class="pr-row"><span>Axis</span><select data-mv="a">${['x', 'y', 'z'].map(a => `<option ${p.mv.a === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Distance</span><input type="number" step="1" min="-120" max="120" data-mv="d" value="${p.mv.d ?? 12}"></div>
+      <div class="pr-row"><span>Speed</span><input type="number" step="0.2" min="0.2" max="4" data-mv="s" value="${p.mv.s ?? 1}"></div>` : ''}
+      <div class="pr-row"><span>Blinking</span><input type="checkbox" data-blink="on" ${p.blink ? 'checked' : ''}></div>
+      ${p.blink ? `<div class="pr-row"><span>Visible (sec)</span><input type="number" step="0.5" min="0.3" max="30" data-blink="on_t" value="${p.blink.on ?? 2}"></div>
+      <div class="pr-row"><span>Hidden (sec)</span><input type="number" step="0.5" min="0.3" max="30" data-blink="off_t" value="${p.blink.off ?? 1.5}"></div>` : ''}
       ${p.k === 'npc' ? `<div class="pr-sec">NPC</div>
       <div class="pr-row"><span>Behavior</span><select data-f="enemy"><option value="0">😊 Friendly</option><option value="1"${p.enemy ? ' selected' : ''}>👹 Enemy (chases players)</option></select></div>
       <div class="pr-row"><span>Dialog</span><input data-f="dialog" maxlength="200" placeholder="Hello!" value="${esc(p.dialog || '')}"></div>
@@ -585,6 +596,18 @@ export class Studio {
       ${v3('p', 'Position')}${v3('s', 'Size')}`;
     this.props.querySelectorAll('input,select').forEach(inp => inp.addEventListener('change', () => {
       this.pushUndo();
+      if (inp.dataset.mv !== undefined) {
+        const k2 = inp.dataset.mv;
+        if (k2 === 'on') { if (inp.checked) p.mv = { a: 'x', d: 12, s: 1 }; else delete p.mv; }
+        else if (p.mv) { if (k2 === 'a') p.mv.a = inp.value; else if (k2 === 'd') p.mv.d = Math.max(-120, Math.min(120, parseFloat(inp.value) || 12)); else p.mv.s = Math.max(0.2, Math.min(4, parseFloat(inp.value) || 1)); }
+        this.markDirty(); this.renderProps(); return;
+      }
+      if (inp.dataset.blink !== undefined) {
+        const k2 = inp.dataset.blink;
+        if (k2 === 'on') { if (inp.checked) p.blink = { on: 2, off: 1.5 }; else delete p.blink; }
+        else if (p.blink) { p.blink[k2 === 'on_t' ? 'on' : 'off'] = Math.max(0.3, Math.min(30, parseFloat(inp.value) || 2)); }
+        this.markDirty(); this.renderProps(); return;
+      }
       if (inp.dataset.script) {
         const key = inp.dataset.script;
         if (!p.script) p.script = { onTouch: { action: 'none' } };
@@ -625,6 +648,8 @@ export class Studio {
     const at = hit ? hit.point : this.camPos.clone().add(new THREE.Vector3(0, 0, -20).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ')));
     const p = { id: this.newId(), name: pr.name, p: [Math.round(at.x), +(at.y + pr.s[1] / 2).toFixed(2), Math.round(at.z)], s: [...pr.s], c: pr.c, k: pr.k, m: pr.m };
     if (pr.k === 'npc') { p.dialog = 'Hello!'; p.wander = true; }
+    if (pr.mv) p.mv = { ...pr.mv };
+    if (pr.blink) p.blink = { ...pr.blink };
     this.world.parts.push(p); this.addMesh(p); this.renderExplorer(); this.select(p); this.markDirty();
     if (this.tool === 'select') this.setTool('move');
   }
