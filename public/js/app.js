@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=439797aa').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=fe10643a').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -64,9 +64,9 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=1d24a70d';
-import { templates } from './worlds.js?v=a0431b48';
-import { startSpooky, stopSpooky, sfx } from './sound.js?v=89850e26';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=collab26';
+import { templates } from './worlds.js?v=collab26';
+import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
 const app = document.getElementById('app');
@@ -262,7 +262,7 @@ function shell(active, content) {
   <header class="topbar">
     <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
     <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
-    <nav class="tb-nav"><a href="#/discover">Discover</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
+    <nav class="tb-nav"><a href="#/discover">Charts</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
     <form class="tb-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search"></form>
     <div class="tb-right">
       <div class="tb-user-wrap">
@@ -283,7 +283,8 @@ function shell(active, content) {
     </div>
   </header>
   <aside class="sidebar">
-    ${[['home', 'Home', icons.home], ['discover', 'Discover', icons.discover], ['avatar', 'Avatar', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
+    <a class="sb-user" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, "headshot")}<span class="sb-user-txt"><b>${esc(me.name)}</b><span>@${esc(me.name)}</span></span></a>
+    ${[['home', 'Lobby', icons.home], ['dashboard', 'Dashboard', icons.discover], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
       .map(([h, l, i, badge]) => h.startsWith('http') ? `<a href="${h}" target="_blank" rel="noopener"><span class="sb-ico">${i}</span>${l}<span class="badge">↗</span></a>` : `<a href="#/${h}" class="${active === h.split('/')[0] ? 'active' : ''}"><span class="sb-ico">${i}</span>${l}${badge ? `<span class="badge">${badge}</span>` : ''}</a>`).join('')}
     <button class="sidebar-logout"><span class="sb-ico">&#9094;</span>Log Out</button>
     <div class="sidebar-footer">Made by <a href="https://parakeetlabz.vercel.app" target="_blank" rel="noopener">Parakeet Labz</a></div>
@@ -406,7 +407,7 @@ function initEasterEggs() {
 setTimeout(initEasterEggs, 1000);
 
 function mount(active, html, after) {
-  document.body.classList.toggle('halloween', halloweenActive());
+  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
   app.className = ''; app.innerHTML = shell(active, html);
   refreshPartyBar();
   refreshSiteBanner();
@@ -500,13 +501,14 @@ function dailyToast(r) {
 
 // ---------- pages ----------
 function loginPage() {
-  document.body.classList.toggle('halloween', halloweenActive());
+  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
   app.className = 'landing';
   app.innerHTML = `
   <div class="landing-bg"></div>
   <div class="landing-inner">
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
-      <h1>Play, build and hang out with friends.</h1><p>Join millions of blocky adventurers. Jump into games, customize your avatar, and build your own worlds in Funtopia Studio.</p></div>
+      <h1>Play, build… and survive the night.</h1><p>Join millions of blocky adventurers — if you dare. Jump into haunted games, dress your avatar for the dark, and build your own cursed worlds in Funtopia Studio. Enter… if you dare. 🎃</p>
+      ${blockverseActive() ? `<a class="bv-strip" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">🟩 <b>Funtopia × Blockverse is LIVE!</b> Free collab gifts, a portal-run course & the World Hopper badge — visit Blockverse ↗</a>` : ''}</div>
     <div class="auth-card">
       <div class="auth-tabs"><button data-m="signup" class="active">Sign Up</button><button data-m="login">Log In</button></div>
       <form class="auth-form">
@@ -540,13 +542,16 @@ function loginPage() {
 async function homePage() {
   const [games, fr] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends')]);
   const byId = Object.fromEntries(games.map(g => [g.id, g]));
+  const bvGames = games.filter(g => g.id === 'g_bvportal' || g.id === 'g_bvplaza');
   const recent = me.recent.map(id => byId[id]).filter(Boolean);
   const favs = me.favorites.map(id => byId[id]).filter(Boolean);
   const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
-  mount('home', `    ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
+  mount('dashboard', `    ${blockverseActive() ? `<div class="bv-hero home-bv"><div class="hw-hero-emoji">🟩</div><div class="hw-hero-text"><h1>Funtopia × Blockverse</h1><p class="muted">The portal is open! Two crossover worlds, <b>free gifts</b> in your inventory, and the <b>World Hopper badge</b>.</p><p><a class="btn-primary" href="#/play/g_bvportal">▶ Play Portal Run</a> <a class="btn-secondary" href="#/blockverse">Collab Hub</a> <a class="btn-secondary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p></div></div>` : ''}
+    ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
     <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
     <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
       <div class="friends-row">${friends.length ? friends.map(userTile).join('') : `<a class="add-friends" href="#/friends"><span>+</span>Add Friends</a>`}</div></section>
+    ${blockverseActive() && bvGames.length ? `<section><div class="sec-h"><h2>🟩 Blockverse Collab Games</h2><a href="#/blockverse">Collab Hub &rsaquo;</a></div><div class="game-row">${bvGames.map(gameCard).join('')}</div></section>` : ''}
     ${recent.length ? `<section><div class="sec-h"><h2>Continue</h2></div><div class="game-row">${recent.map(gameCard).join('')}</div></section>` : ''}
     <section><div class="sec-h"><h2>Recommended For You</h2><a href="#/discover">See All &rsaquo;</a></div><div class="game-row">${games.slice(0, 12).map(gameCard).join('')}</div></section>
     ${favs.length ? `<section><div class="sec-h"><h2>Favorites</h2></div><div class="game-row">${favs.map(gameCard).join('')}</div></section>` : ''}
@@ -558,7 +563,7 @@ async function discoverPage(q) {
   const top = [...games].sort((a, b) => (b.likes / (b.likes + b.dislikes || 1)) - (a.likes / (a.likes + a.dislikes || 1)));
   const fresh = [...games].sort((a, b) => b.updated - a.updated);
   mount('discover', q ? `<h1>Results for "${esc(q)}"</h1><div class="game-grid">${games.map(gameCard).join('') || '<p class="muted">No games found.</p>'}</div>`
-    : `<h1>Discover</h1>
+    : `<h1>Charts</h1>
     <section><div class="sec-h"><h2>Most Popular</h2></div><div class="game-grid">${games.map(gameCard).join('')}</div></section>
     <section><div class="sec-h"><h2>Top Rated</h2></div><div class="game-row">${top.map(gameCard).join('')}</div></section>
     <section><div class="sec-h"><h2>Recently Updated</h2></div><div class="game-row">${fresh.map(gameCard).join('')}</div></section>`);
@@ -683,7 +688,7 @@ async function playPage(id, server) {
   const g = await api('GET', '/api/games/' + id);
   me = await api('GET', '/api/me');
   app.className = 'fullscreen'; app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=23d95dd3');
+  const { Game } = await import('./game.js?v=4ee442ac');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -931,6 +936,35 @@ function paintPetVoxels(root) {
   });
 }
 const halloweenActive = () => { const n = Date.now(); return n >= HALLOWEEN_DATES.starts && n <= HALLOWEEN_DATES.ends; };
+const BV_DATES = { starts: Date.parse('2026-10-22T00:00:00Z'), ends: Date.parse('2026-12-06T00:00:00Z') };
+const blockverseActive = () => { const n = Date.now(); return n >= BV_DATES.starts && n <= BV_DATES.ends; };
+const BV_EMOJI = { g_bvportal: '🌌', g_bvplaza: '🟩' };
+async function blockversePage() {
+  let ev = null;
+  try { ev = await api('GET', '/api/event/blockverse'); } catch { ev = { games: [], active: blockverseActive() }; }
+  const daysLeft = Math.max(0, Math.ceil((BV_DATES.ends - Date.now()) / 86400000));
+  const gifts = ['hat_bv_cap', 'shirt_bv_tee', 'gear_foamsword', 'pet_cubit'].map(id => ITEM[id]).filter(Boolean);
+  mount('blockverse', `
+    <div class="bv-hero">
+      <div class="hw-hero-emoji">🟩</div>
+      <div class="hw-hero-text">
+        <h1>Funtopia × Blockverse</h1>
+        <p class="muted">${ev.active ? `Two worlds, one portal! A crossover course, a plaza hangout, <b>free collab gifts</b> and the <b>World Hopper badge</b> — ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}!` : 'The portal has closed... for now. Thanks for hopping worlds with us!'}</p>
+        <p><a class="btn-primary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p>
+      </div>
+    </div>
+    <section><div class="sec-h"><h2>Collab Games (${ev.games.length})</h2></div>
+      <div class="game-row">${ev.games.map(g => `
+        <a class="game-card" href="#/play/${g.id}">
+          <div class="gc-thumb bv-thumb">${BV_EMOJI[g.id] || '🟩'}</div>
+          <b>${esc(g.name)}</b><span class="muted small">${fmt(g.visits)} plays</span>
+        </a>`).join('') || '<p class="muted">The portal is still warming up…</p>'}</div></section>
+    <section><div class="sec-h"><h2>Free Collab Gifts 🎁</h2></div>
+      <p class="muted">Free for everyone while the collab lasts — they're already in your inventory! Find them in the <a href="#/avatar">Avatar Editor</a> and <a href="#/catalog">Marketplace</a>.</p>
+      <div class="game-row">${gifts.map(it => `<div class="game-card"><div class="gc-thumb bv-thumb">${it.emoji || '🎁'}</div><b>${esc(it.name)}</b><span class="muted small">FREE · Limited</span></div>`).join('')}</div></section>
+    <section><div class="sec-h"><h2>World Hopper Badge 🏅</h2></div>
+      <p class="muted">Beat the <a href="#/play/g_bvportal">Blockverse Portal Run</a> to earn the <b>World Hopper</b> badge — only available during the collab!</p></section>`);
+}
 const HALLOWEEN_EMOJI = { g_halloween01: '👻', g_halloween02: '🎃', g_halloween03: '🧙', g_halloween04: '💀', g_halloween05: '🦇' };
 async function halloweenPage() {
   let ev = null;
@@ -1196,7 +1230,7 @@ async function profilePage(name) {
 
 async function createPage() {
   const mine = await api('GET', '/api/mygames');
-  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 10-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!']];
+  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.'], ['blockverse', '🌌 Blockverse Portal Run', 'The Funtopia × Blockverse collab course — moving platforms, blink bridges, sweepers!'], ['bvPlaza', '🟩 Blockverse Plaza', 'Collab hangout plaza with the great portal, duel ring and parkour.']];
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button></div>
@@ -1215,17 +1249,17 @@ function tplThumb(k) { return tplCache[k] ||= worldThumbnail(templates[k]()); }
 
 async function studioPage(id, tpl) {
   let g;
-  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
+  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet', blockverse: 'Blockverse Portal Run', bvPlaza: 'Blockverse Plaza' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
   else { g = await api('GET', '/api/games/' + id); if (g.creator.toLowerCase() !== me.name.toLowerCase()) { toast('You can only edit your own games', true); location.hash = '#/games/' + id; return; } }
   app.className = 'fullscreen'; app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=5bfe0508');
+  const { Studio } = await import('./studio.js?v=collab26');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=23d95dd3');
+      const { Game: GameClass } = await import('./game.js?v=4ee442ac');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1405,6 +1439,7 @@ async function ugcGlbModal(u) {
 const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN, ensureAvatar3d, get me() { return me; }, get BADGE_DEFS() { return BADGE_DEFS; } };
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
+const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
   const m = await import('./admin.js?v=d572c4e4');
   return m.adminPage(adminDeps, q);
@@ -1522,9 +1557,18 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
+      case 'home': case 'lobby': { const m = await import('./lobby.js?v=fnlobby1'); return m.lobbyPage(lobbyDeps); }
+      case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'));
+      case 'create': return await createPage();
+      case 'users': return await profilePage(decodeURIComponent(seg[1] || ''));
+      case 'friends': return await friendsPage();
+      case 'messages': return seg[1] ? await dmPage(decodeURIComponent(seg[1])) : await messagesPage();
+      case 'groups': return groupsPage();
+      case 'halloween': return await halloweenPage();
+      case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
       case 'ugc': { const m = await import('./ugc-studio.js?v=07967ed1'); return m.ugcPage(ugcDeps); }
@@ -1532,6 +1576,7 @@ async function route() {
       case 'scripts': { const m = await import('./scripts-page.js?v=e67b220b'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
       case 'club': return clubPage();
+      case 'blockverse': return await blockversePage();
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
       case 'owner': return await ownerPage();
