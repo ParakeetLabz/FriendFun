@@ -2,12 +2,12 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=439797aa';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=fe10643a';
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
 import { VoiceChat } from './voice.js?v=9d41bd66';
-import { sfx } from './sound.js?v=89850e26';
+import { sfx } from './sound.js?v=music26';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=1d24a70d';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=collab26';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -73,11 +73,11 @@ function buildGear(gearId) {
   g.scale.setScalar(0.5);
   return g;
 }
-const GEAR_COOLDOWN = { gear_sword: 0.8, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
+const GEAR_COOLDOWN = { gear_sword: 0.8, gear_foamsword: 0.7, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
   gear_blaster: 0.5, gear_raygun: 0.7, gear_crossbow: 0.9, gear_freezeray: 1.0,
   gear_hammer: 1.0, gear_axe: 0.9, gear_katana: 0.6, gear_spear: 0.9, gear_mace: 1.1,
   gear_lasersword: 0.7, gear_cannon: 2.5, gear_bazooka: 2.8 };
-const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
+const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_foamsword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
   gear_blaster: 'pellet', gear_raygun: 'pellet', gear_crossbow: 'pellet', gear_freezeray: 'pellet',
   gear_hammer: 'melee', gear_axe: 'melee', gear_katana: 'melee', gear_spear: 'melee', gear_mace: 'melee',
   gear_lasersword: 'melee', gear_cannon: 'rocket', gear_bazooka: 'rocket' };
@@ -175,7 +175,7 @@ export class Game {
     ep.innerHTML = '<div class="pk-label">Emotes — /e name</div>' + EMOTES.map(x => `<button data-e="${x.id}" title="${x.name}">${x.icon}</button>`).join('');
     ep.onclick = (e) => { const b = e.target.closest('button[data-e]'); if (b) this.doEmote(b.dataset.e); };
     const jp = q('.jam-picker');
-    jp.innerHTML = '<div class="pk-label">Jam tracks — /jam</div>' + JAM_TRACKS.map(x => `<button data-j="${x.id}" title="${x.name}">${x.icon}</button>`).join('') + '<button data-j="stop" title="Stop">\u23F9\uFE0F</button>';
+    jp.innerHTML = '<div class="pk-label">Jam tracks — /jam</div>' + JAM_TRACKS.map(x => `<button data-j="${x.id}" title="${x.name}">${x.icon}</button>`).join('') + '<button data-j="stop" title="Stop">⏹️</button>';
     jp.onclick = (e) => { const b = e.target.closest('button[data-j]'); if (b) this.doJam(b.dataset.j); };
     q('.emote-btn').onclick = (e) => { e.stopPropagation(); this.togglePicker('.emote-picker', '.jam-picker'); };
     q('.jam-btn').onclick = (e) => { e.stopPropagation(); this.togglePicker('.jam-picker', '.emote-picker'); };
@@ -935,6 +935,17 @@ export class Game {
       const m = this.meshes.get(p.id); if (m) { this.scene.remove(m); this.meshes.delete(p.id); }
       this.spawnNPC(p);
     }
+    // dynamic parts: moving platforms/hazards (mv) + blinking platforms (blink)
+    this.movers = []; this.blinkers = [];
+    for (const p of this.world.parts) {
+      if (p.k === 'npc') continue;
+      if (p.mv && ['x', 'y', 'z'].includes(p.mv.a)) this.movers.push({ p, base: [...p.p] });
+      if (p.blink) {
+        const m = this.meshes.get(p.id);
+        if (m) { m.material = m.material.clone(); m.material.transparent = true; }
+        this.blinkers.push({ p, on: true });
+      }
+    }
     this.char = buildChar(this.me.avatar, { pet: false, gear: false });
     this.scene.add(this.char);
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3();
@@ -1459,6 +1470,36 @@ export class Game {
       }
     }
   }
+  // Moving + blinking parts. Runs before physics so a player standing on a
+  // mover is carried by exactly the distance it moved this frame.
+  updateDynamics() {
+    const t = this.t;
+    for (const mv of this.movers) {
+      const p = mv.p;
+      const sp = Math.max(0.2, Math.min(4, Number(p.mv.s) || 1));
+      const d = Math.max(-120, Math.min(120, Number(p.mv.d) || 10));
+      const off = Math.sin(t * sp * 1.6 + (Number(p.mv.ph) || 0)) * d;
+      const nx = mv.base[0] + (p.mv.a === 'x' ? off : 0);
+      const ny = mv.base[1] + (p.mv.a === 'y' ? off : 0);
+      const nz = mv.base[2] + (p.mv.a === 'z' ? off : 0);
+      const dx = nx - p.p[0], dy = ny - p.p[1], dz = nz - p.p[2];
+      if (!dx && !dy && !dz) continue;
+      p.p = [nx, ny, nz];
+      const m = this.meshes.get(p.id); if (m) m.position.set(nx, ny, nz);
+      this.syncPartBoxes(p);
+      if (this.ground && this.ground.p === p) { this.pos.x += dx; this.pos.y += dy; this.pos.z += dz; }
+    }
+    for (const bl of this.blinkers) {
+      const p = bl.p;
+      const onT = Math.max(0.3, Math.min(30, Number(p.blink.on) || 2));
+      const offT = Math.max(0.3, Math.min(30, Number(p.blink.off) || 1.5));
+      const cyc = (t + (Number(p.blink.ph) || 0)) % (onT + offT);
+      const on = cyc < onT;
+      const m = this.meshes.get(p.id);
+      if (on !== bl.on) { bl.on = on; if (m) m.visible = on; this.setPartActive(p, on); }
+      if (m && on) m.material.opacity = cyc > onT - 0.45 ? 0.35 : 1; // flicker warning before it vanishes
+    }
+  }
   physics(dt) {
     if (this.frozen) { this.vel.set(0, 0, 0); this.carSpeed = 0; this.anim = 'idle'; return; }
     if (this.vehicleId && !this.dead) { this.drivePhysics(dt); return; }
@@ -1562,6 +1603,7 @@ export class Game {
     if (this.emote && this.emoteT && (this.emoteT -= dt) <= 0) this.emote = null;
     for (const fn of (this._scriptState?.tickFns || [])) { try { fn(dt, this.t); } catch (e) { console.warn('onTick error:', e); } }
     if (!this.dead) {
+      this.updateDynamics();
       this.physics(dt);
       if (this.firing && this.rivals && this.rivalsWeapon().auto) this.fireRivals();
       this.char.position.copy(this.pos);
