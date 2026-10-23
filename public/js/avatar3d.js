@@ -434,13 +434,15 @@ function buildR6(avatar, opts = {}, smooth = false) {
   const torsoW = isBugs ? 1.8 : 2;
   const torso = part(torsoW, 2, 1, suit ? '#263238' : C.torso); torso.position.y = 3; root.add(torso);
   const shirtIt = ITEM[avatar.shirt];
+  const shirtTex = avatar.shirt && avatar.shirt !== 'shirt_none' && !(shirtIt && shirtIt.model_url);
+  const shirtMat = shirtTex ? new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), roughness: 0.8 }) : null;
   if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
-  else if (avatar.shirt && avatar.shirt !== 'shirt_none') {
+  else if (shirtTex) {
     // 3D shirt: a box just bigger than the torso, textured with the shirt design
     const shirtGeo = smooth
       ? new RoundedBoxGeometry(torsoW + 0.08, 2.04, 1.08, 2, 0.045)
       : new THREE.BoxGeometry(torsoW + 0.08, 2.04, 1.08);
-    const shirt = new THREE.Mesh(shirtGeo, new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), roughness: 0.8 }));
+    const shirt = new THREE.Mesh(shirtGeo, shirtMat);
     shirt.castShadow = true; shirt.receiveShadow = true; torso.add(shirt);
   }
   const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
@@ -459,7 +461,7 @@ function buildR6(avatar, opts = {}, smooth = false) {
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
   else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
   // R6 limbs: ONE rigid block per limb, pivot at the top.
-  const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
+  const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.userData.w = w; const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
   let larm, rarm, lleg, rleg;
   if (isBugs) {
     larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
@@ -486,6 +488,16 @@ function buildR6(avatar, opts = {}, smooth = false) {
   } else {
     larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
     lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
+  }
+  if (shirtTex) {
+    // sleeves: textured 3D boxes riding the arm pivots, so they swing with every animation
+    for (const arm of [larm, rarm]) {
+      const w = (arm.userData.w || 1) + 0.16;
+      const sg = smooth ? new RoundedBoxGeometry(w, 1.1, w, 2, 0.045) : new THREE.BoxGeometry(w, 1.1, w);
+      const sleeve = new THREE.Mesh(sg, shirtMat);
+      sleeve.position.y = -0.55; sleeve.castShadow = true; sleeve.receiveShadow = true;
+      arm.add(sleeve);
+    }
   }
   root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso };
   if (smooth) { root.userData.headPivot = headPivot; root.userData.smooth = true; }
