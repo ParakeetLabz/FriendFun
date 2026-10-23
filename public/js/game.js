@@ -2,15 +2,27 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=20261021r6';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=439797aa';
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
 import { VoiceChat } from './voice.js?v=9d41bd66';
-import { sfx } from './sound.js?v=music26';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=collab26';
+import { sfx } from './sound.js?v=89850e26';
+import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=1d24a70d';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
 const ANIMS = ['idle', 'walk', 'jump', 'fall', 'wave', 'dance', 'dead', 'sit'];
+const EMOTES = [
+  { id: 'wave', icon: '👋', name: 'Wave' },
+  { id: 'dance', icon: '💃', name: 'Dance' },
+  { id: 'spin', icon: '🌀', name: 'Spin' },
+  { id: 'bow', icon: '🙇', name: 'Bow' },
+  { id: 'cheer', icon: '🎉', name: 'Cheer' },
+  { id: 'laugh', icon: '😂', name: 'Laugh' },
+  { id: 'dab', icon: '😎', name: 'Dab' },
+  { id: 'sit', icon: '🪑', name: 'Sit' },
+];
+const EMOTE_TIMES = { wave: 2.5, spin: 2.2, bow: 2.5, cheer: 3, laugh: 3, dab: 2.5, dance: 9999, sit: 9999 };
 const GAME_TIPS = [
   'Press / to chat with other players!',
   'Type /e dance to show off your moves!',
@@ -61,11 +73,11 @@ function buildGear(gearId) {
   g.scale.setScalar(0.5);
   return g;
 }
-const GEAR_COOLDOWN = { gear_sword: 0.8, gear_foamsword: 0.7, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
+const GEAR_COOLDOWN = { gear_sword: 0.8, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
   gear_blaster: 0.5, gear_raygun: 0.7, gear_crossbow: 0.9, gear_freezeray: 1.0,
   gear_hammer: 1.0, gear_axe: 0.9, gear_katana: 0.6, gear_spear: 0.9, gear_mace: 1.1,
   gear_lasersword: 0.7, gear_cannon: 2.5, gear_bazooka: 2.8 };
-const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_foamsword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
+const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
   gear_blaster: 'pellet', gear_raygun: 'pellet', gear_crossbow: 'pellet', gear_freezeray: 'pellet',
   gear_hammer: 'melee', gear_axe: 'melee', gear_katana: 'melee', gear_spear: 'melee', gear_mace: 'melee',
   gear_lasersword: 'melee', gear_cannon: 'rocket', gear_bazooka: 'rocket' };
@@ -104,6 +116,8 @@ export class Game {
       <div class="hud-topleft">
         <button class="hud-btn menu-btn" title="Menu (Esc)"><span class="ff-mini">${LOGO}</span></button>
         <button class="hud-btn chat-toggle" title="Chat">${chatIcon}</button>
+        <button class="hud-btn emote-btn" title="Emotes">🎭</button>
+        <button class="hud-btn jam-btn" title="Jam tracks">🎵</button>
         ${['owner', 'admin', 'moderator'].includes(this.me.role) ? '<button class="hud-btn funpanel-btn" title="FunPanel (F4)">🛡️</button>' : ''}
       </div>
       <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
@@ -127,6 +141,8 @@ export class Game {
         <div class="fp-row"><input class="fp-announce" placeholder="Announce to server..." maxlength="200"><button class="btn-primary fp-announce-send">Send</button></div>
         ${this.me.role === 'owner' ? '<div class="fp-row"><button class="btn-danger fp-kickall">Kick everyone</button></div>' : ''}` : ''}
       </div>` : ''}
+      <div class="picker-pop emote-picker hidden"></div>
+      <div class="picker-pop jam-picker hidden"></div>
       <div class="esc-menu hidden">
         <div class="esc-panel">
           <div class="esc-tabs"><b>${esc(this.o.gameName || 'Game')}</b></div>
@@ -139,7 +155,7 @@ export class Game {
           <label class="esc-opt"><input type="checkbox" data-o="shadows" checked> Shadows</label>
           <label class="esc-opt"><input type="checkbox" data-o="sound" ${sfx.enabled ? 'checked' : ''}> Sound</label>
           <label class="esc-opt"><input type="checkbox" data-o="touch" ${touch ? 'checked' : ''}> Touch controls</label>
-          <div class="esc-help">WASD / arrows: move &middot; Space: jump &middot; Right-drag: rotate camera &middot; Wheel: zoom &middot; Shift: shift-lock &middot; /: chat &middot; /e wave, /e dance<br>Touch: left thumbstick to move &middot; jump button &middot; drag to look &middot; pinch to zoom</div>
+          <div class="esc-help">WASD / arrows: move &middot; Space: jump &middot; Right-drag: rotate camera &middot; Wheel: zoom &middot; Shift: shift-lock &middot; /: chat &middot; /e dance, /e spin, /e dab &middot; /jam<br>Touch: left thumbstick to move &middot; jump button &middot; drag to look &middot; pinch to zoom</div>
         </div>
       </div>
       <div class="loading"><div class="loading-card"><div class="ff-logo-big">${LOGO}Funtopia</div><div class="loading-name">${esc(this.o.gameName || '')}</div><div class="loading-sub">${this.o.test ? 'Starting test...' : 'Joining server...'}</div><div class="spinner"></div><div class="loading-tip">💡 ${esc(GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)])}</div></div></div>
@@ -150,6 +166,19 @@ export class Game {
     this.healthFill = q('.health-fill'); this.txCount = q('.tx-count'); this.root = q('.game-root');
     q('.menu-btn').onclick = () => this.toggleMenu();
     q('.chat-toggle').onclick = () => q('.chat-box').classList.toggle('hidden');
+    if (!document.getElementById('ff-picker-css')) {
+      const st = document.createElement('style'); st.id = 'ff-picker-css';
+      st.textContent = `.picker-pop{position:absolute;bottom:76px;left:12px;background:var(--card,#222242);border:1px solid var(--line,#3a3a66);border-radius:12px;padding:10px;display:grid;grid-template-columns:repeat(4,auto);gap:8px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4)}.picker-pop.hidden{display:none}.picker-pop button{font-size:24px;background:rgba(255,255,255,.07);border:1px solid transparent;border-radius:10px;padding:8px 10px;cursor:pointer;line-height:1}.picker-pop button:hover{border-color:var(--blue,#7c6cf5);transform:scale(1.08)}.picker-pop .pk-label{grid-column:1/-1;font-size:12px;opacity:.65;text-align:center}`;
+      document.head.appendChild(st);
+    }
+    const ep = q('.emote-picker');
+    ep.innerHTML = '<div class="pk-label">Emotes — /e name</div>' + EMOTES.map(x => `<button data-e="${x.id}" title="${x.name}">${x.icon}</button>`).join('');
+    ep.onclick = (e) => { const b = e.target.closest('button[data-e]'); if (b) this.doEmote(b.dataset.e); };
+    const jp = q('.jam-picker');
+    jp.innerHTML = '<div class="pk-label">Jam tracks — /jam</div>' + JAM_TRACKS.map(x => `<button data-j="${x.id}" title="${x.name}">${x.icon}</button>`).join('') + '<button data-j="stop" title="Stop">\u23F9\uFE0F</button>';
+    jp.onclick = (e) => { const b = e.target.closest('button[data-j]'); if (b) this.doJam(b.dataset.j); };
+    q('.emote-btn').onclick = (e) => { e.stopPropagation(); this.togglePicker('.emote-picker', '.jam-picker'); };
+    q('.jam-btn').onclick = (e) => { e.stopPropagation(); this.togglePicker('.jam-picker', '.emote-picker'); };
     const fpb = q('.funpanel-btn');
     if (fpb) fpb.onclick = () => this.toggleFunPanel();
     const fpc = q('.funpanel-close');
@@ -821,11 +850,33 @@ export class Game {
   }
   sendChat(text) {
     text = text.trim(); if (!text) return;
+    const jm = text.match(/^\/jam(?:\s+(\w+))?\s*$/i);
+    if (jm) { this.doJam((jm[1] || '').toLowerCase()); return; }
     const em = text.match(/^\/e\s+(\w+)/i);
-    if (em) { const e = em[1].toLowerCase(); if (['wave', 'dance'].includes(e)) { this.emote = e; this.emoteT = e === 'wave' ? 2.5 : 999; this.send({ t: 'emote', e }); } return; }
+    if (em) { const e = em[1].toLowerCase(); if (EMOTE_TIMES[e]) { this.doEmote(e); } else { this.sys('Emotes: ' + EMOTES.map(x => '/e ' + x.id).join(', ')); } return; }
     if (this.o.test || !this.ws) { this.onChat({ id: 0, name: this.me.name, text, badge: this.me.badge }); return; }
     this.send({ t: 'chat', text });
   }
+  doEmote(e) {
+    if (!EMOTE_TIMES[e]) return;
+    this.emote = e; this.emoteT = EMOTE_TIMES[e];
+    this.send({ t: 'emote', e });
+    this.hidePickers();
+  }
+  doJam(arg) {
+    if (!arg) { this.sys('🎵 Jam tracks: ' + JAM_TRACKS.map((t, i) => `${i + 1}=${t.icon}${t.name}`).join('  ') + ' — /jam 1 (or /jam stop)'); return; }
+    if (arg === 'stop' || arg === 'off') { stopJam(); this.send({ t: 'jam', track: '' }); this.sys('🎵 Jam stopped'); this.hidePickers(); return; }
+    const tr = JAM_TRACKS.find(t => t.id === arg) || JAM_TRACKS[parseInt(arg, 10) - 1];
+    if (!tr) { this.sys('🎵 Unknown track — /jam to list'); return; }
+    if (startJam(tr.id)) { this.send({ t: 'jam', track: tr.id }); this.sys(`🎵 Now jamming: ${tr.icon} ${tr.name}`); }
+    this.hidePickers();
+  }
+  togglePicker(sel, other) {
+    const p = this.c.querySelector(sel), o = this.c.querySelector(other);
+    if (o) o.classList.add('hidden');
+    if (p) p.classList.toggle('hidden');
+  }
+  hidePickers() { for (const s of ['.emote-picker', '.jam-picker']) this.c.querySelector(s)?.classList.add('hidden'); }
   onChat(m) {
     if (!m.system) for (const fn of (this._scriptState?.chatFns || [])) { try { fn(m.name, m.text); } catch (e) { console.warn('onChat script error:', e); } }
     if (m.system) return this.sys(m.text);
@@ -883,17 +934,6 @@ export class Game {
       if (p.k !== 'npc') continue;
       const m = this.meshes.get(p.id); if (m) { this.scene.remove(m); this.meshes.delete(p.id); }
       this.spawnNPC(p);
-    }
-    // dynamic parts: moving platforms/hazards (mv) + blinking platforms (blink)
-    this.movers = []; this.blinkers = [];
-    for (const p of this.world.parts) {
-      if (p.k === 'npc') continue;
-      if (p.mv && ['x', 'y', 'z'].includes(p.mv.a)) this.movers.push({ p, base: [...p.p] });
-      if (p.blink) {
-        const m = this.meshes.get(p.id);
-        if (m) { m.material = m.material.clone(); m.material.transparent = true; }
-        this.blinkers.push({ p, on: true });
-      }
     }
     this.char = buildChar(this.me.avatar, { pet: false, gear: false });
     this.scene.add(this.char);
@@ -1346,7 +1386,13 @@ export class Game {
         for (const s of m.p) { if (s[0] === this.myId) continue; const p = this.players.get(s[0]); if (p) p.target = s; }
       } else if (m.t === 'chat') this.onChat(m);
       else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
-      else if (m.t === 'emote') { const p = this.players.get(m.id); if (p) { p.emote = m.e; } }
+      else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
+      else if (m.t === 'jam') {
+        const tr = JAM_TRACKS.find(t => t.id === m.track);
+        const nm = this.players.get(m.id)?.name || 'Someone';
+        if (tr) { startJam(tr.id); this.sys(`🎵 ${nm} started jam: ${tr.icon} ${tr.name}`); }
+        else { stopJam(); this.sys(`🎵 ${nm} stopped the jam`); }
+      }
       else if (m.t === 'gearHit' && this.rivals && m.dmg) { this.applyRivalsDamage(m.dmg, m.from); }
       else if (m.t === 'gearHit') { if (!this.dead) this.die(); }
       else if (m.t === 'scriptTpDo') { this.pos.set(Number(m.x) || 0, Number(m.y) || 10, Number(m.z) || 0); this.vel.set(0, 0, 0); }
@@ -1411,36 +1457,6 @@ export class Game {
         if (step > 0 && step <= 1.3 && this.wasGround && !this.blockedAt(P.x, b.max[1] + 0.01, P.z)) { P.y = b.max[1] + 0.01; continue; }
         if (d > 0) P.setComponent(ax, b.min[ax] - hw - 0.001); else P.setComponent(ax, b.max[ax] + hw + 0.001);
       }
-    }
-  }
-  // Moving + blinking parts. Runs before physics so a player standing on a
-  // mover is carried by exactly the distance it moved this frame.
-  updateDynamics() {
-    const t = this.t;
-    for (const mv of this.movers) {
-      const p = mv.p;
-      const sp = Math.max(0.2, Math.min(4, Number(p.mv.s) || 1));
-      const d = Math.max(-120, Math.min(120, Number(p.mv.d) || 10));
-      const off = Math.sin(t * sp * 1.6 + (Number(p.mv.ph) || 0)) * d;
-      const nx = mv.base[0] + (p.mv.a === 'x' ? off : 0);
-      const ny = mv.base[1] + (p.mv.a === 'y' ? off : 0);
-      const nz = mv.base[2] + (p.mv.a === 'z' ? off : 0);
-      const dx = nx - p.p[0], dy = ny - p.p[1], dz = nz - p.p[2];
-      if (!dx && !dy && !dz) continue;
-      p.p = [nx, ny, nz];
-      const m = this.meshes.get(p.id); if (m) m.position.set(nx, ny, nz);
-      this.syncPartBoxes(p);
-      if (this.ground && this.ground.p === p) { this.pos.x += dx; this.pos.y += dy; this.pos.z += dz; }
-    }
-    for (const bl of this.blinkers) {
-      const p = bl.p;
-      const onT = Math.max(0.3, Math.min(30, Number(p.blink.on) || 2));
-      const offT = Math.max(0.3, Math.min(30, Number(p.blink.off) || 1.5));
-      const cyc = (t + (Number(p.blink.ph) || 0)) % (onT + offT);
-      const on = cyc < onT;
-      const m = this.meshes.get(p.id);
-      if (on !== bl.on) { bl.on = on; if (m) m.visible = on; this.setPartActive(p, on); }
-      if (m && on) m.material.opacity = cyc > onT - 0.45 ? 0.35 : 1; // flicker warning before it vanishes
     }
   }
   physics(dt) {
@@ -1543,10 +1559,9 @@ export class Game {
     const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now; this.t += dt;
     if (this.o.test && !this.loadHidden) { this.loadHidden = true; this.hideLoading(); }
     if (this.speedTimer > 0) this.speedTimer -= dt;
-    if (this.emote === 'wave' && (this.emoteT -= dt) <= 0) this.emote = null;
+    if (this.emote && this.emoteT && (this.emoteT -= dt) <= 0) this.emote = null;
     for (const fn of (this._scriptState?.tickFns || [])) { try { fn(dt, this.t); } catch (e) { console.warn('onTick error:', e); } }
     if (!this.dead) {
-      this.updateDynamics();
       this.physics(dt);
       if (this.firing && this.rivals && this.rivalsWeapon().auto) this.fireRivals();
       this.char.position.copy(this.pos);
@@ -1575,6 +1590,7 @@ export class Game {
           ch.add(p.carMesh);
         }
       }
+      if (p.emote && p.emoteT && (p.emoteT -= dt) <= 0) p.emote = null;
       if (anim === 'idle' && p.emote) anim = p.emote; else if (anim !== 'idle') p.emote = null;
       ch.visible = anim !== 'dead';
       if (p.pet) { p.pet.visible = ch.visible; if (ch.visible) this.updatePet(p.pet, ch.position, ch.rotation.y, dt); }
@@ -1710,6 +1726,7 @@ export class Game {
     for (const pr of this.projectiles) this.scene.remove(pr.mesh);
     this.projectiles = []; this.destroy(); this.o.onExit?.(); }
   destroy() {
+    stopJam();
     this.destroyed = true; cancelAnimationFrame(this.raf);
     removeEventListener('keydown', this.onKey); removeEventListener('keyup', this.onKey); removeEventListener('resize', this.onResize);
     if (document.pointerLockElement) document.exitPointerLock();
