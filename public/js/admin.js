@@ -235,7 +235,9 @@ export async function ownerPage(D, q = '') {
           <button class="btn-secondary avatar-reset" data-name="${esc(u.name)}" title="Reset avatar">Reset Avatar</button>
           <button class="btn-secondary unmute-btn" data-name="${esc(u.name)}" title="Unmute">Unmute</button>
           <button class="btn-secondary sysdm-btn" data-name="${esc(u.name)}" title="System DM">System DM</button>
-          <button class="btn-danger ban-btn" data-name="${esc(u.name)}" title="Ban user">🔨 Ban</button>
+          ${u.banned
+            ? `<button class="btn-primary ban-revoke" data-name="${esc(u.name)}" title="Unban this user">Unban</button><span class="banned-tag" title="${esc(u.banReason || 'Banned')}">🚫 BANNED${u.bannedUntil ? ' until ' + new Date(u.bannedUntil).toLocaleDateString() : ''}</span>`
+            : `<button class="btn-danger ban-btn" data-name="${esc(u.name)}" title="Ban user">🔨 Ban</button>`}
           <button class="btn-danger wipe-games" data-name="${esc(u.name)}" title="Delete games">Wipe Games</button>
           <button class="btn-secondary clear-friends" data-name="${esc(u.name)}" title="Clear friends">Clear Friends</button>
           <button class="btn-secondary clear-badges" data-name="${esc(u.name)}" title="Clear badges">Clear Badges</button>
@@ -333,10 +335,19 @@ export async function ownerPage(D, q = '') {
       if (!confirm(`Ban ${b.dataset.name} for: ${reason}?`)) return;
       try {
         const r = await api('POST', `/api/admin/users/${b.dataset.name}/command`, { command: 'ban', reason });
-        if (r.user?.banned) toast(`${b.dataset.name} banned`);
+        if (r.user?.banned) { toast(`${b.dataset.name} banned`); ownerPage(D, q); }
         else toast(`Ban may have failed - check user`, true);
       } catch (e) {
         toast(`Ban failed: ${e.message}`, true);
+      }
+    });
+    app.querySelectorAll('.ban-revoke').forEach(b => b.onclick = async () => {
+      if (!confirm(`Unban ${b.dataset.name}?`)) return;
+      try {
+        await api('POST', `/api/admin/users/${b.dataset.name}/command`, { command: 'unban' });
+        toast(`${b.dataset.name} unbanned`); ownerPage(D, q);
+      } catch (e) {
+        toast(`Unban failed: ${e.message}`, true);
       }
     });
     ownerCmd('.wipe-games', 'wipe_games', null, b => `DELETE ALL games by ${b.dataset.name}? This cannot be undone.`);
