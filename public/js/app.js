@@ -1441,11 +1441,11 @@ const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAv
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=d572c4e4');
+  const m = await import('./admin.js?v=00104c30');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=d572c4e4');
+  const m = await import('./admin.js?v=00104c30');
   return m.ownerPage(adminDeps, q);
 }
 
