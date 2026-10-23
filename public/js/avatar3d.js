@@ -436,9 +436,12 @@ function buildR6(avatar, opts = {}, smooth = false) {
   const shirtIt = ITEM[avatar.shirt];
   if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
   else if (avatar.shirt && avatar.shirt !== 'shirt_none') {
-    const d = new THREE.Mesh(new THREE.PlaneGeometry(torsoW, 2), new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), transparent: true, roughness: 0.8 }));
-    d.position.z = 0.501; torso.add(d);
-    const back = d.clone(); back.rotation.y = Math.PI; back.position.z = -0.501; torso.add(back);
+    // 3D shirt: a box just bigger than the torso, textured with the shirt design
+    const shirtGeo = smooth
+      ? new RoundedBoxGeometry(torsoW + 0.08, 2.04, 1.08, 2, 0.045)
+      : new THREE.BoxGeometry(torsoW + 0.08, 2.04, 1.08);
+    const shirt = new THREE.Mesh(shirtGeo, new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), roughness: 0.8 }));
+    shirt.castShadow = true; shirt.receiveShadow = true; torso.add(shirt);
   }
   const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
   const H = HEADS[avatar.head] || HEADS.head_classic;
