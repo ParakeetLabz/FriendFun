@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=6e922cc9';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=collab26';
 import { renderToDataURL } from './three-util.js?v=ac3e6f2b';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const faceCache = {}, shirtCache = {};
 function faceTexture(id) {
@@ -121,6 +122,47 @@ function shirtTexture(id) {
 
 function mat(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.75 }); }
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
+// Rounded box — same blocky proportions, softened edges that catch the light.
+function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
+function attachExtras(root, avatar, opts = {}) {
+  const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
+  if (petSpec) {
+    const pet = new THREE.Group();
+    for (const b of petSpec.boxes) {
+      const m = box(b[3], b[4], b[5], b[6]);
+      m.position.set(b[0], b[1], b[2]);
+      if (b[7]) m.rotation.z = b[7];
+      pet.add(m);
+    }
+    pet.position.set(1.9, 0, 0.6);
+    pet.rotation.y = -0.4;
+    root.add(pet);
+    root.userData.pet = pet;
+  }
+  const gearIt = ITEM[avatar.gear];
+  const gearGlb = opts.gear === false ? null : (gearIt && gearIt.model_url);
+  const gearBoxes = opts.gear === false ? null : (GEAR_MODELS[avatar.gear] && GEAR_MODELS[avatar.gear].boxes);
+  if (gearGlb) {
+    const gear = new THREE.Group();
+    gear.position.set(0, -2, 0.5);
+    (root.userData.limbs?.rarm || root).add(gear);
+    loadUgcGlb(gearGlb, 1.1, gearIt.model_transform).then(g => { if (gear.parent) gear.add(g); }).catch(() => {});
+    root.userData.gear = gear;
+  } else if (gearBoxes) {
+    const gear = new THREE.Group();
+    for (const b of gearBoxes) {
+      const m = box(b[3], b[4], b[5], b[6]);
+      m.position.set(b[0], b[1], b[2]);
+      if (b[7]) m.rotation.z = b[7];
+      gear.add(m);
+    }
+    gear.scale.setScalar(0.5);
+    const rarmG = root.userData.limbs?.rarm;
+    gear.position.set(0, -2, 0.5);
+    (rarmG || root).add(gear);
+    root.userData.gear = gear;
+  }
+}
 // UGC custom 3D models (.glb). Loads async, cached per URL; each use gets a
 // fresh clone normalized so its longest dimension equals targetSize, centered.
 const gltfLoader = new GLTFLoader();
@@ -337,19 +379,19 @@ const HEADS = {
   head_slimebody: { h: 1.35, custom: buildSlimeHead },
   head_pumpkin: { h: 1.45, custom: buildPumpkinHead },
   head_ghost: { h: 1.6, custom: buildGhostHead },
-  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24), ex: 1 },
-  head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), ex: 1 },
+  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) },
+  head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },
   head_tall: { h: 1.6, fz: 0.56, fw: 0.95, hs: 0.9, geo: () => new THREE.CylinderGeometry(0.55, 0.55, 1.6, 24) },
   head_wide: { h: 1.05, fz: 0.63, fw: 1.1, hs: 1.15, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.05, 24).scale(1.4, 1, 1) },
   head_alien: { h: 1.5, fz: 0.6, color: '#7cb342', geo: () => new THREE.SphereGeometry(0.62, 24, 18).scale(1, 1.35, 0.95) },
-  head_brick: { h: 1.2, fz: 0.61, color: '#a6492f', geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), ex: 1 },
+  head_brick: { h: 1.2, fz: 0.61, color: '#a6492f', geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_cactus: { h: 1.3, fz: 0.56, color: '#43a047', geo: () => new THREE.CylinderGeometry(0.5, 0.55, 1.3, 20) },
   head_cloud: { h: 1.1, fz: 0.6, color: '#f5f5f5', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(1.3, 0.9, 1) },
   head_cone: { h: 1.3, fz: 0.55, color: '#ff9800', geo: () => new THREE.ConeGeometry(0.62, 1.3, 20) },
   head_cookie: { h: 0.9, fz: 0.66, color: '#c98f4e', geo: () => new THREE.CylinderGeometry(0.65, 0.65, 0.9, 22) },
-  head_cube: { h: 1.2, fz: 0.61, color: '#9aa0a6', geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2), ex: 1 },
-  head_cylinder: { h: 1.2, fz: 0.63, color: '#b0bec5', geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24), ex: 1 },
+  head_cube: { h: 1.2, fz: 0.61, color: '#9aa0a6', geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
+  head_cylinder: { h: 1.2, fz: 0.63, color: '#b0bec5', geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) },
   head_diamond: { h: 1.3, fz: 0.55, color: '#4fc3f7', geo: () => new THREE.OctahedronGeometry(0.75) },
   head_egg: { h: 1.45, fz: 0.6, color: '#fafafa', geo: () => new THREE.SphereGeometry(0.62, 22, 16).scale(1, 1.25, 1) },
   head_fishbowl: { h: 1.4, fz: 0.68, color: '#b3e5fc', geo: () => new THREE.SphereGeometry(0.7, 22, 16) },
@@ -358,7 +400,7 @@ const HEADS = {
   head_heart: { h: 1.25, fz: 0.5, color: '#e53935', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(1.15, 1, 0.8) },
   head_moon: { h: 1.24, fz: 0.6, color: '#fff9c4', geo: () => new THREE.SphereGeometry(0.62, 22, 16) },
   head_mushroom: { h: 1.0, fz: 0.7, color: '#d32f2f', geo: () => new THREE.SphereGeometry(0.62, 20, 12).scale(1.25, 0.8, 1.25) },
-  head_robot: { h: 1.1, fz: 0.56, color: '#90a4ae', geo: () => new THREE.BoxGeometry(1.1, 1.1, 1.1), ex: 1 },
+  head_robot: { h: 1.1, fz: 0.56, color: '#90a4ae', geo: () => new THREE.BoxGeometry(1.1, 1.1, 1.1) },
   head_skull: { h: 1.24, fz: 0.6, color: '#f5f5f5', geo: () => new THREE.SphereGeometry(0.62, 22, 16) },
   head_slime: { h: 1.1, fz: 0.65, color: '#7cb342', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(1.1, 0.9, 1.1) },
   head_snowman: { h: 1.24, fz: 0.6, color: '#ffffff', geo: () => new THREE.SphereGeometry(0.62, 22, 16) },
@@ -366,141 +408,86 @@ const HEADS = {
   head_star: { h: 1.3, fz: 0.6, color: '#fdd835', geo: () => new THREE.IcosahedronGeometry(0.7) },
   head_tv: { h: 1.0, fz: 0.46, color: '#37474f', geo: () => new THREE.BoxGeometry(1.3, 1.0, 0.9) },
   head_watermelon: { h: 1.4, fz: 0.64, color: '#43a047', geo: () => new THREE.SphereGeometry(0.66, 22, 16).scale(1, 1.1, 1) },
-  head_wood: { h: 1.2, fz: 0.63, color: '#8d6e63', geo: () => new THREE.CylinderGeometry(0.6, 0.62, 1.2, 20), ex: 1 },
+  head_wood: { h: 1.2, fz: 0.63, color: '#8d6e63', geo: () => new THREE.CylinderGeometry(0.6, 0.62, 1.2, 20) },
 };
 
 // Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
 const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody: '#66bb6a' };
-// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lelbow, relbow, lleg, rleg, lknee, rknee, head, torso }
-export function buildCharacter(avatar, opts = {}) {
+
+// ---------- R6 player rig ----------
+// Classic R6 shape language: exactly SIX rigid parts — Head, Torso,
+// Left Arm, Right Arm, Left Leg, Right Leg. Single-piece blocky limbs that
+// pivot at the shoulder/hip, torso 2x2x1, head sitting straight on the
+// torso (no neck, no waist, no elbows/knees, no separate hands/shoes).
+// smooth=true only softens the finish (tiny edge bevel + glossier material,
+// the classic parts have a slight bevel too) — the shapes stay R6.
+function buildR6(avatar, opts = {}, smooth = false) {
   const C = { ...avatar.colors };
   const suitColor = BODY_SUITS[avatar.head];
   if (suitColor) for (const k of Object.keys(C)) C[k] = suitColor;
   const suit = avatar.shirt === 'shirt_suit' && !suitColor;
   const isBugs = avatar.head === 'head_bugs', isDaffy = avatar.head === 'head_daffy';
   const root = new THREE.Group();
-  const torsoC = suit ? '#263238' : C.torso;
-
-  // ---- torso: waist + belt + chest + neck + shoulder pads (pivots at hips so it can bow) ----
-  const torso = new THREE.Group(); torso.position.y = 2.0; root.add(torso);
-  const waist = box(1.6, 0.45, 0.85, suit ? '#1b262c' : C.lleg); waist.position.y = 0.225; torso.add(waist);
-  const belt = box(1.68, 0.18, 0.92, '#3e2723'); belt.position.y = 0.1; torso.add(belt);
-  const buckle = box(0.34, 0.2, 0.06, '#ffd400'); buckle.position.set(0, 0.1, 0.47); torso.add(buckle);
-  const chest = box(1.9, 1.3, 0.95, torsoC); chest.position.y = 1.1; torso.add(chest);
-  const collar = box(1.2, 0.22, 1.0, suit ? '#1b262c' : C.head); collar.position.y = 1.66; torso.add(collar);
-  const neck = box(0.5, 0.25, 0.5, C.head); neck.position.y = 1.875; torso.add(neck);
-  for (const sx of [-1, 1]) {
-    const pad = box(1.0, 0.3, 1.0, torsoC); pad.position.set(sx * 1.45, 1.82, 0); torso.add(pad);
-  }
+  const part = smooth
+    ? (w, h, d, color) => rbox(w, h, d, color, 0.045, 0.5)
+    : box;
+  const torsoW = isBugs ? 1.8 : 2;
+  const torso = part(torsoW, 2, 1, suit ? '#263238' : C.torso); torso.position.y = 3; root.add(torso);
   const shirtIt = ITEM[avatar.shirt];
-  if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 1.0, shirtIt.model_transform); }
+  if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
   else if (avatar.shirt && avatar.shirt !== 'shirt_none') {
-    const d = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.15), new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), transparent: true, roughness: 0.8 }));
-    d.position.set(0, 1.1, 0.476); torso.add(d);
+    const d = new THREE.Mesh(new THREE.PlaneGeometry(torsoW, 2), new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), transparent: true, roughness: 0.8 }));
+    d.position.z = 0.501; torso.add(d);
+    const back = d.clone(); back.rotation.y = Math.PI; back.position.z = -0.501; torso.add(back);
   }
-
-  // ---- head ----
   const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
   const H = HEADS[avatar.head] || HEADS.head_classic;
   if (H.custom) { H.custom(headPivot); }
   else {
-    const head = new THREE.Mesh(H.geo(), mat(H.color || C.head)); head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
+    const head = new THREE.Mesh(H.geo(), smooth ? new THREE.MeshStandardMaterial({ color: H.color || C.head, roughness: 0.4, metalness: 0.05 }) : mat(H.color || C.head));
+    head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
     const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
     const face = H.round
       ? new THREE.Mesh(new THREE.SphereGeometry(H.r + 0.01, 24, 16, Math.PI / 2 - 0.75, 1.5, Math.PI / 2 - 0.75, 1.5), faceMat)
       : new THREE.Mesh(new THREE.PlaneGeometry(H.fw, H.fw), faceMat);
     face.position.set(0, H.h / 2, H.round ? 0 : H.fz); headPivot.add(face);
-    if (H.ex) {
-      const hc = H.color || C.head;
-      for (const sx of [-1, 1]) {
-        const ear = box(0.28, 0.5, 0.5, hc); ear.position.set(sx * (H.fw * 0.62 + 0.12), H.h / 2, 0); headPivot.add(ear);
-      }
-      const nose = box(0.24, 0.24, 0.22, hc); nose.position.set(0, H.h / 2 - 0.14, H.fz + 0.08); headPivot.add(nose);
-    }
   }
   const hatIt = ITEM[avatar.hat];
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
   else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
-
-  // ---- legs: hip -> thigh -> knee -> shin -> foot ----
-  const mkLeg = (sx, color, w, footSpec) => {
-    const hip = new THREE.Group(); hip.position.set(sx * 0.5, 2.0, 0); root.add(hip);
-    const thigh = box(w, 0.85, w, color); thigh.position.y = -0.425; hip.add(thigh);
-    const knee = new THREE.Group(); knee.position.y = -0.85; hip.add(knee);
-    const shin = box(w * 0.9, 0.8, w * 0.9, color); shin.position.y = -0.4; knee.add(shin);
-    const fs = footSpec || { w: w * 0.95, h: 0.35, d: w * 1.5, c: suit ? '#1b262c' : '#5d4037', z: 0.2 };
-    const foot = box(fs.w, fs.h, fs.d, fs.c); foot.position.set(0, -1.15 + fs.h / 2, fs.z); knee.add(foot);
-    return { hip, knee };
-  };
-  const armW = isBugs ? 0.75 : isDaffy ? 0.7 : 0.9;
-  const legW = isBugs ? 0.85 : isDaffy ? 0.5 : 0.95;
-  const armX = isBugs || isDaffy ? 1.35 : 1.5;
-  const mkArmX = (s, color) => {
-    const sh = new THREE.Group(); sh.position.set(s * armX, 3.75, 0); root.add(sh);
-    const upper = box(armW, 1.0, armW, color); upper.position.y = -0.5; sh.add(upper);
-    const el = new THREE.Group(); el.position.y = -1.0; sh.add(el);
-    const fore = box(armW * 0.88, 0.85, armW * 0.88, color); fore.position.y = -0.425; el.add(fore);
-    const hand = box(armW * 0.92, 0.45, armW * 0.95, C.head); hand.position.y = -1.075; el.add(hand);
-    return { sh, el };
-  };
-  const larm = mkArmX(-1, suit ? '#263238' : C.larm), rarm = mkArmX(1, suit ? '#263238' : C.rarm);
-  let lleg, rleg;
+  // R6 limbs: ONE rigid block per limb, pivot at the top.
+  const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
+  let larm, rarm, lleg, rleg;
   if (isBugs) {
-    lleg = mkLeg(-0.9, C.lleg, legW, { w: 0.95, h: 0.45, d: 1.7, c: '#9e9e9e', z: 0.45 });
-    rleg = mkLeg(0.9, C.lleg, legW, { w: 0.95, h: 0.45, d: 1.7, c: '#9e9e9e', z: 0.45 });
+    larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
+    lleg = limb(-0.45, 2, C.lleg, 0.9); rleg = limb(0.45, 2, C.rleg, 0.9);
+    for (const leg of [lleg, rleg]) {
+      const foot = part(0.95, 0.45, 1.7, '#9e9e9e');
+      foot.position.set(0, -1.85, 0.45); foot.castShadow = true; leg.add(foot);
+    }
     const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
     tail.position.set(0, 2.3, -0.62); tail.castShadow = true; root.add(tail);
     const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
     belly.position.set(0, 2.9, 0.5); root.add(belly);
   } else if (isDaffy) {
-    lleg = mkLeg(-0.8, '#ff9800', legW, { w: 1.15, h: 0.28, d: 1.5, c: '#ff9800', z: 0.5 });
-    rleg = mkLeg(0.8, '#ff9800', legW, { w: 1.15, h: 0.28, d: 1.5, c: '#ff9800', z: 0.5 });
+    larm = limb(-1.35, 4, C.larm, 0.75); rarm = limb(1.35, 4, C.rarm, 0.75);
+    lleg = limb(-0.4, 2, '#ff9800', 0.55); rleg = limb(0.4, 2, '#ff9800', 0.55);
+    for (const leg of [lleg, rleg]) {
+      const foot = part(1.15, 0.28, 1.5, '#ff9800');
+      foot.position.set(0, -1.9, 0.5); foot.castShadow = true; leg.add(foot);
+    }
     for (let i = -1; i <= 1; i++) {
       const f = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), mat('#212121'));
       f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
     }
   } else {
-    lleg = mkLeg(-1, C.lleg, legW); rleg = mkLeg(1, C.lleg, legW);
+    larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
+    lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
-  root.userData.limbs = { larm: larm.sh, rarm: rarm.sh, lelbow: larm.el, relbow: rarm.el, lleg: lleg.hip, rleg: rleg.hip, lknee: lleg.knee, rknee: rleg.knee, head: headPivot, torso };
-  const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
-  if (petSpec) {
-    const pet = new THREE.Group();
-    for (const b of petSpec.boxes) {
-      const m = box(b[3], b[4], b[5], b[6]);
-      m.position.set(b[0], b[1], b[2]);
-      if (b[7]) m.rotation.z = b[7];
-      pet.add(m);
-    }
-    pet.position.set(1.9, 0, 0.6);
-    pet.rotation.y = -0.4;
-    root.add(pet);
-    root.userData.pet = pet;
-  }
-  const gearIt = ITEM[avatar.gear];
-  const gearGlb = opts.gear === false ? null : (gearIt && gearIt.model_url);
-  const gearBoxes = opts.gear === false ? null : (GEAR_MODELS[avatar.gear] && GEAR_MODELS[avatar.gear].boxes);
-  if (gearGlb) {
-    const gear = new THREE.Group();
-    gear.position.set(0, -2, 0.5);
-    (root.userData.limbs?.rarm || root).add(gear);
-    loadUgcGlb(gearGlb, 1.1, gearIt.model_transform).then(g => { if (gear.parent) gear.add(g); }).catch(() => {});
-    root.userData.gear = gear;
-  } else if (gearBoxes) {
-    const gear = new THREE.Group();
-    for (const b of gearBoxes) {
-      const m = box(b[3], b[4], b[5], b[6]);
-      m.position.set(b[0], b[1], b[2]);
-      if (b[7]) m.rotation.z = b[7];
-      gear.add(m);
-    }
-    gear.scale.setScalar(0.5);
-    const rarmG = root.userData.limbs?.rarm;
-    gear.position.set(0, -2, 0.5);
-    (rarmG || root).add(gear);
-    root.userData.gear = gear;
-  }
-  // wrap the body so the spin emote can rotate it without fighting player facing
+  root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso };
+  if (smooth) { root.userData.headPivot = headPivot; root.userData.smooth = true; }
+  attachExtras(root, avatar, opts);
+  // inner wrapper so the spin emote can rotate the body without fighting player facing
   const spinG = new THREE.Group();
   while (root.children.length) spinG.add(root.children[0]);
   root.add(spinG);
@@ -508,73 +495,36 @@ export function buildCharacter(avatar, opts = {}) {
   return root;
 }
 
-// ✨ Advanced: smooth Roblox-style humanoid (original design, not a copy)
-export function buildCharacterSmooth(avatar, opts = {}) {
-  const C = { ...avatar.colors };
-  const root = new THREE.Group();
-  const smooth = (color, rough = 0.5) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0.05 });
+// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
+export function buildCharacter(avatar, opts = {}) { return buildR6(avatar, opts, false); }
 
-  // Torso: rounded capsule-ish (cylinder + spheres)
-  const torsoG = new THREE.Group(); torsoG.position.y = 3; root.add(torsoG);
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.95, 1.8, 20), smooth(C.torso));
-  torso.castShadow = true; torsoG.add(torso);
-  const chestCap = new THREE.Mesh(new THREE.SphereGeometry(0.85, 20, 12), smooth(C.torso));
-  chestCap.position.y = 0.9; chestCap.castShadow = true; torsoG.add(chestCap);
-
-  // Head: smooth sphere
-  const headPivot = new THREE.Group(); headPivot.position.y = 4.6; root.add(headPivot);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.75, 24, 18), smooth(C.head, 0.4));
-  head.position.y = 0.55; head.castShadow = true; headPivot.add(head);
-  // Face
-  const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), faceMat);
-  face.position.set(0, 0.55, 0.72); headPivot.add(face);
-  // Hat
-  const hat = buildHat(avatar.hat);
-  if (hat) { hat.position.y = 1.25; headPivot.add(hat); }
-
-  // Limbs: capsules
-  const limb = (x, y, color, len = 1.8, r = 0.32) => {
-    const p = new THREE.Group(); p.position.set(x, y, 0);
-    const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 8, 16), smooth(color));
-    m.position.y = -len / 2; m.castShadow = true; p.add(m);
-    root.add(p); return p;
-  };
-  const larm = limb(-1.15, 3.8, C.larm), rarm = limb(1.15, 3.8, C.rarm);
-  const lleg = limb(-0.42, 2.0, C.lleg, 1.7, 0.36), rleg = limb(0.42, 2.0, C.rleg, 1.7, 0.36);
-
-  root.userData.limbs = { larm, rarm, lleg, rleg, headPivot, torso: torsoG };
-  root.userData.smooth = true;
-  return root;
-}
-
+// Advanced graphics: same R6 shapes, smoother finish (slight bevel + gloss).
+export function buildCharacterSmooth(avatar, opts = {}) { return buildR6(avatar, opts, true); }
 
 export function animateCharacter(ch, state, t, dt) {
   const L = ch.userData.limbs; if (!L) return;
+  // R6 animation: limbs are rigid — they swing as single parts, no joint bends.
   // Classic Roblox style: idle is statue-still, walk swings big, jump = arms straight up, fall = arms out
   // rotation.x > 0 swings a limb backwards (character faces +z); arms up ~ -PI
   if (L.torso.userData.baseY === undefined) L.torso.userData.baseY = L.torso.position.y;
-  let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0, tp = 0;
-  let le = 0, re = 0, lk = 0, rk = 0; // elbow / knee bend
+  let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0, tp = 0, hp = 0;
   const spin = ch.userData.spin;
   if (state === 'walk') {
     const s = Math.sin(t * 10);
     la = s * 1.05; ra = -s * 1.05; ll = -s * 1.05; rl = s * 1.05;
     laz = 0.14; raz = -0.14;
-    le = -0.35 - 0.45 * Math.max(0, s); re = -0.35 - 0.45 * Math.max(0, -s);
-    lk = 0.25 + 0.55 * Math.max(0, Math.sin(t * 10 + 2.2)); rk = 0.25 + 0.55 * Math.max(0, Math.sin(t * 10 + Math.PI + 2.2));
     bob = Math.abs(Math.cos(t * 10)) * 0.14;
   }
-  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; le = re = -0.5; lk = rk = 0.55; }
-  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; lk = rk = 0.25; }
-  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); re = -0.45; la = -0.2; le = -0.25; }
-  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; le = -1.1 - s * 0.5; re = -1.1 + s * 0.5; lk = rk = 0.35; bob = Math.abs(Math.cos(t * 8)) * 0.12; }
-  else if (state === 'sit') { ll = rl = -1.35; lk = rk = 1.3; la = ra = -0.5; le = re = -0.5; tp = 0.12; }
-  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.6; ra = 0.6; laz = 0.5; raz = -0.5; le = re = -0.4; }
-  else if (state === 'bow') { tp = 0.95; la = ra = 0.5; le = re = -0.2; ll = rl = -0.1; }
-  else if (state === 'cheer') { la = ra = -Math.PI + 0.35; le = re = -0.3; bob = Math.abs(Math.sin(t * 10)) * 0.3; lk = rk = 0.3; }
-  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.22 + s * 0.12; la = ra = -0.7; le = re = -1.15; lk = rk = 0.35; }
-  else if (state === 'dab') { la = -2.7; laz = -0.4; le = -0.3; ra = -0.85; raz = 1.25; re = -1.5; tp = 0.3; ll = -0.15; rl = 0.15; }
+  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; }
+  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; }
+  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); }
+  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; }
+  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.6; }
+  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.6; ra = 0.6; laz = 0.5; raz = -0.5; }
+  else if (state === 'bow') { tp = 0.75; hp = 0.45; la = ra = 0.5; }
+  else if (state === 'cheer') { la = ra = -Math.PI + 0.35; bob = Math.abs(Math.sin(t * 10)) * 0.3; }
+  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.1; hp = 0.1 + s * 0.06; la = ra = -0.7; }
+  else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; }
   // idle: perfectly still, like classic Roblox
   const k = Math.min(1, dt * 15);
   L.larm.rotation.x += (la - L.larm.rotation.x) * k;
@@ -583,14 +533,9 @@ export function animateCharacter(ch, state, t, dt) {
   L.rleg.rotation.x += (rl - L.rleg.rotation.x) * k;
   L.larm.rotation.z += (laz - L.larm.rotation.z) * k;
   L.rarm.rotation.z += (raz - L.rarm.rotation.z) * k;
-  if (L.lelbow) {
-    L.lelbow.rotation.x += (le - L.lelbow.rotation.x) * k;
-    L.relbow.rotation.x += (re - L.relbow.rotation.x) * k;
-    L.lknee.rotation.x += (lk - L.lknee.rotation.x) * k;
-    L.rknee.rotation.x += (rk - L.rknee.rotation.x) * k;
-  }
-  L.torso.rotation.x += (tp - L.torso.rotation.x) * k;
   L.torso.position.y += ((L.torso.userData.baseY + bob) - L.torso.position.y) * k;
+  L.torso.rotation.x += (tp - L.torso.rotation.x) * k;
+  if (L.head) L.head.rotation.x += (hp - L.head.rotation.x) * k;
   if (spin && state !== 'spin') {
     const twoPi = Math.PI * 2;
     const home = Math.round(spin.rotation.y / twoPi) * twoPi;
