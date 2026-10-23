@@ -10,6 +10,7 @@ import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { templates, hwMansion, hwPumpkin, hwWitch, hwGhost, hwBase, shooterArena, shooterFort, shooterRooftop } from './public/js/worlds.js';
 import { HALLOWEEN_GAMES, seedHalloweenGames } from './halloween.js';
+import { BLOCKVERSE_GAMES, seedBlockverseGames } from './collab.js';
 import { ITEM, CATALOG, DEFAULT_AVATAR, ECON, BADGES, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT } from './public/js/catalog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -360,6 +361,14 @@ app.get('/api/me', auth, async (req, res) => {
   if (!list(u, 'earnedBadges').includes('looney')) {
     const badges = [...list(u, 'earnedBadges'), 'looney'];
     await supabase.from('users').update({ earnedBadges: badges }).eq('name', u.name);
+  }
+  // Funtopia × Blockverse collab: free gift items for everyone during the event
+  if (typeof blockverseActive === 'function' && blockverseActive()) {
+    const missBv = BV_PRIZE.filter(id => !u.inventory.includes(id));
+    if (missBv.length) {
+      u.inventory = [...u.inventory, ...missBv];
+      await supabase.from('users').update({ inventory: u.inventory }).eq('name', u.name);
+    }
   }
   // Named moderators: persist the flag when the column exists (ignored otherwise)
   if (MODERATORS.includes(u.name.toLowerCase()) && !u.moderator) {
@@ -1442,6 +1451,8 @@ function sanitizeWorld(w) {
     ...(p.cc === false ? { cc: false } : {}), ...(p.tr ? { tr: Math.max(0, Math.min(1, num(p.tr))) } : {}),
     ...(sanitizeScript(p.script) ? { script: sanitizeScript(p.script) } : {}),
     ...(p.folder ? { folder: String(p.folder).slice(0, 20) } : {}),
+    ...(p.mv && ['x', 'y', 'z'].includes(p.mv.a) && Math.abs(num(p.mv.d)) >= 1 ? { mv: { a: p.mv.a, d: Math.max(-120, Math.min(120, num(p.mv.d))), s: Math.max(0.2, Math.min(4, num(p.mv.s) || 1)), ...(num(p.mv.ph) ? { ph: num(p.mv.ph) } : {}) } } : {}),
+    ...(p.blink ? { blink: { on: Math.max(0.3, Math.min(30, num(p.blink.on) || 2)), off: Math.max(0.3, Math.min(30, num(p.blink.off) || 1.5)), ...(num(p.blink.ph) ? { ph: num(p.blink.ph) } : {}) } } : {}),
   }));
   const htmlScripts = Array.isArray(w?.htmlScripts) ? w.htmlScripts.slice(0, 20).map((s, i) => ({
     id: String(s.id || 'hs' + i).slice(0, 20),
@@ -1475,6 +1486,7 @@ function winBadges(game) {
   const kinds = new Set((game?.world?.parts || []).map(part => part.k));
   return [
     'game_first_win',
+    ...(game?.event === 'blockverse' ? ['blockverse'] : []),
     ...(kinds.has('coin') ? ['game_coin_hunter'] : []),
     ...(kinds.has('speed') ? ['game_speedster'] : []),
     ...(kinds.has('bounce') ? ['game_bouncer'] : []),
@@ -1779,7 +1791,7 @@ wss.on('connection', (ws) => {
       broadcast(room, { t: 'chat', system: true, text: `${player.name} beat the game! (+${ECON.WIN_TIX} FunTix, ${winBadges(player.game).length} badge${winBadges(player.game).length === 1 ? '' : 's'} earned)` });
     }
     else if (m.t === 'emote' && ['wave','dance','sit','spin','bow','cheer','laugh','dab'].includes(m.e)) broadcast(room, { t: 'emote', id: player.id, e: m.e }, ws);
-    else if (m.t === 'jam' && typeof m.track === 'string' && m.track.length < 20) broadcast(room, { t: 'jam', id: player.id, track: m.track }, ws);
+    else if (m.t === 'jam' && m.track?.length < 20) broadcast(room, { t: 'jam', id: player.id, track: m.track }, ws);
     else if (m.t === 'gearHit' && typeof m.id === 'number') {
       const now = Date.now();
       if (now - (player.lastGearHit || 0) < 500) return;
@@ -2235,7 +2247,7 @@ app.get('/iknow/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 🕹️ OG theme — the classic pre-remodel look
+// OG theme
 app.get('/OG', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'og.html'));
 });
@@ -2330,6 +2342,22 @@ app.get('/api/event/halloween', auth, async (req, res) => {
   res.json({ id: e.id, name: e.name, starts: e.starts, ends: e.ends, active: halloweenActive(), games: games || [] });
 });
 
+// Funtopia × Blockverse collab (Oct 22 - Dec 6, 2026)
+const BLOCKVERSE_EVENT = { id: 'blockverse', name: 'Funtopia × Blockverse',
+  starts: Date.parse('2026-10-22T00:00:00Z'), ends: Date.parse('2026-12-06T00:00:00Z') };
+const blockverseActive = () => Date.now() >= BLOCKVERSE_EVENT.starts && Date.now() <= BLOCKVERSE_EVENT.ends;
+const BV_PRIZE = ['hat_bv_cap', 'shirt_bv_tee', 'gear_foamsword', 'pet_cubit'];
+
+app.post('/api/admin/event/seed-blockverse', auth, async (req, res) => {
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin only' });
+  res.json(await seedBlockverseGames(supabase, sanitizeWorld));
+});
+app.get('/api/event/blockverse', auth, async (req, res) => {
+  const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'blockverse').order('id');
+  const e = BLOCKVERSE_EVENT;
+  res.json({ id: e.id, name: e.name, starts: e.starts, ends: e.ends, active: blockverseActive(), games: games || [] });
+});
+
 // PvP shooter arenas (seeded once, never deleted)
 const SHOOTER_GAMES = [
   { id: 'g_arena1', name: 'Block Arena', desc: 'Close-quarters shooter arena. Grab a gear and fight! 🔫', build: shooterArena },
@@ -2359,6 +2387,7 @@ ensureUgcBucket().then(() => console.log('UGC bucket ready:', ugcState.bucketOk)
 // Remove Looney games (event deleted Oct 6)
 supabase.from('games').delete().eq('event', 'looney').then(() => console.log('looney games removed'));
 seedHalloweenGames(supabase, sanitizeWorld).then(r => console.log('hw:', r.created));
+seedBlockverseGames(supabase, sanitizeWorld).then(r => console.log('bv:', r.created));
 seedShooterGames().then(r => console.log('shooter:', r.created));
 server.listen(PORT, () => console.log(`Funtopia running on http://localhost:${PORT}`));
 
