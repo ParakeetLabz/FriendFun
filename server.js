@@ -750,8 +750,12 @@ app.post('/api/admin/users/:name/command', auth, adminOnly, async (req, res) => 
   } else {
     return res.status(400).json({ error: 'Unknown admin command' });
   }
-  const { data: updated, error } = await supabase.from('users').update(updates).eq('name', user.name).select().single();
-  if (error) return res.status(500).json({ error: error.message });
+  let updated = user;
+  if (updates && Object.keys(updates).length) {
+    const { data, error } = await supabase.from('users').update(updates).eq('name', user.name).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    updated = data;
+  }
   const isBanned = !!updated.banned && (!updated.bannedUntil || updated.bannedUntil > Date.now());
   res.json({ ok: true, message, user: { ...await publicUser(updated), funtix: updated.funtix, clubForever: isAdmin(updated) || !!updated.clubForever, aiAccess: isOwner(updated) || isAdmin(updated) || !!updated.aiAccess, banned: isBanned, banReason: updated.banReason || '', bannedUntil: updated.bannedUntil || 0, admin: isAdmin(updated), owner: isOwner(updated) } });
 });
