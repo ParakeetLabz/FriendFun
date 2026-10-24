@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=bcfbcafe').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=f0334023').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -688,7 +688,7 @@ async function playPage(id, server) {
   const g = await api('GET', '/api/games/' + id);
   me = await api('GET', '/api/me');
   app.className = 'fullscreen'; app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=e91c354d');
+  const { Game } = await import('./game.js?v=e717403f');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -752,6 +752,10 @@ async function avatarPage(tab = 'body') {
 }
 const PREVIEW_BASE = { colors: { head: '#a3a2a5', torso: '#a3a2a5', larm: '#a3a2a5', rarm: '#a3a2a5', lleg: '#a3a2a5', rleg: '#a3a2a5' }, hat: 'hat_none', face: 'face_smile', shirt: 'shirt_none' };
 function itemImage(item) {
+  if (item.type === 'shirt' && _avatar3d && _avatar3d.shirtDesignImage) {
+    const flat = _avatar3d.shirtDesignImage(item.id);
+    if (flat) return flat;
+  }
   const a = structuredClone(me?.avatar || PREVIEW_BASE);
   a[item.type] = item.id;
   return avatarImage(a, item.type === 'shirt' ? 'full' : 'headshot');
@@ -818,7 +822,7 @@ function buyModal(it, onDone) {
   const opts = [['tix', tix, it.price, me.funtix ?? 0]];
   const d = document.createElement('div'); d.className = 'modal-bg';
   d.innerHTML = `<div class="modal"><h2>Buy Item</h2>
-    <div class="buy-row">${it.type === 'pet' ? (PET_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="pet-voxel" width="160" height="160" data-pet="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji}</div>`) : it.type === 'gear' ? (GEAR_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="gear-voxel" width="160" height="160" data-gear="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji}</div>`) : `<img src="${itemImage(it)}"`}><div><p>Would you like to buy <b>${esc(it.name)}</b>?</p>
+    <div class="buy-row">${it.type === 'pet' ? (PET_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="pet-voxel" width="160" height="160" data-pet="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji}</div>`) : it.type === 'gear' ? (GEAR_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="gear-voxel" width="160" height="160" data-gear="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji}</div>`) : `<img src="${itemImage(it)}">`}<div><p>Would you like to buy <b>${esc(it.name)}</b>?</p>
     <p class="muted small">You have ${tix} ${fmt(me.funtix ?? 0)}</p></div></div>
     <div class="modal-actions"><button class="btn-secondary">Cancel</button>${opts.map(([c, ic, p, bal]) => `<button class="btn-primary buy-with" data-c="${c}" ${bal < p ? 'disabled title="Not enough"' : ''}>Buy for ${ic} ${p}</button>`).join('')}</div></div>`;
   document.body.appendChild(d);
@@ -1259,7 +1263,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=e91c354d');
+      const { Game: GameClass } = await import('./game.js?v=e717403f');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
