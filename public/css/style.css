@@ -784,3 +784,9 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
   .lb-panel { width: 230px; right: 8px; }
   .lb-tiles { flex-wrap: wrap; }
 }
+
+/* Lobby emotes */
+.lb-emotes { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10; }
+.lb-emotes button { width: 44px; height: 44px; border-radius: 12px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); font-size: 20px; cursor: pointer; line-height: 1; }
+.lb-emotes button:hover { background: rgba(255,255,255,.12); }
+.lb-emotes button.on { background: rgba(124,108,245,.35); border-color: rgba(124,108,245,.7); }
