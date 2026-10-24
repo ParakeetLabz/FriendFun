@@ -69,6 +69,7 @@ export async function lobbyPage(D) {
       </div>
     </aside>
     <div class="lb-nameplate"><b>${esc(me.name)}</b><span>🏅 ${(me.badges || []).length} badges · 🔥 ${me.streak || 0} day streak</span></div>
+    <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
     <footer class="lb-tiles">
       ${recent ? `<a class="lb-tile" href="#/play/${recent.id}"><span>⏩</span><b>Continue</b><i>${esc(recent.name)}</i></a>` : ''}
       <a class="lb-tile" href="#/discover"><span>🏆</span><b>Charts</b><i>Top games right now</i></a>
@@ -169,6 +170,13 @@ export async function lobbyPage(D) {
   el.addEventListener('pointermove', e => { if (dragging) { targetSpin += (e.clientX - lastX) * 0.008; lastX = e.clientX; } });
   const resize = () => { const w = holder.clientWidth, h = holder.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   resize(); addEventListener('resize', resize);
+  let myEmote = 'idle', emoteEnd = 0;
+  app.querySelectorAll('.lb-emotes button').forEach(b => b.onclick = () => {
+    const e = b.dataset.e;
+    if (myEmote === e && clock.elapsedTime < emoteEnd) { myEmote = 'idle'; emoteEnd = 0; }
+    else { myEmote = e; emoteEnd = clock.elapsedTime + 4; }
+    app.querySelectorAll('.lb-emotes button').forEach(x => x.classList.toggle('on', x.dataset.e === myEmote && clock.elapsedTime < emoteEnd));
+  });
   let raf = 0; const clock = new THREE.Clock();
   const tick = () => {
     raf = requestAnimationFrame(tick);
@@ -176,7 +184,8 @@ export async function lobbyPage(D) {
     if (!dragging) targetSpin += dt * 0.12;
     spin += (targetSpin - spin) * Math.min(1, dt * 6);
     stage.rotation.y = spin;
-    chars.forEach((c, i) => animateCharacter(c, 'idle', t + i * 1.7, dt));
+    if (myEmote !== 'idle' && t >= emoteEnd) { myEmote = 'idle'; app.querySelectorAll('.lb-emotes button').forEach(x => x.classList.remove('on')); }
+    chars.forEach((c, i) => animateCharacter(c, i === 0 ? myEmote : 'idle', t + i * 1.7, dt));
     renderer.render(scene, camera);
   };
   tick();
