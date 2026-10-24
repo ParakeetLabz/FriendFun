@@ -76,6 +76,10 @@ export async function lobbyPage(D) {
       <a class="lb-tile" href="#/halloween"><span>🎃</span><b>Halloween</b><i>Spooky games & loot</i></a>
       <a class="lb-tile" href="#/create"><span>👹</span><b>Horror Gauntlet</b><i>Remix the 250-part course</i></a>
     </footer>
+    <div class="lb-overlay" id="lb-overlay">
+      <button class="lb-ov-close" title="Back to lobby">✕</button>
+      <div class="lb-ov-body"></div>
+    </div>
   </div>`;
 
   const playBtn = app.querySelector('.lb-play');
@@ -89,7 +93,34 @@ export async function lobbyPage(D) {
     app.querySelectorAll('.lb-chips button').forEach(x => x.classList.toggle('on', x === b));
     mode = b.dataset.m; setFeat(pick(mode));
   });
-  playBtn.onclick = () => { if (feat) location.hash = '#/play/' + feat.id; };
+  const overlay = app.querySelector('#lb-overlay');
+  const overlayBody = overlay.querySelector('.lb-ov-body');
+  function closeOverlay() {
+    overlay.classList.remove('open');
+    window.__clearOverlayApp();
+    window.__closeLobbyOverlay = null;
+    history.replaceState(null, '', '#/home');
+  }
+  function openOverlay(hash) {
+    if (hash === '#/home' || hash === '#/lobby') { closeOverlay(); return; }
+    overlayBody.innerHTML = '';
+    overlay.classList.add('open');
+    window.__setOverlayApp(overlayBody);
+    window.__closeLobbyOverlay = closeOverlay;
+    if (location.hash === hash) window.__route();
+    else location.hash = hash;
+  }
+  // every lobby button opens its page as an overlay — the lobby stays underneath
+  app.querySelectorAll('a[href^="#/"]').forEach(a => {
+    a.addEventListener('click', e => { e.preventDefault(); openOverlay(a.getAttribute('href')); });
+  });
+  // links inside the overlay stay in the overlay
+  overlay.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#/"]');
+    if (a) { e.preventDefault(); e.stopPropagation(); openOverlay(a.getAttribute('href')); }
+  });
+  overlay.querySelector('.lb-ov-close').onclick = closeOverlay;
+  playBtn.onclick = () => { if (feat) openOverlay('#/play/' + feat.id); };
 
   // ---------- 3D stage ----------
   const holder = app.querySelector('.lb-3d');
