@@ -1273,7 +1273,8 @@ async function studioPage(id, tpl) {
   let g;
   if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet', blockverse: 'Blockverse Portal Run', bvPlaza: 'Blockverse Plaza' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
   else { g = await api('GET', '/api/games/' + id); if (g.creator.toLowerCase() !== me.name.toLowerCase()) { toast('You can only edit your own games', true); location.hash = '#/games/' + id; return; } }
-  app.className = 'fullscreen'; app.innerHTML = '<div class="studio-container"></div>';
+  if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
+  app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
   const { Studio } = await import('./studio.js?v=collab26');
   const studio = new Studio(app.querySelector('.studio-container'), {
