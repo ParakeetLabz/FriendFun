@@ -119,6 +119,11 @@ function shirtTexture(id) {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   return (shirtCache[id] = t);
 }
+// Flat 2D preview of a shirt's design (for shop thumbnails) — the 3D garment itself is solid colors.
+export function shirtDesignImage(id) {
+  const t = shirtTexture(id);
+  try { return t.image.toDataURL(); } catch { return ''; }
+}
 
 function mat(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.75 }); }
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
