@@ -434,16 +434,37 @@ function buildR6(avatar, opts = {}, smooth = false) {
   const torsoW = isBugs ? 1.8 : 2;
   const torso = part(torsoW, 2, 1, suit ? '#263238' : C.torso); torso.position.y = 3; root.add(torso);
   const shirtIt = ITEM[avatar.shirt];
-  const shirtTex = avatar.shirt && avatar.shirt !== 'shirt_none' && !(shirtIt && shirtIt.model_url);
-  const shirtMat = shirtTex ? new THREE.MeshStandardMaterial({ map: shirtTexture(avatar.shirt), roughness: 0.8 }) : null;
+  const shirtOn = avatar.shirt && avatar.shirt !== 'shirt_none' && !(shirtIt && shirtIt.model_url);
+  const shirtColor = (shirtIt && shirtIt.color) || '#aaaaaa';
+  // complex 3D garment in solid colors (no copied textures): torso + collar + placket + buttons + hem
+  const clothPart = (w, h, d, material) => {
+    const r = Math.max(0.01, Math.min(0.045, Math.min(w, h, d) / 2 - 0.01));
+    const g = smooth ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d);
+    const m = new THREE.Mesh(g, material);
+    m.castShadow = true; m.receiveShadow = true;
+    return m;
+  };
+  const shirtMat = shirtOn ? new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.8 }) : null;
+  const trimMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.8 }) : null;
+  const btnMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#37474f', roughness: 0.6 }) : null;
   if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
-  else if (shirtTex) {
-    // 3D shirt: a box just bigger than the torso, textured with the shirt design
-    const shirtGeo = smooth
-      ? new RoundedBoxGeometry(torsoW + 0.08, 2.04, 1.08, 2, 0.045)
-      : new THREE.BoxGeometry(torsoW + 0.08, 2.04, 1.08);
-    const shirt = new THREE.Mesh(shirtGeo, shirtMat);
-    shirt.castShadow = true; shirt.receiveShadow = true; torso.add(shirt);
+  else if (shirtOn) {
+    torso.add(clothPart(torsoW + 0.08, 2.04, 1.08, shirtMat));
+    for (const s of [-1, 1]) { // collar panels
+      const cp = clothPart(0.5, 0.26, 0.12, trimMat);
+      cp.position.set(s * 0.3, 0.95, 0.4); cp.rotation.z = s * -0.3; cp.rotation.x = -0.2;
+      torso.add(cp);
+    }
+    const cb = clothPart(torsoW * 0.6, 0.22, 0.12, trimMat); // back collar band
+    cb.position.set(0, 0.95, -0.42); torso.add(cb);
+    const placket = clothPart(0.2, 1.7, 0.06, trimMat); // button placket
+    placket.position.set(0, -0.05, 0.55); torso.add(placket);
+    for (let i = 0; i < 4; i++) {
+      const b = clothPart(0.13, 0.13, 0.06, btnMat);
+      b.position.set(0, 0.55 - i * 0.42, 0.56); torso.add(b);
+    }
+    const hem = clothPart(torsoW + 0.12, 0.2, 1.12, shirtMat); // hem
+    hem.position.y = -0.95; torso.add(hem);
   }
   const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
   const H = HEADS[avatar.head] || HEADS.head_classic;
@@ -489,14 +510,14 @@ function buildR6(avatar, opts = {}, smooth = false) {
     larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
     lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
-  if (shirtTex) {
-    // sleeves: textured 3D boxes riding the arm pivots, so they swing with every animation
+  if (shirtOn) {
+    // sleeves + cuffs riding the arm pivots, so they swing with every animation
     for (const arm of [larm, rarm]) {
       const w = (arm.userData.w || 1) + 0.16;
-      const sg = smooth ? new RoundedBoxGeometry(w, 1.1, w, 2, 0.045) : new THREE.BoxGeometry(w, 1.1, w);
-      const sleeve = new THREE.Mesh(sg, shirtMat);
-      sleeve.position.y = -0.55; sleeve.castShadow = true; sleeve.receiveShadow = true;
-      arm.add(sleeve);
+      const sleeve = clothPart(w, 1.1, w, shirtMat);
+      sleeve.position.y = -0.55; arm.add(sleeve);
+      const cuff = clothPart(w + 0.08, 0.3, w + 0.08, trimMat);
+      cuff.position.y = -1.0; arm.add(cuff);
     }
   }
   root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso };
