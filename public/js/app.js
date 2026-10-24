@@ -69,7 +69,18 @@ import { templates } from './worlds.js?v=collab26';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
-const app = document.getElementById('app');
+let app = document.getElementById('app');
+let overlayMode = false;
+let lobbyCleanup = null;
+window.__setOverlayApp = (el) => { lobbyCleanup = cleanup; cleanup = null; app = el; overlayMode = true; };
+window.__clearOverlayApp = () => {
+  if (!overlayMode) return;
+  if (cleanup) { const c = cleanup; cleanup = null; c(); }
+  app = document.getElementById('app');
+  overlayMode = false;
+  cleanup = lobbyCleanup; lobbyCleanup = null;
+};
+window.__route = route;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let token = localStorage.getItem('ff_token');
 let me = null;
@@ -407,6 +418,11 @@ function initEasterEggs() {
 setTimeout(initEasterEggs, 1000);
 
 function mount(active, html, after) {
+  if (overlayMode) {
+    app.innerHTML = html;
+    after?.(); fillThumbs();
+    return;
+  }
   document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
   app.className = ''; app.innerHTML = shell(active, html);
   refreshPartyBar();
@@ -687,11 +703,13 @@ async function gamePage(id) {
 async function playPage(id, server) {
   const g = await api('GET', '/api/games/' + id);
   me = await api('GET', '/api/me');
-  app.className = 'fullscreen'; app.innerHTML = '<div class="play-container"></div>';
+  const wasOverlay = overlayMode;
+  if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
+  app.innerHTML = '<div class="play-container"></div>';
   const { Game } = await import('./game.js?v=18807d65');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
-    onMoney: r => setMoney(r), onExit: () => { cleanup = null; history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
+    onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
   });
   cleanup = () => game.destroy();
 }
@@ -1561,7 +1579,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { const m = await import('./lobby.js?v=fnlobby1'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=56a89691'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
