@@ -452,25 +452,76 @@ function buildR6(avatar, opts = {}, smooth = false) {
   const shirtMat = shirtOn ? new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.8 }) : null;
   const trimMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.8 }) : null;
   const btnMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#37474f', roughness: 0.6 }) : null;
+  // every shirt gets its own garment layout: archetype from the shirt style + hashed variations
+  const garmentLayout = (id) => {
+    const it = ITEM[id];
+    const ugcT = (id.startsWith('ugc_') && it && it.template) ? it.template : null;
+    const st = ugcT ? ugcT.slice(6).split('_')[0] : id.slice(6).split('_')[0];
+    let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0;
+    const ah = Math.abs(h);
+    const arch = st === 'hoodie' ? 'hoodie'
+      : ['suit', 'tux', 'goldsuit', 'dress', 'referee', 'labcoat', 'chefcoat'].includes(st) ? 'dress'
+      : st === 'polo' ? 'polo' : st === 'jacket' ? 'jacket' : st === 'vest' ? 'vest'
+      : st === 'vampcape' ? 'cape' : 'tee';
+    return { arch, buttons: 3 + (ah % 3), pointedCollar: ((ah >> 3) & 1) === 1, pocket: ((ah >> 5) & 1) === 1, cuffs: ((ah >> 7) & 1) === 1 };
+  };
+  const GL = shirtOn ? garmentLayout(avatar.shirt) : null;
+  const buildGarment = () => {
+    const a = GL.arch;
+    torso.add(clothPart(torsoW + 0.08, 2.04, 1.08, shirtMat)); // torso shell
+    if (a === 'hoodie') {
+      const hood = clothPart(1.3, 0.85, 0.6, shirtMat);
+      hood.position.set(0, 1.05, -0.32); torso.add(hood);
+      const rim = clothPart(1.0, 0.18, 0.18, trimMat);
+      rim.position.set(0, 0.78, 0.28); torso.add(rim);
+    } else if (a === 'dress' || a === 'polo' || a === 'jacket') {
+      if (GL.pointedCollar) {
+        for (const s of [-1, 1]) {
+          const cp = clothPart(0.5, 0.26, 0.12, trimMat);
+          cp.position.set(s * 0.3, 0.95, 0.4); cp.rotation.z = s * -0.3; cp.rotation.x = -0.2;
+          torso.add(cp);
+        }
+      } else {
+        const band = clothPart(torsoW * 0.62, 0.2, 0.5, trimMat);
+        band.position.set(0, 0.96, 0.1); torso.add(band);
+      }
+      const back = clothPart(torsoW * 0.6, 0.22, 0.12, trimMat);
+      back.position.set(0, 0.95, -0.42); torso.add(back);
+    }
+    if (a === 'dress') {
+      const placket = clothPart(0.2, 1.7, 0.06, trimMat);
+      placket.position.set(0, -0.05, 0.55); torso.add(placket);
+      for (let i = 0; i < GL.buttons; i++) {
+        const b = clothPart(0.13, 0.13, 0.06, btnMat);
+        b.position.set(0, 0.55 - i * (1.1 / Math.max(1, GL.buttons - 1)), 0.56); torso.add(b);
+      }
+    } else if (a === 'polo') {
+      const placket = clothPart(0.2, 0.7, 0.06, trimMat);
+      placket.position.set(0, 0.6, 0.55); torso.add(placket);
+      for (let i = 0; i < 2; i++) {
+        const b = clothPart(0.13, 0.13, 0.06, btnMat);
+        b.position.set(0, 0.75 - i * 0.35, 0.56); torso.add(b);
+      }
+    } else if (a === 'jacket' || a === 'vest') {
+      for (const s of [-1, 1]) { // open front panels
+        const p = clothPart(torsoW * 0.4, 1.85, 0.1, shirtMat);
+        p.position.set(s * torsoW * 0.3, -0.05, 0.5); torso.add(p);
+      }
+    }
+    if (GL.pocket && (a === 'dress' || a === 'tee' || a === 'polo')) {
+      const pk = clothPart(0.42, 0.5, 0.08, trimMat);
+      pk.position.set(-0.58, 0.28, 0.55); torso.add(pk);
+    }
+    if (a === 'cape') {
+      const cape = clothPart(torsoW + 0.35, 2.3, 0.12, shirtMat);
+      cape.position.set(0, -0.15, -0.68); cape.rotation.x = 0.1; torso.add(cape);
+    } else {
+      const hem = clothPart(torsoW + 0.12, 0.2, 1.12, shirtMat);
+      hem.position.y = -0.95; torso.add(hem);
+    }
+  };
   if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
-  else if (shirtOn) {
-    torso.add(clothPart(torsoW + 0.08, 2.04, 1.08, shirtMat));
-    for (const s of [-1, 1]) { // collar panels
-      const cp = clothPart(0.5, 0.26, 0.12, trimMat);
-      cp.position.set(s * 0.3, 0.95, 0.4); cp.rotation.z = s * -0.3; cp.rotation.x = -0.2;
-      torso.add(cp);
-    }
-    const cb = clothPart(torsoW * 0.6, 0.22, 0.12, trimMat); // back collar band
-    cb.position.set(0, 0.95, -0.42); torso.add(cb);
-    const placket = clothPart(0.2, 1.7, 0.06, trimMat); // button placket
-    placket.position.set(0, -0.05, 0.55); torso.add(placket);
-    for (let i = 0; i < 4; i++) {
-      const b = clothPart(0.13, 0.13, 0.06, btnMat);
-      b.position.set(0, 0.55 - i * 0.42, 0.56); torso.add(b);
-    }
-    const hem = clothPart(torsoW + 0.12, 0.2, 1.12, shirtMat); // hem
-    hem.position.y = -0.95; torso.add(hem);
-  }
+  else if (shirtOn) buildGarment();
   const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
   const H = HEADS[avatar.head] || HEADS.head_classic;
   if (H.custom) { H.custom(headPivot); }
@@ -515,14 +566,16 @@ function buildR6(avatar, opts = {}, smooth = false) {
     larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
     lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
-  if (shirtOn) {
-    // sleeves + cuffs riding the arm pivots, so they swing with every animation
+  if (shirtOn && GL.arch !== 'vest') {
+    // sleeves riding the arm pivots, so they swing with every animation
     for (const arm of [larm, rarm]) {
       const w = (arm.userData.w || 1) + 0.16;
       const sleeve = clothPart(w, 1.1, w, shirtMat);
       sleeve.position.y = -0.55; arm.add(sleeve);
-      const cuff = clothPart(w + 0.08, 0.3, w + 0.08, trimMat);
-      cuff.position.y = -1.0; arm.add(cuff);
+      if (GL.cuffs) {
+        const cuff = clothPart(w + 0.08, 0.3, w + 0.08, trimMat);
+        cuff.position.y = -1.0; arm.add(cuff);
+      }
     }
   }
   root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso };
