@@ -159,6 +159,20 @@ function userTile(u) {
 
 // ---------- layout ----------
 const UPDATES = [
+  { id: 'u11', date: 'Oct 24, 2026', title: 'Lobby emotes + lobby is home', items: [
+    'The 3D lobby is now the home screen — every lobby button opens as a fullscreen overlay, ✕ takes you back to the lobby',
+    '8 emotes under the nameplate: 👋 wave, 💃 dance, 🌀 spin, 🙇 bow, 🎉 cheer, 😂 laugh, 😎 dab, 🪑 sit — tap one to perform it, tap again to stop',
+  ]},
+  { id: 'u10', date: 'Oct 23, 2026', title: '3D clothes, your way', items: [
+    'Real 3D garments with moving sleeves — shirts are no longer boxes',
+    'Every shirt gets its own layout: hoodies get a hood, suits get a collar + placket + buttons, jackets and vests open in front, the vampire cape gets a back cape',
+    'No two shirts share a layout',
+  ]},
+  { id: 'u9', date: 'Oct 11–16, 2026', title: 'UGC Studio, News + a new look', items: [
+    'UGC Studio: remix hat and shirt templates or upload your own .glb — approved items sell in the Marketplace and creators keep 70% of each sale',
+    'News broadcasts + News Maker: owners can broadcast live to every screen',
+    'Midnight-ocean remodel: deep dark blue theme with cyan and warm orange accents',
+  ]},
   { id: 'u8', date: 'Oct 7, 2026', title: 'Owner tier + FunPanel', items: [
     'Owners get 20 extra controls: take FunTix, make mods, grant items, reset passwords, system DMs, broadcasts, maintenance mode, FunTix rain, more',
     'Admins keep the classic panel; moderators keep the Moderation page',
