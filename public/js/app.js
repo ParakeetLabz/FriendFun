@@ -159,6 +159,16 @@ function userTile(u) {
 
 // ---------- layout ----------
 const UPDATES = [
+  { id: 'u13', date: 'Oct 26, 2026', title: 'FunTopia Pro is live', items: [
+    'A separate violet + gold version of the whole website — home, discover, avatar, marketplace, create, friends, groups, profile, settings',
+    'The new Pro character: a restylable visor bot — change its body, visor and outfit trim on the Avatar page',
+    'Jump from Funtopia Settings’ gold 👑 FunTopia Pro banner; head back from Pro Settings. Live at funtopia-pro.vercel.app',
+  ]},
+  { id: 'u12', date: 'Oct 26, 2026', title: 'Halloween countdown gets scarier every day', items: [
+    'The lobby counts down to Halloween — and every day it gets scarier, on its own',
+    'Constant glitches plus drifting ghosts, bats, spiders and skulls, and eyes blinking in the dark — faster and more of them as the scare level climbs',
+    'Runs through Sunday Nov 1 at 7pm: Nov 1 is the LAST DAY, then the countdown, glitches and creatures hide and the decor + double daily FunTix switch off',
+  ]},
   { id: 'u11', date: 'Oct 24, 2026', title: 'Lobby emotes + lobby is home', items: [
     'The 3D lobby is now the home screen — every lobby button opens as a fullscreen overlay, ✕ takes you back to the lobby',
     '8 emotes under the nameplate: 👋 wave, 💃 dance, 🌀 spin, 🙇 bow, 🎉 cheer, 😂 laugh, 😎 dab, 🪑 sit — tap one to perform it, tap again to stop',
