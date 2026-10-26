@@ -7,12 +7,13 @@ const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': 
 
 // 🎃 Halloween countdown — days until Oct 31, scarier every day. Pure date
 // math, so the level climbs on its own with no daily pushes. After Oct 31 it
-// counts down to the Nov 2 event end at max scare, then hides.
+// runs at max scare through the Nov 1, 7pm local cutoff (matching the site
+// HALLOWEEN_DATES end), then hides.
 function halloweenCountdown(now = new Date()) {
   const y = now.getFullYear();
   const day = 86400000;
   const hw = new Date(y, 9, 31); // Oct 31 local
-  const end = new Date(y, 10, 3); // Nov 3 local — event runs through Nov 2
+  const end = new Date(y, 10, 1, 19); // Nov 1, 7pm local — site cutoff
   const toHW = Math.ceil((hw - now) / day);
   const EMOJIS = ['🎃', '🎃🦇', '🎃🦇👻', '🎃🦇👻🕷️', '🎃🦇👻🕷️💀', '💀🎃🦇👻🕷️🩸'];
   if (toHW > 5 || now >= end) return null;
@@ -21,8 +22,6 @@ function halloweenCountdown(now = new Date()) {
     return { level, emojis: EMOJIS[level - 1], text: `${toHW} day${toHW === 1 ? '' : 's'} until Halloween` };
   }
   if (toHW === 0) return { level: 6, emojis: EMOJIS[5], text: 'HALLOWEEN IS HERE' };
-  const toEnd = Math.ceil((new Date(y, 10, 2) - now) / day);
-  if (toEnd > 0) return { level: 6, emojis: EMOJIS[5], text: `${toEnd} day${toEnd === 1 ? '' : 's'} left of Halloween` };
   return { level: 6, emojis: EMOJIS[5], text: 'LAST DAY of Halloween' };
 }
 
