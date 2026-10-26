@@ -5,9 +5,31 @@ import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=9
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// 🎃 Halloween countdown — days until Oct 31, scarier every day. Pure date
+// math, so the level climbs on its own with no daily pushes. After Oct 31 it
+// counts down to the Nov 2 event end at max scare, then hides.
+function halloweenCountdown(now = new Date()) {
+  const y = now.getFullYear();
+  const day = 86400000;
+  const hw = new Date(y, 9, 31); // Oct 31 local
+  const end = new Date(y, 10, 3); // Nov 3 local — event runs through Nov 2
+  const toHW = Math.ceil((hw - now) / day);
+  const EMOJIS = ['🎃', '🎃🦇', '🎃🦇👻', '🎃🦇👻🕷️', '🎃🦇👻🕷️💀', '💀🎃🦇👻🕷️🩸'];
+  if (toHW > 5 || now >= end) return null;
+  if (toHW > 0) {
+    const level = 6 - toHW;
+    return { level, emojis: EMOJIS[level - 1], text: `${toHW} day${toHW === 1 ? '' : 's'} until Halloween` };
+  }
+  if (toHW === 0) return { level: 6, emojis: EMOJIS[5], text: 'HALLOWEEN IS HERE' };
+  const toEnd = Math.ceil((new Date(y, 10, 2) - now) / day);
+  if (toEnd > 0) return { level: 6, emojis: EMOJIS[5], text: `${toEnd} day${toEnd === 1 ? '' : 's'} left of Halloween` };
+  return { level: 6, emojis: EMOJIS[5], text: 'LAST DAY of Halloween' };
+}
+
 export async function lobbyPage(D) {
   const { api, esc, fmt, toast, avatarImgTag } = D;
   const me = D.me;
+  const cd = halloweenCountdown();
   const app = document.getElementById('app');
   app.className = 'fullscreen';
   let games = [], friends = [];
@@ -25,7 +47,7 @@ export async function lobbyPage(D) {
   const recent = games.find(g => g.id === recentId);
 
   app.innerHTML = `
-  <div class="lobby">
+  <div class="lobby${cd ? ` scare-${cd.level}` : ''}">
     <div class="lb-bg"></div>
     <div class="lb-3d"></div>
     <header class="lb-top">
@@ -37,6 +59,7 @@ export async function lobbyPage(D) {
         <a class="lb-iconbtn" href="#/settings" title="Settings">⚙️</a>
       </div>
     </header>
+    ${cd ? `<a class="lb-countdown scare-${cd.level}" href="#/halloween"><span>${cd.emojis}</span><b>${cd.text}</b></a>` : ''}
     <nav class="lb-rail">
       <a class="lb-item active" href="#/discover"><span>▶</span>PLAY</a>
       <a class="lb-item" href="#/avatar"><span>🎽</span>LOCKER</a>
