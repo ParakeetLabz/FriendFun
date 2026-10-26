@@ -26,6 +26,23 @@ function halloweenCountdown(now = new Date()) {
   return { level: 6, emojis: EMOJIS[5], text: 'LAST DAY of Halloween' };
 }
 
+// 👻 Haunting creatures drifting across the lobby. Count grows with the scare
+// level. Deterministic layout (no Math.random) so it renders the same every load.
+function hauntHtml(level) {
+  const EMOJIS = ['👻', '🦇', '🕷️', '💀', '🩸'];
+  const n = level + 2;
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const top = 8 + ((i * 37) % 70);
+    const dur = 14 + ((i * 7) % 18);
+    const delay = -((i * 5) % 20);
+    const size = 22 + ((i * 13) % 22);
+    const rev = i % 2 === 1;
+    out += `<span style="top:${top}%;font-size:${size}px;animation-duration:${dur}s;animation-delay:${delay}s;${rev ? 'animation-direction:reverse;' : ''}">${EMOJIS[i % EMOJIS.length]}</span>`;
+  }
+  return out;
+}
+
 export async function lobbyPage(D) {
   const { api, esc, fmt, toast, avatarImgTag } = D;
   const me = D.me;
@@ -60,6 +77,7 @@ export async function lobbyPage(D) {
       </div>
     </header>
     ${cd ? `<a class="lb-countdown scare-${cd.level}" href="#/halloween"><span>${cd.emojis}</span><b>${cd.text}</b></a>` : ''}
+    ${cd ? `<div class="lb-glitch"></div><div class="lb-haunt">${hauntHtml(cd.level)}</div>${cd.level >= 5 ? '<div class="lb-eyes">👀</div>' : ''}` : ''}
     <nav class="lb-rail">
       <a class="lb-item active" href="#/discover"><span>▶</span>PLAY</a>
       <a class="lb-item" href="#/avatar"><span>🎽</span>LOCKER</a>
