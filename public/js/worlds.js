@@ -270,7 +270,8 @@ export function stealablob() {
     w.parts.push(part([x, y, z], [7, 1.6, 4], '#ffffff', { name: 'Cloud', m: 'plastic' }));
     w.parts.push(part([x + 2, y + 1, z], [4, 1.4, 3], '#ffffff', { name: 'Cloud', m: 'plastic' }));
   }
-  w.parts.push(part([0, 0.25, -40], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  // spawn sits beside the belt, not on it — the conveyor is for blobs only
+  w.parts.push(part([14, 0.25, -40], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
   w.stealablob = true;
   return w;
 }
