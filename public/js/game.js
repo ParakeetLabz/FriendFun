@@ -105,7 +105,7 @@ export class Game {
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); } else this.sys('Test mode - press Stop to return to Studio.');
-    if (this.world.stealablob) import('./stealablob.js?v=e6eaff2f').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    if (this.world.stealablob) import('./stealablob.js?v=3e60005b').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
     this.last = performance.now();
     this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
   }
