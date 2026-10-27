@@ -24,14 +24,19 @@ export async function seedHalloweenGames(supabase, sanitizeWorld) {
       if (error) console.warn('sab fail', error.message); else console.log('sab: Steal a Blob seeded');
     } else {
       // Migrate the saved world when the template improves: the row is frozen
-      // from its first seed, so new base designs never appear otherwise. Only
-      // migrates worlds that still look like the official old template (old
-      // pillar markers, no new slot pads) — never a player-edited world.
+      // from its first seed, so new base designs never appear otherwise. The
+      // first seed used the flat Oct 26 template (no pillars at all), so the
+      // check is: a blob world (Conveyor + Base1) that lacks the new slot pads.
       const parts = sab.world?.parts || [];
-      const isOldOfficial = parts.some(p => p.name === 'BasePillar1') && !parts.some(p => p.name === 'SlotPad1');
-      if (isOldOfficial) {
+      const isBlobWorld = parts.some(p => p.name === 'Conveyor') && parts.some(p => p.name === 'Base1');
+      const hasNewBases = parts.some(p => p.name === 'SlotPad1');
+      if (isBlobWorld && !hasNewBases) {
         const { error } = await supabase.from('games').update({ world: sanitizeWorld(stealablob()), updated: Date.now() }).eq('id', 'g_stealablob');
         if (error) console.warn('sab migrate fail', error.message); else console.log('sab: Steal a Blob world refreshed');
+      } else if (hasNewBases) {
+        console.log('sab: world already current');
+      } else {
+        console.log('sab: world unrecognized, skipping migrate');
       }
     }
     const { data: ex } = await supabase.from('games').select('id').eq('event', 'halloween');
