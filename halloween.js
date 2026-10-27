@@ -16,12 +16,23 @@ export async function seedHalloweenGames(supabase, sanitizeWorld) {
   try {
     // Steal a Blob — official Funtopia game, seeded once (runs on every boot).
     // Seeded here because server.js is at the push size cap and can't take a new endpoint.
-    const { data: sab } = await supabase.from('games').select('id').eq('id', 'g_stealablob').maybeSingle();
+    const { data: sab } = await supabase.from('games').select('id,world').eq('id', 'g_stealablob').maybeSingle();
     if (!sab) {
       const { error } = await supabase.from('games').insert({ id: 'g_stealablob', name: 'Steal a Blob', creator: 'Funtopia',
         description: 'Blobs walk the conveyor. Buy them, and they print coins in your base. Steal your rivals\' blobs — and slap thieves before they get away! 🫧',
         world: sanitizeWorld(stealablob()), visits: 0, likes: 0, dislikes: 0, max_players: 30, created: Date.now(), updated: Date.now(), thumbnail: '', unpublished: false });
       if (error) console.warn('sab fail', error.message); else console.log('sab: Steal a Blob seeded');
+    } else {
+      // Migrate the saved world when the template improves: the row is frozen
+      // from its first seed, so new base designs never appear otherwise. Only
+      // migrates worlds that still look like the official old template (old
+      // pillar markers, no new slot pads) — never a player-edited world.
+      const parts = sab.world?.parts || [];
+      const isOldOfficial = parts.some(p => p.name === 'BasePillar1') && !parts.some(p => p.name === 'SlotPad1');
+      if (isOldOfficial) {
+        const { error } = await supabase.from('games').update({ world: sanitizeWorld(stealablob()), updated: Date.now() }).eq('id', 'g_stealablob');
+        if (error) console.warn('sab migrate fail', error.message); else console.log('sab: Steal a Blob world refreshed');
+      }
     }
     const { data: ex } = await supabase.from('games').select('id').eq('event', 'halloween');
     const haveIds = new Set((ex || []).map(g => g.id));
