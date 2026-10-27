@@ -213,16 +213,43 @@ export function garden() {
 export function stealablob() {
   const w = startWorld('#8fc8ff');
   w.parts.push(part([0, -0.5, 0], [160, 1, 160], '#3d6b4f', { name: 'Ground', m: 'grass' }));
-  // conveyor down the middle
+  // conveyor down the middle, with moving-look chevrons + lamp posts
   w.parts.push(part([0, 0.1, 0], [14, 0.4, 120], '#2a3550', { name: 'Conveyor', m: 'plastic' }));
   w.parts.push(part([-7.5, 0.4, 0], [1, 0.8, 120], '#ffd700', { name: 'ConveyorEdge', m: 'neon' }));
   w.parts.push(part([7.5, 0.4, 0], [1, 0.8, 120], '#ffd700', { name: 'ConveyorEdge', m: 'neon' }));
-  // 8 base platforms (must match SAB_BASES in stealablob.js)
+  for (let z = -55; z <= 55; z += 10) {
+    w.parts.push(part([0, 0.32, z], [10, 0.08, 1.2], '#3a4763', { name: 'BeltStripe', m: 'plastic' }));
+  }
+  for (let z = -50; z <= 50; z += 20) {
+    for (const sx of [-9, 9]) {
+      w.parts.push(part([sx, 1, z], [0.5, 2, 0.5], '#1f2937', { name: 'LampPost', m: 'plastic' }));
+      w.parts.push(part([sx, 2.2, z], [1.2, 0.6, 1.2], '#ffe066', { name: 'LampGlow', m: 'neon' }));
+    }
+  }
+  // 8 base platforms (must match SAB_BASES in stealablob.js) — dressed up:
+  // raised platform + corner pillars + back banner + glowing front trim
   const bases = [[-22, -22], [22, -22], [-22, 22], [22, 22], [0, -26], [0, 26], [-26, 0], [26, 0]];
   const colors = ['#4a90e2', '#e24a4a', '#2ed573', '#ffd700', '#9b59e6', '#ff9f43', '#3ee6c4', '#ff5e8a'];
   bases.forEach(([x, z], i) => {
-    w.parts.push(part([x, 0.3, z], [14, 0.6, 12], colors[i], { name: 'Base' + (i + 1), m: 'plastic' }));
+    const c = colors[i];
+    w.parts.push(part([x, 0.3, z], [14, 0.6, 12], c, { name: 'Base' + (i + 1), m: 'plastic' }));
+    w.parts.push(part([x, 0.65, z - 5.5], [14, 0.15, 0.8], '#ffffff', { name: 'BaseTrim' + (i + 1), m: 'neon' }));
+    for (const [px, pz] of [[-6.5, -5.5], [6.5, -5.5], [-6.5, 5.5], [6.5, 5.5]]) {
+      w.parts.push(part([x + px, 1.6, z + pz], [1, 2.6, 1], c, { name: 'BasePillar' + (i + 1), m: 'plastic' }));
+    }
+    w.parts.push(part([x, 3.4, z - 5.5], [13, 1.6, 0.6], c, { name: 'BaseBanner' + (i + 1), m: 'plastic' }));
+    w.parts.push(part([x, 4.3, z - 5.5], [13, 0.2, 0.7], '#ffffff', { name: 'BannerTrim' + (i + 1), m: 'neon' }));
   });
+  // blocky trees + drifting clouds for atmosphere
+  for (const [x, z] of [[-16, -40], [16, -38], [-18, 8], [18, 12], [-15, 38], [15, 40], [-34, -12], [34, 14]]) {
+    w.parts.push(part([x, 1.2, z], [1, 2.4, 1], '#6b4a2f', { name: 'TreeTrunk', m: 'plastic' }));
+    w.parts.push(part([x, 3.2, z], [3.4, 2.4, 3.4], '#2e8b57', { name: 'TreeTop', m: 'plastic' }));
+    w.parts.push(part([x, 4.8, z], [2.2, 1.4, 2.2], '#3aa76d', { name: 'TreeTop2', m: 'plastic' }));
+  }
+  for (const [x, y, z] of [[-20, 14, -30], [22, 16, -10], [0, 15, 30], [-28, 17, 20], [28, 14, 35]]) {
+    w.parts.push(part([x, y, z], [7, 1.6, 4], '#ffffff', { name: 'Cloud', m: 'plastic' }));
+    w.parts.push(part([x + 2, y + 1, z], [4, 1.4, 3], '#ffffff', { name: 'Cloud', m: 'plastic' }));
+  }
   w.parts.push(part([0, 0.25, -40], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
   w.stealablob = true;
   return w;
