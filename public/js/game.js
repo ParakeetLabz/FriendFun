@@ -105,7 +105,11 @@ export class Game {
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); } else this.sys('Test mode - press Stop to return to Studio.');
-    if (this.world.stealablob) import('./stealablob.js?v=3e60005b').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    // Steal a Blob detection: sanitizeWorld() strips the stealablob flag from
+    // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
+    // which survive sanitizing. Covers the seeded game + Studio-made blob games.
+    const __isBlobWorld = this.world.stealablob || (Array.isArray(this.world.parts) && this.world.parts.some(p => p.name === 'Conveyor') && this.world.parts.some(p => /^Base[1-8]$/.test(p.name || '')));
+    if (__isBlobWorld) import('./stealablob.js?v=3e60005b').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
     this.last = performance.now();
     this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
   }
