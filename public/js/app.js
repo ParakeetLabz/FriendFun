@@ -65,7 +65,7 @@ function buildCharacter(avatar) {
   return _avatar3d.buildCharacter(avatar);
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=collab26';
-import { templates } from './worlds.js?v=ffbf903b';
+import { templates } from './worlds.js?v=6db0d335';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
@@ -733,7 +733,7 @@ async function playPage(id, server) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=32a9ef71');
+  const { Game } = await import('./game.js?v=968ec993');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1309,7 +1309,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=32a9ef71');
+      const { Game: GameClass } = await import('./game.js?v=968ec993');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
