@@ -146,6 +146,15 @@ export function startStealABlob(game) {
     if (pid === game.myId) return game.me?.name || 'You';
     return game.players.get(pid)?.name || 'Someone';
   }
+  // Wire transport: server.js is at the push size cap, so blob events ride the
+  // existing jam relay (server broadcasts any jam track < 20 chars). Format:
+  // 'blob:<action>:<id>' — game.js intercepts these before the jam handler.
+  function sendBlob(a, b) { game.send({ t: 'jam', track: 'blob:' + a + ':' + b }); }
+  function onBlobWire(fromId, track) {
+    const parts = track.split(':');
+    if (parts.length !== 3) return;
+    onBlob({ id: fromId, a: parts[1], b: Number(parts[2]) });
+  }
 
   // --- remote events (from the blob relay) ---
   function onBlob(m) {
@@ -204,7 +213,7 @@ export function startStealABlob(game) {
     if (slot < 0) { game.sys('Your base is full!'); return; }
     coins -= b.price;
     b.state = 'returning'; b.owner = game.myId; b.base = myBase(); b.slot = slot;
-    game.send({ t: 'blob', a: 'buy', b: b.id });
+    sendBlob('buy', b.id);
     game.sys(`🫧 You bought ${b.name}!`);
     refreshHud();
   }
@@ -213,7 +222,7 @@ export function startStealABlob(game) {
     if (game.pos.distanceTo(new THREE.Vector3(b.x, game.pos.y, b.z)) > 8) { game.sys('Too far from that blob!'); return; }
     mySteal = { blobId: b.id, endsAt: Date.now() + 3000 };
     steals.set(game.myId, mySteal);
-    game.send({ t: 'blob', a: 'steal', b: b.id });
+    sendBlob('steal', b.id);
     game.sys(`🫧 Stealing ${b.name}… stay close!`);
   }
   function doSlap(pid) {
@@ -223,7 +232,7 @@ export function startStealABlob(game) {
     const pp = playerPos(pid);
     if (!pp) return;
     if (game.pos.distanceTo(new THREE.Vector3(pp.x, game.pos.y, pp.z)) > 6) { game.sys('Too far to slap!'); return; }
-    game.send({ t: 'blob', a: 'slap', b: pid });
+    sendBlob('slap', pid);
     const stopped = steals.has(pid);
     steals.delete(pid);
     if (stopped) game.sys(`👋 You slapped ${playerName(pid)} and stopped the steal!`);
@@ -289,7 +298,7 @@ export function startStealABlob(game) {
       } else if (t >= mySteal.endsAt) {
         mySteal = null;
         sb.state = 'following'; sb.thief = game.myId; sb.owner = null;
-        game.send({ t: 'blob', a: 'grab', b: sb.id });
+        sendBlob('grab', sb.id);
         game.sys(`🫧 You grabbed ${sb.name}! Run to your base!`);
       }
     }
@@ -318,7 +327,7 @@ export function startStealABlob(game) {
             const slot = freeSlot(myBase());
             if (slot >= 0) {
               b.state = 'returning'; b.owner = game.myId; b.base = myBase(); b.slot = slot; b.thief = null;
-              game.send({ t: 'blob', a: 'deliver', b: b.id });
+              sendBlob('deliver', b.id);
               game.sys(`🫧 You stole ${b.name}!`);
             }
           }
@@ -346,6 +355,7 @@ export function startStealABlob(game) {
   return {
     tick,
     onBlob,
+    onBlobWire,
     destroy() {
       game.canvas.removeEventListener('pointerdown', onDown);
       game.canvas.removeEventListener('pointerup', onUp);
