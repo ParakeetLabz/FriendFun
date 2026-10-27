@@ -103,7 +103,7 @@ export class Game {
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); } else this.sys('Test mode - press Stop to return to Studio.');
-    if (this.world.stealablob) import('./stealablob.js?v=3dd33c26').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    if (this.world.stealablob) import('./stealablob.js?v=e6eaff2f').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
     this.last = performance.now();
     this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
   }
@@ -1399,7 +1399,8 @@ export class Game {
       } else if (m.t === 'chat') this.onChat(m);
       else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
       else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
-      else if (m.t === 'blob') { if (this.stealablob) { try { this.stealablob.onBlob(m); } catch (e) { console.warn('stealablob msg error:', e); } } }
+
+      else if (m.t === 'jam' && typeof m.track === 'string' && m.track.startsWith('blob:')) { if (this.stealablob) { try { this.stealablob.onBlobWire(m.id, m.track); } catch (e) { console.warn('stealablob wire error:', e); } } }
       else if (m.t === 'jam') {
         const tr = JAM_TRACKS.find(t => t.id === m.track);
         const nm = this.players.get(m.id)?.name || 'Someone';
