@@ -8,6 +8,13 @@ export const SAB_BASES = [
   { x: 0, z: -26 }, { x: 0, z: 26 }, { x: -26, z: 0 }, { x: 26, z: 0 },
 ];
 export const SAB_SLOTS = 6;
+// Base colors + names, in the same order as worlds.js stealablob() colors.
+export const SAB_BASE_COLORS = [
+  { hex: '#4a90e2', name: 'blue' }, { hex: '#e24a4a', name: 'red' },
+  { hex: '#2ed573', name: 'green' }, { hex: '#ffd700', name: 'gold' },
+  { hex: '#9b59e6', name: 'purple' }, { hex: '#ff9f43', name: 'orange' },
+  { hex: '#3ee6c4', name: 'teal' }, { hex: '#ff5e8a', name: 'pink' },
+];
 export function sabSlotPos(baseIdx, slotIdx) {
   const b = SAB_BASES[baseIdx];
   const row = Math.floor(slotIdx / 3), col = slotIdx % 3;
@@ -219,11 +226,11 @@ export function startStealABlob(game) {
   // HUD
   const hud = document.createElement('div');
   hud.className = 'sab-hud';
-  hud.innerHTML = `<span class="sab-pill">🪙 <b class="sab-coins">150</b></span><span class="sab-pill">💰 <b class="sab-inc">0</b>/s</span><span class="sab-pill">🫧 <b class="sab-owned">0</b></span><span class="sab-hint">Click a walking blob to buy · enemy blob to steal · player to slap</span>`;
+  hud.innerHTML = `<span class="sab-pill">🪙 <b class="sab-coins">150</b></span><span class="sab-pill">💰 <b class="sab-inc">0</b>/s</span><span class="sab-pill">🫧 <b class="sab-owned">0</b></span><span class="sab-pill">🏠 <b class="sab-base">…</b></span><span class="sab-hint">Click a walking blob to buy · enemy blob to steal · player to slap</span>`;
   const style = document.createElement('style');
   style.textContent = `.sab-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;flex-wrap:wrap;justify-content:center}.sab-pill{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700}.sab-hint{font-size:12px;color:#cfd8e3;align-self:center}`;
   game.c.appendChild(style); game.c.appendChild(hud);
-  const coinsEl = hud.querySelector('.sab-coins'), incEl = hud.querySelector('.sab-inc'), ownedEl = hud.querySelector('.sab-owned');
+  const coinsEl = hud.querySelector('.sab-coins'), incEl = hud.querySelector('.sab-inc'), ownedEl = hud.querySelector('.sab-owned'), baseEl = hud.querySelector('.sab-base');
 
   // one-shot particle bursts (buy / steal celebrations)
   const bursts = [];
@@ -274,6 +281,32 @@ export function startStealABlob(game) {
       if (!taken) return s;
     }
     return -1;
+  }
+  // "YOUR BASE" beacon: the game never told the player which base is theirs
+  // (they spawn at SpawnLocation, away from all bases), so mark it clearly.
+  let baseMarker = null;
+  function makeBaseMarker() {
+    const idx = myBase();
+    const bp = SAB_BASES[idx], bc = SAB_BASE_COLORS[idx];
+    const grp = new THREE.Group();
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128;
+    const ctx = cv.getContext('2d');
+    ctx.font = '900 64px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 10; ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText('⭐ YOUR BASE', 256, 64);
+    ctx.fillStyle = '#ffd700'; ctx.fillText('⭐ YOUR BASE', 256, 64);
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthTest: false }));
+    label.scale.set(11, 2.75, 1); label.position.y = 8; label.renderOrder = 999;
+    grp.add(label);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.9 });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(6, 0.18, 8, 48), ringMat);
+    ring.rotation.x = Math.PI / 2; ring.position.y = 0.75;
+    grp.add(ring);
+    grp.position.set(bp.x, 0, bp.z);
+    game.scene.add(grp);
+    baseMarker = { grp, ringMat };
+    baseEl.textContent = `Base ${idx + 1} (${bc.name})`;
+    game.sys(`⭐ Your base is Base ${idx + 1} (${bc.name}) — follow the gold marker!`);
   }
   function spawnBlob(idx) {
     const rnd = mulberry(seed + idx * 7919);
@@ -445,6 +478,9 @@ export function startStealABlob(game) {
   let lastIncome = 0;
   function tick(dt, now) {
     const t = Date.now();
+    // claim + mark your base as soon as your player id is known
+    if (!baseMarker && game.myId != null) makeBaseMarker();
+    if (baseMarker) baseMarker.ringMat.opacity = 0.6 + Math.sin(t / 500) * 0.3;
     // deterministic spawning
     if (t - lastSpawn > 2500) {
       lastSpawn = t;
@@ -563,6 +599,7 @@ export function startStealABlob(game) {
       for (const br of bursts) game.scene.remove(br.grp);
       bursts.length = 0;
       blobs.clear();
+      if (baseMarker) game.scene.remove(baseMarker.grp);
       hud.remove(); style.remove();
     },
   };
