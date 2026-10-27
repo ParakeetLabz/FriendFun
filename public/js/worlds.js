@@ -226,19 +226,39 @@ export function stealablob() {
       w.parts.push(part([sx, 2.2, z], [1.2, 0.6, 1.2], '#ffe066', { name: 'LampGlow', m: 'neon' }));
     }
   }
-  // 8 base platforms (must match SAB_BASES in stealablob.js) — dressed up:
-  // raised platform + corner pillars + back banner + glowing front trim
+  // 8 bases (must match SAB_BASES in stealablob.js): platform + walls on 3
+  // sides + a gated entrance facing the map center (posts, beam, sign) +
+  // a display pad under each of the 6 blob slots.
   const bases = [[-22, -22], [22, -22], [-22, 22], [22, 22], [0, -26], [0, 26], [-26, 0], [26, 0]];
   const colors = ['#4a90e2', '#e24a4a', '#2ed573', '#ffd700', '#9b59e6', '#ff9f43', '#3ee6c4', '#ff5e8a'];
   bases.forEach(([x, z], i) => {
     const c = colors[i];
+    // gate faces the map center along the dominant axis
+    const gx = Math.abs(x) >= Math.abs(z) ? -Math.sign(x) : 0;
+    const gz = gx === 0 ? -Math.sign(z) : 0;
     w.parts.push(part([x, 0.3, z], [14, 0.6, 12], c, { name: 'Base' + (i + 1), m: 'plastic' }));
-    w.parts.push(part([x, 0.65, z - 5.5], [14, 0.15, 0.8], '#ffffff', { name: 'BaseTrim' + (i + 1), m: 'neon' }));
-    for (const [px, pz] of [[-6.5, -5.5], [6.5, -5.5], [-6.5, 5.5], [6.5, 5.5]]) {
-      w.parts.push(part([x + px, 1.6, z + pz], [1, 2.6, 1], c, { name: 'BasePillar' + (i + 1), m: 'plastic' }));
+    if (gx !== 0) {
+      w.parts.push(part([x + gx * 6.85, 0.68, z], [0.5, 0.15, 12], '#ffffff', { name: 'GateTrim' + (i + 1), m: 'neon' }));
+      w.parts.push(part([x - gx * 6.6, 1.8, z], [0.8, 2.4, 12], c, { name: 'BaseWall' + (i + 1), m: 'plastic' }));
+      for (const sz of [-1, 1]) w.parts.push(part([x, 1.8, z + sz * 5.6], [12, 2.4, 0.8], c, { name: 'BaseWall' + (i + 1), m: 'plastic' }));
+      for (const sz of [-1, 1]) w.parts.push(part([x + gx * 6.6, 2.2, z + sz * 2.5], [0.8, 3.2, 0.8], c, { name: 'GatePost' + (i + 1), m: 'plastic' }));
+      w.parts.push(part([x + gx * 6.6, 4.2, z], [0.8, 0.8, 6.6], c, { name: 'GateBeam' + (i + 1), m: 'plastic' }));
+      w.parts.push(part([x + gx * 6.6, 5.3, z], [0.8, 1.4, 5.2], c, { name: 'BaseSign' + (i + 1), m: 'plastic' }));
+      w.parts.push(part([x + gx * 6.6, 6.05, z], [0.9, 0.18, 5.4], '#ffffff', { name: 'SignTrim' + (i + 1), m: 'neon' }));
+    } else {
+      w.parts.push(part([x, 0.68, z + gz * 5.85], [14, 0.15, 0.5], '#ffffff', { name: 'GateTrim' + (i + 1), m: 'neon' }));
+      w.parts.push(part([x, 1.8, z - gz * 5.6], [14, 2.4, 0.8], c, { name: 'BaseWall' + (i + 1), m: 'plastic' }));
+      for (const sx of [-1, 1]) w.parts.push(part([x + sx * 6.6, 1.8, z], [0.8, 2.4, 10], c, { name: 'BaseWall' + (i + 1), m: 'plastic' }));
+      for (const sx of [-1, 1]) w.parts.push(part([x + sx * 2.5, 2.2, z + gz * 5.6], [0.8, 3.2, 0.8], c, { name: 'GatePost' + (i + 1), m: 'plastic' }));
+      w.parts.push(part([x, 4.2, z + gz * 5.6], [6.6, 0.8, 0.8], c, { name: 'GateBeam' + (i + 1), m: 'plastic' }));
+      w.parts.push(part([x, 5.3, z + gz * 5.6], [5.2, 1.4, 0.8], c, { name: 'BaseSign' + (i + 1), m: 'plastic' }));
+      w.parts.push(part([x, 6.05, z + gz * 5.6], [5.4, 0.18, 0.9], '#ffffff', { name: 'SignTrim' + (i + 1), m: 'neon' }));
     }
-    w.parts.push(part([x, 3.4, z - 5.5], [13, 1.6, 0.6], c, { name: 'BaseBanner' + (i + 1), m: 'plastic' }));
-    w.parts.push(part([x, 4.3, z - 5.5], [13, 0.2, 0.7], '#ffffff', { name: 'BannerTrim' + (i + 1), m: 'neon' }));
+    // slot pads (match sabSlotPos: 2 rows x 3 cols)
+    for (let s = 0; s < 6; s++) {
+      const row = Math.floor(s / 3), col = s % 3;
+      w.parts.push(part([x + (col - 1) * 4, 0.66, z + (row - 0.5) * 4], [2.8, 0.12, 2.8], '#ffffff', { name: 'SlotPad' + (i + 1), m: 'plastic' }));
+    }
   });
   // blocky trees + drifting clouds for atmosphere
   for (const [x, z] of [[-16, -40], [16, -38], [-18, 8], [18, 12], [-15, 38], [15, 40], [-34, -12], [34, 14]]) {
