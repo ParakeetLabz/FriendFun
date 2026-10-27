@@ -278,7 +278,7 @@ export function startStealABlob(game) {
   function spawnBlob(idx) {
     const rnd = mulberry(seed + idx * 7919);
     const t = pickBlob(rnd);
-    const b = { id: idx, ...t, x: (rnd() - 0.5) * 8, z: -55, state: 'walking', owner: null, base: -1, slot: -1, mesh: null };
+    const b = { id: idx, ...t, x: (rnd() - 0.5) * 8, z: -55, state: 'walking', owner: null, base: -1, slot: -1, mesh: null, surfY: 0.3 };
     b.mesh = buildBlobMesh(b);
     b.mesh.traverse(o => o.userData.sabBlob = idx);
     game.scene.add(b.mesh);
@@ -469,15 +469,18 @@ export function startStealABlob(game) {
     // blob movement
     for (const b of [...blobs.values()]) {
       if (b.state === 'walking') {
-        b.z += 5 * dt;
+        b.z += 5 * dt; b.surfY = 0.3;
         if (b.z > 55) removeBlob(b.id);
       } else if (b.state === 'returning') {
         const p = sabSlotPos(b.base, b.slot);
         const dx = p.x - b.x, dz = p.z - b.z;
         const d = Math.hypot(dx, dz);
-        if (d < 0.5) { b.x = p.x; b.z = p.z; b.state = 'owned'; }
+        // rise smoothly from belt height to pad height as it nears its slot
+        b.surfY = 0.3 + 0.42 * (1 - Math.min(1, d / 6));
+        if (d < 0.5) { b.x = p.x; b.z = p.z; b.state = 'owned'; b.surfY = 0.72; }
         else { b.x += dx / d * 8 * dt; b.z += dz / d * 8 * dt; }
       } else if (b.state === 'following') {
+        b.surfY = 0.3;
         const tp = playerPos(b.thief);
         if (!tp) { b.state = 'owned'; continue; }
         const dx = tp.x - b.x, dz = tp.z - b.z;
@@ -514,7 +517,8 @@ export function startStealABlob(game) {
         const sq = Math.sin(ph);
         const sy = 0.85 + sq * (moving ? 0.1 : 0.04);
         refs.body.scale.set(1 - sq * 0.05, sy, 1 - sq * 0.05);
-        b.mesh.position.set(b.x, Math.abs(Math.sin(ph)) * 0.18, b.z);
+        const groundY = b.state === 'owned' ? 0.72 : (b.surfY ?? 0.3);
+        b.mesh.position.set(b.x, groundY + Math.abs(Math.sin(ph)) * 0.18, b.z);
         refs.feet[0].position.y = 0.24 + (moving ? Math.max(0, Math.sin(ph)) * 0.22 : 0);
         refs.feet[1].position.y = 0.24 + (moving ? Math.max(0, Math.sin(ph + Math.PI)) * 0.22 : 0);
         refs.arms[0].rotation.z = Math.sin(ph) * 0.35;
