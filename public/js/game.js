@@ -109,7 +109,7 @@ export class Game {
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
     // which survive sanitizing. Covers the seeded game + Studio-made blob games.
     const __isBlobWorld = this.world.stealablob || (Array.isArray(this.world.parts) && this.world.parts.some(p => p.name === 'Conveyor') && this.world.parts.some(p => /^Base[1-8]$/.test(p.name || '')));
-    if (__isBlobWorld) import('./stealablob.js?v=cf288ccc').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    if (__isBlobWorld) import('./stealablob.js?v=a5ad3a23').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
     this.last = performance.now();
     this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
   }
