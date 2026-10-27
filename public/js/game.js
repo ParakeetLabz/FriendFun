@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=97bd0103';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=60b969a3';
+import { isVerified } from './verified.js?v=6fb5be32';
+const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music26';
@@ -836,7 +838,7 @@ export class Game {
   }
   updateLeaderboard() {
     const list = [this.me, ...this.players.values()];
-    this.lbList.innerHTML = list.map((p, i) => `<div class="lb-row ${i === 0 ? 'me' : ''}">${badgeIcon(p.badge)}${esc(p.name)}${i === 0 && this.kills ? ` <span class="lb-kills">💀${this.kills}</span>` : ''}</div>`).join('');
+    this.lbList.innerHTML = list.map((p, i) => `<div class="lb-row ${i === 0 ? 'me' : ''}">${badgeIcon(p.badge)}${esc(p.name)}${vtag(p.name)}${i === 0 && this.kills ? ` <span class="lb-kills">💀${this.kills}</span>` : ''}</div>`).join('');
   }
   addChat(html) {
     const d = document.createElement('div'); d.className = 'chat-line'; d.innerHTML = html;
@@ -882,7 +884,7 @@ export class Game {
     if (!m.system) for (const fn of (this._scriptState?.chatFns || [])) { try { fn(m.name, m.text); } catch (e) { console.warn('onChat script error:', e); } }
     if (m.system) return this.sys(m.text);
     const color = nameColor(m.name);
-    this.addChat(`<b style="color:${color}">${badgeIcon(m.badge)}${esc(m.name)}:</b> ${esc(m.text)}`);
+    this.addChat(`<b style="color:${color}">${badgeIcon(m.badge)}${esc(m.name)}${vtag(m.name)}:</b> ${esc(m.text)}`);
     sfx.chat();
     const ch = m.id === this.myId || m.id === 0 ? this.char : this.players.get(m.id)?.char;
     if (ch) this.bubble(ch, m.text);
