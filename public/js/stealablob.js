@@ -308,7 +308,57 @@ export function startStealABlob(game) {
     baseEl.textContent = `Base ${idx + 1} (${bc.name})`;
     game.sys(`⭐ Your base is Base ${idx + 1} (${bc.name}) — follow the gold marker!`);
   }
+  // Progress autosave (localStorage, per game + player): Blob Coins and owned
+  // blobs survive leaving and rejoining on the same device/browser. Server
+  // persistence isn't an option without a new endpoint (server.js is at its
+  // push size cap), and Blob Coins are client-side by design.
+  function saveKey() { return 'sab-save:' + String(game.o.gameId || 'stealablob') + ':' + String(game.myId); }
+  function saveProgress() {
+    if (game.myId == null || !restoredSave) return; // never save before restore: the start-time HUD refresh would wipe last session's save
+    try {
+      const owned = [...blobs.values()]
+        .filter(b => b.owner === game.myId && (b.state === 'owned' || b.state === 'returning'))
+        .map(b => ({ id: b.id, base: b.base, slot: b.slot }));
+      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', pid: game.myId, coins: Math.floor(coins), owned }));
+    } catch (e) { /* storage unavailable (private mode): progress just won't persist */ }
+  }
+  let restoredSave = false;
+  function restoreSave() {
+    if (restoredSave || game.myId == null) return;
+    restoredSave = true;
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(saveKey()) || 'null'); } catch (e) { return; }
+    if (!s || s.v !== 1 || s.gameId !== (game.o.gameId || 'stealablob') || s.pid !== game.myId) return;
+    if (Number.isFinite(s.coins) && s.coins >= 0) coins = Math.floor(s.coins);
+    const entries = Array.isArray(s.owned) ? s.owned : [];
+    let placed = 0, mySavedBase = -1;
+    for (const e of entries) {
+      if (!Number.isInteger(e.id) || e.id < 0) continue;
+      if (!Number.isInteger(e.base) || e.base < 0 || e.base >= SAB_BASES.length) continue;
+      if (blobs.has(e.id) && blobs.get(e.id).owner === game.myId) continue; // already mine
+      let slot = (Number.isInteger(e.slot) && e.slot >= 0 && e.slot < SAB_SLOTS) ? e.slot : -1;
+      if (slot < 0 || [...blobs.values()].some(b => b.base === e.base && b.slot === slot && (b.state === 'owned' || b.state === 'returning'))) {
+        slot = freeSlot(e.base);
+        if (slot < 0) continue; // base full: blob stays lost rather than stacking
+      }
+      let b = blobs.get(e.id);
+      if (!b) { spawnBlob(e.id); b = blobs.get(e.id); }
+      if (!b) continue;
+      // a walking blob of the same id: take it over (no duplicate)
+      b.state = 'owned'; b.owner = game.myId; b.base = e.base; b.slot = slot;
+      const p = sabSlotPos(e.base, slot);
+      b.x = p.x; b.z = p.z; b.surfY = 0.72;
+      drawLabel(b);
+      sendBlob('buy', b.id);
+      if (mySavedBase < 0) mySavedBase = e.base;
+      placed++;
+    }
+    if (mySavedBase >= 0) baseByPlayer.set(game.myId, mySavedBase);
+    refreshHud();
+    if (placed > 0 || coins !== 150) game.sys(`💾 Progress restored: ${placed} blob${placed === 1 ? '' : 's'}, ${Math.floor(coins)} coins`);
+  }
   function spawnBlob(idx) {
+    if (blobs.has(idx)) return; // never double-spawn (restore pre-creates ids)
     const rnd = mulberry(seed + idx * 7919);
     const t = pickBlob(rnd);
     const b = { id: idx, ...t, x: (rnd() - 0.5) * 8, z: -55, state: 'walking', owner: null, base: -1, slot: -1, mesh: null, surfY: 0.3 };
@@ -327,6 +377,7 @@ export function startStealABlob(game) {
     coinsEl.textContent = Math.floor(coins).toLocaleString();
     incEl.textContent = mine.reduce((s, b) => s + b.income, 0);
     ownedEl.textContent = mine.length;
+    saveProgress(); // autosave on every HUD refresh (buys, events, income ticks)
   }
   function playerPos(pid) {
     if (pid === game.myId) return game.pos;
@@ -478,6 +529,9 @@ export function startStealABlob(game) {
   let lastIncome = 0;
   function tick(dt, now) {
     const t = Date.now();
+    // restore saved progress as soon as your player id is known (before the
+    // beacon, so the beacon marks your restored base)
+    if (!restoredSave && game.myId != null) restoreSave();
     // claim + mark your base as soon as your player id is known
     if (!baseMarker && game.myId != null) makeBaseMarker();
     if (baseMarker) baseMarker.ringMat.opacity = 0.6 + Math.sin(t / 500) * 0.3;
@@ -593,6 +647,7 @@ export function startStealABlob(game) {
     onBlob,
     onBlobWire,
     destroy() {
+      saveProgress(); // final flush on leaving the game
       game.canvas.removeEventListener('pointerdown', onDown);
       game.canvas.removeEventListener('pointerup', onUp);
       for (const b of blobs.values()) if (b.mesh) game.scene.remove(b.mesh);
