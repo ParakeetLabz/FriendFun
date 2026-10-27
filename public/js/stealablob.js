@@ -41,41 +41,171 @@ function pickBlob(rnd) {
   return pool[Math.floor(rnd() * pool.length)];
 }
 
+// --- graphics helpers (canvas textures, shared) ---
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function makeGlowTexture(hex) {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const ctx = cv.getContext('2d');
+  const gr = ctx.createRadialGradient(64, 64, 4, 64, 64, 64);
+  gr.addColorStop(0, hex); gr.addColorStop(0.4, hex + 'aa'); gr.addColorStop(1, hex + '00');
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, 128, 128);
+  const tx = new THREE.CanvasTexture(cv); return tx;
+}
+function makeStarTexture() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.beginPath();
+  ctx.moveTo(32, 2); ctx.quadraticCurveTo(38, 26, 62, 32); ctx.quadraticCurveTo(38, 38, 32, 62);
+  ctx.quadraticCurveTo(26, 38, 2, 32); ctx.quadraticCurveTo(26, 26, 32, 2); ctx.fill();
+  return new THREE.CanvasTexture(cv);
+}
+const STAR_TEX = () => (makeStarTexture._t || (makeStarTexture._t = makeStarTexture()));
+
+function shade(hex, f) {
+  const c = new THREE.Color(hex); c.multiplyScalar(f); return c;
+}
+
 function buildBlobMesh(b) {
   const g = new THREE.Group();
-  const body = new THREE.Mesh(
-    new THREE.SphereGeometry(1.3, 20, 14),
-    new THREE.MeshStandardMaterial({ color: b.color, roughness: 0.25 })
-  );
-  body.scale.y = 0.85; body.position.y = 1.3;
-  g.add(body);
+  const refs = {};
+  // glossy jelly body
+  const bodyMat = new THREE.MeshPhysicalMaterial({ color: b.color, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.12 });
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1.3, 28, 20), bodyMat);
+  body.scale.y = 0.85; body.position.y = 1.3; body.castShadow = true;
+  g.add(body); refs.body = body; refs.bodyMat = bodyMat;
+  // cartoon gloss shine (upper-left of the face)
+  const shine = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
+  shine.scale.set(1, 1.5, 0.3); shine.position.set(-0.55, 1.95, 1.05); g.add(shine);
+  // expressive eyes: white + pupil + highlight, grouped for blinking
+  refs.eyes = [];
   for (const sx of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-    eye.position.set(sx * 0.5, 1.6, 1.05); g.add(eye);
+    const eg = new THREE.Group(); eg.position.set(sx * 0.52, 1.68, 1.02);
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.33, 14, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+    white.scale.z = 0.55; eg.add(white);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 }));
+    pupil.position.set(0, 0, 0.2); eg.add(pupil);
+    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    glint.position.set(0.07, 0.08, 0.34); eg.add(glint);
+    g.add(eg); refs.eyes.push(eg);
   }
-  const smile = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.05, 6, 12, Math.PI), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-  smile.rotation.z = Math.PI; smile.position.set(0, 1.25, 1.15); g.add(smile);
+  // blush cheeks
+  for (const sx of [-1, 1]) {
+    const ch = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16),
+      new THREE.MeshBasicMaterial({ color: 0xff8fab, transparent: true, opacity: 0.55, depthWrite: false }));
+    ch.position.set(sx * 0.98, 1.28, 1.02); g.add(ch);
+  }
+  // mouth: open smile for the soft blobs, classic smile otherwise
+  if (b.name === 'Gooey' || b.name === 'Pudding') {
+    const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.3, 16, 0, Math.PI),
+      new THREE.MeshStandardMaterial({ color: 0x5b2233, roughness: 0.6 }));
+    mouth.rotation.z = Math.PI; mouth.position.set(0, 1.28, 1.16); g.add(mouth);
+  } else {
+    const smile = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.055, 6, 14, Math.PI), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
+    smile.rotation.z = Math.PI; smile.position.set(0, 1.3, 1.15); g.add(smile);
+  }
+  // waddly feet + little arms (darker shade of the body)
+  const dark = shade(b.color, 0.75);
+  refs.feet = []; refs.arms = [];
+  for (const sx of [-1, 1]) {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 10), new THREE.MeshStandardMaterial({ color: dark, roughness: 0.3 }));
+    f.scale.set(1, 0.55, 1.25); f.position.set(sx * 0.55, 0.24, 0.35); f.castShadow = true; g.add(f); refs.feet.push(f);
+    const a = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), new THREE.MeshStandardMaterial({ color: dark, roughness: 0.3 }));
+    a.scale.set(0.7, 1.2, 0.7); a.position.set(sx * 1.28, 1.1, 0.15); g.add(a); refs.arms.push(a);
+  }
+  // hats, upgraded
   if (b.hat === 'crown') {
-    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.65, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.7, roughness: 0.3 }));
+    const gold = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.85, roughness: 0.25 });
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.68, 0.55, 8), gold);
     c.position.y = 2.55; g.add(c);
+    for (let i = 0; i < 3; i++) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.4, 4), gold);
+      const ang = (i / 3) * Math.PI * 2;
+      spike.position.set(Math.cos(ang) * 0.5, 2.95, Math.sin(ang) * 0.5); g.add(spike);
+    }
+    for (const sx of [-1, 1]) {
+      const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.14), new THREE.MeshStandardMaterial({ color: 0xff2d55, emissive: 0xff2d55, emissiveIntensity: 0.7 }));
+      gem.position.set(sx * 0.45, 2.55, 0.55); g.add(gem);
+    }
   } else if (b.hat === 'bow') {
-    const bo = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.4, 0.2), new THREE.MeshStandardMaterial({ color: 0xff5e8a }));
-    bo.position.set(0, 2.4, 0.6); bo.rotation.z = 0.3; g.add(bo);
+    const pink = new THREE.MeshStandardMaterial({ color: 0xff5e8a, roughness: 0.4 });
+    for (const sx of [-1, 1]) {
+      const loop = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.13, 8, 16), pink);
+      loop.position.set(sx * 0.35, 2.45, 0.55); loop.rotation.z = sx * 0.5; g.add(loop);
+    }
+    const knot = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), pink);
+    knot.position.set(0, 2.45, 0.6); g.add(knot);
   } else if (b.hat === 'ears') {
     for (const sx of [-1, 1]) {
-      const e = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.9, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-      e.position.set(sx * 0.7, 2.4, 0); g.add(e);
+      const e = new THREE.Mesh(new THREE.ConeGeometry(0.34, 1.0, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }));
+      e.position.set(sx * 0.7, 2.45, 0); e.rotation.z = sx * -0.15; g.add(e);
+      const inner = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.65, 8), new THREE.MeshStandardMaterial({ color: 0xffb3c8, roughness: 0.5 }));
+      inner.position.set(sx * 0.7, 2.4, 0.2); inner.rotation.z = sx * -0.15; g.add(inner);
     }
   } else if (b.hat === 'halo') {
-    const h = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.1, 8, 24), new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 0.8 }));
-    h.rotation.x = Math.PI / 2; h.position.y = 2.7; g.add(h);
+    const hg = new THREE.Group(); hg.position.y = 2.75;
+    const h = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.1, 8, 28), new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 1.2 }));
+    h.rotation.x = Math.PI / 2; hg.add(h);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture('#ffd700'), transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(2.2); hg.add(glow);
+    g.add(hg); refs.halo = hg;
   } else if (b.hat === 'sparkle') {
-    const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.35), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x3ee6c4, emissiveIntensity: 1 }));
-    s.position.y = 2.6; g.add(s);
+    const s = new THREE.Mesh(new THREE.OctahedronGeometry(0.38), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x3ee6c4, emissiveIntensity: 1.4 }));
+    s.position.y = 2.65; g.add(s); refs.spinHat = s;
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture('#3ee6c4'), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.scale.setScalar(2.0); glow.position.y = 2.65; g.add(glow);
   }
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.06, 8, 32), new THREE.MeshStandardMaterial({ color: RARITY_COLOR[b.rarity], emissive: RARITY_COLOR[b.rarity], emissiveIntensity: 0.6 }));
-  ring.rotation.x = Math.PI / 2; ring.position.y = 0.1; g.add(ring);
+  // rarity ring + soft ground glow (pulses in tick)
+  const rc = RARITY_COLOR[b.rarity];
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.07, 8, 40), new THREE.MeshStandardMaterial({ color: rc, emissive: rc, emissiveIntensity: 0.8 }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.12; g.add(ring); refs.ring = ring;
+  const glowDisc = new THREE.Mesh(new THREE.CircleGeometry(2.3, 24),
+    new THREE.MeshBasicMaterial({ map: makeGlowTexture('#' + rc.toString(16).padStart(6, '0')), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  glowDisc.rotation.x = -Math.PI / 2; glowDisc.position.y = 0.06; g.add(glowDisc); refs.glowDisc = glowDisc;
+  // orbiting sparkles for epic and up
+  if (b.rarity === 'epic' || b.rarity === 'legendary' || b.rarity === 'mythic') {
+    const sg = new THREE.Group();
+    for (let i = 0; i < 4; i++) {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: STAR_TEX(), color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+      const ang = (i / 4) * Math.PI * 2;
+      sp.position.set(Math.cos(ang) * 1.9, 1.2 + (i % 2) * 0.9, Math.sin(ang) * 1.9);
+      sp.scale.setScalar(0.35); sg.add(sp);
+    }
+    g.add(sg); refs.sparkles = sg;
+  }
+  // floating name + price/income label
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
+  const tex = new THREE.CanvasTexture(cv);
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  label.scale.set(4.6, 1.44, 1); label.position.y = 3.9; g.add(label);
+  refs.labelCv = cv; refs.labelTex = tex;
+  g.userData.refs = refs;
+  drawLabel(b, refs);
   return g;
+}
+
+function drawLabel(b, refs) {
+  refs = refs || b.mesh.userData.refs;
+  const cv = refs.labelCv, ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, 512, 160);
+  const rc = '#' + RARITY_COLOR[b.rarity].toString(16).padStart(6, '0');
+  ctx.fillStyle = 'rgba(0,0,0,0.62)'; roundRect(ctx, 8, 8, 496, 144, 28); ctx.fill();
+  ctx.strokeStyle = rc; ctx.lineWidth = 6; roundRect(ctx, 8, 8, 496, 144, 28); ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 52px sans-serif';
+  ctx.fillText(b.name, 256, 66);
+  if (b.state === 'walking') {
+    ctx.fillStyle = '#ffd700'; ctx.font = 'bold 44px sans-serif';
+    ctx.fillText('🪙 ' + b.price.toLocaleString(), 256, 128);
+  } else {
+    ctx.fillStyle = '#7dff8a'; ctx.font = 'bold 44px sans-serif';
+    ctx.fillText('💰 ' + b.income + '/s', 256, 128);
+  }
+  refs.labelTex.needsUpdate = true;
 }
 
 export function startStealABlob(game) {
@@ -94,6 +224,33 @@ export function startStealABlob(game) {
   style.textContent = `.sab-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;flex-wrap:wrap;justify-content:center}.sab-pill{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700}.sab-hint{font-size:12px;color:#cfd8e3;align-self:center}`;
   game.c.appendChild(style); game.c.appendChild(hud);
   const coinsEl = hud.querySelector('.sab-coins'), incEl = hud.querySelector('.sab-inc'), ownedEl = hud.querySelector('.sab-owned');
+
+  // one-shot particle bursts (buy / steal celebrations)
+  const bursts = [];
+  function burst(x, y, z, color) {
+    const grp = new THREE.Group();
+    for (let i = 0; i < 14; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: STAR_TEX(), color, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+      s.scale.setScalar(0.35 + Math.random() * 0.35);
+      s.position.set(x, y, z);
+      s.userData.v = new THREE.Vector3((Math.random() - 0.5) * 9, 4 + Math.random() * 5, (Math.random() - 0.5) * 9);
+      grp.add(s);
+    }
+    game.scene.add(grp);
+    bursts.push({ grp, t0: Date.now() });
+  }
+  function tickBursts(dt) {
+    const t = Date.now();
+    for (const br of [...bursts]) {
+      const age = (t - br.t0) / 1000;
+      if (age > 0.8) { game.scene.remove(br.grp); bursts.splice(bursts.indexOf(br), 1); continue; }
+      for (const s of br.grp.children) {
+        s.position.x += s.userData.v.x * dt; s.position.y += s.userData.v.y * dt; s.position.z += s.userData.v.z * dt;
+        s.userData.v.y -= 14 * dt;
+        s.material.opacity = 1 - age / 0.8;
+      }
+    }
+  }
 
   function myBase() {
     if (game.myId == null) return 0;
@@ -166,6 +323,7 @@ export function startStealABlob(game) {
       const slot = freeSlot(base);
       if (slot < 0) return;
       b.state = 'returning'; b.owner = from; b.base = base; b.slot = slot;
+      burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
       game.sys(`🫧 ${playerName(from)} bought ${b.name}!`);
     } else if (a === 'steal') {
       const b = blobs.get(bid);
@@ -176,6 +334,7 @@ export function startStealABlob(game) {
       if (!b || b.state !== 'owned') return;
       b.state = 'following'; b.thief = from; b.owner = null;
       steals.delete(from);
+      burst(b.x, 1.5, b.z, 0xff5e8a); drawLabel(b);
       game.sys(`🫧 ${playerName(from)} grabbed ${b.name}!`);
     } else if (a === 'deliver') {
       const b = blobs.get(bid);
@@ -184,6 +343,7 @@ export function startStealABlob(game) {
       const slot = freeSlot(base);
       if (slot < 0) { b.state = 'owned'; b.owner = from; b.base = base; b.slot = -1; return; }
       b.state = 'returning'; b.owner = from; b.base = base; b.slot = slot; b.thief = null;
+      burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
       game.sys(`🫧 ${playerName(from)} stole ${b.name}!`);
     } else if (a === 'slap') {
       const target = bid;
@@ -213,6 +373,7 @@ export function startStealABlob(game) {
     if (slot < 0) { game.sys('Your base is full!'); return; }
     coins -= b.price;
     b.state = 'returning'; b.owner = game.myId; b.base = myBase(); b.slot = slot;
+    burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
     sendBlob('buy', b.id);
     game.sys(`🫧 You bought ${b.name}!`);
     refreshHud();
@@ -298,6 +459,7 @@ export function startStealABlob(game) {
       } else if (t >= mySteal.endsAt) {
         mySteal = null;
         sb.state = 'following'; sb.thief = game.myId; sb.owner = null;
+        burst(sb.x, 1.5, sb.z, 0xff5e8a); drawLabel(sb);
         sendBlob('grab', sb.id);
         game.sys(`🫧 You grabbed ${sb.name}! Run to your base!`);
       }
@@ -327,6 +489,7 @@ export function startStealABlob(game) {
             const slot = freeSlot(myBase());
             if (slot >= 0) {
               b.state = 'returning'; b.owner = game.myId; b.base = myBase(); b.slot = slot; b.thief = null;
+              burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
               sendBlob('deliver', b.id);
               game.sys(`🫧 You stole ${b.name}!`);
             }
@@ -334,10 +497,43 @@ export function startStealABlob(game) {
         }
       }
       if (b.mesh) {
-        b.mesh.position.set(b.x, Math.sin(t / 500 + b.id) * 0.15, b.z);
-        b.mesh.rotation.y = t / 1000 * 0.5;
+        const refs = b.mesh.userData.refs;
+        const moving = b.state !== 'owned';
+        // face movement direction (smooth turn)
+        const dx = b.x - (b.px ?? b.x), dz = b.z - (b.pz ?? b.z);
+        if (Math.abs(dx) + Math.abs(dz) > 0.001) {
+          const target = Math.atan2(dx, dz);
+          let d = target - b.mesh.rotation.y;
+          while (d > Math.PI) d -= Math.PI * 2;
+          while (d < -Math.PI) d += Math.PI * 2;
+          b.mesh.rotation.y += d * Math.min(1, dt * 10);
+        }
+        b.px = b.x; b.pz = b.z;
+        // squash & stretch + bob + waddle
+        const ph = t / 1000 * (moving ? 7 : 2.2) + b.id * 1.3;
+        const sq = Math.sin(ph);
+        const sy = 0.85 + sq * (moving ? 0.1 : 0.04);
+        refs.body.scale.set(1 - sq * 0.05, sy, 1 - sq * 0.05);
+        b.mesh.position.set(b.x, Math.abs(Math.sin(ph)) * 0.18, b.z);
+        refs.feet[0].position.y = 0.24 + (moving ? Math.max(0, Math.sin(ph)) * 0.22 : 0);
+        refs.feet[1].position.y = 0.24 + (moving ? Math.max(0, Math.sin(ph + Math.PI)) * 0.22 : 0);
+        refs.arms[0].rotation.z = Math.sin(ph) * 0.35;
+        refs.arms[1].rotation.z = -Math.sin(ph) * 0.35;
+        // blink every few seconds
+        const blink = ((t / 1000 + b.id * 1.7) % 3.7) < 0.12 ? 0.12 : 1;
+        for (const e of refs.eyes) e.scale.y = blink;
+        // rarity ring pulse + glow
+        refs.ring.material.emissiveIntensity = 0.7 + Math.sin(t / 500 + b.id) * 0.35;
+        const gs = 1 + Math.sin(t / 500 + b.id) * 0.08;
+        refs.glowDisc.scale.set(gs, gs, 1);
+        if (refs.sparkles) refs.sparkles.rotation.y = t / 1000;
+        if (refs.halo) { refs.halo.rotation.y = t / 1000 * 0.8; refs.halo.position.y = 2.75 + Math.sin(t / 800) * 0.08; }
+        if (refs.spinHat) { refs.spinHat.rotation.y = t / 1000 * 2; refs.spinHat.position.y = 2.65 + Math.sin(t / 700) * 0.1; }
+        // rainbow blob cycles hue
+        if (b.name === 'Rainbow Blob') refs.bodyMat.color.setHSL(((t / 3000) + b.id * 0.13) % 1, 0.85, 0.6);
       }
     }
+    tickBursts(dt);
     // income
     if (t - lastIncome > 1000) {
       lastIncome = t;
@@ -360,6 +556,8 @@ export function startStealABlob(game) {
       game.canvas.removeEventListener('pointerdown', onDown);
       game.canvas.removeEventListener('pointerup', onUp);
       for (const b of blobs.values()) if (b.mesh) game.scene.remove(b.mesh);
+      for (const br of bursts) game.scene.remove(br.grp);
+      bursts.length = 0;
       blobs.clear();
       hud.remove(); style.remove();
     },
