@@ -233,7 +233,7 @@ function settingsPage() {
   const gfxMode = localStorage.getItem('ff_gfx') || 'classic';
   mount('settings', `<h1>⚙️ Settings</h1>
     <p class="muted">Make Funtopia yours.</p>
-    <a href="https://funtopia-pro.vercel.app/" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ffd700,#ff9d00);color:#1a0b2e;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(255,215,0,.35);"><span style="font-weight:900;font-size:18px;">👑 FunTopia Pro</span><span style="display:block;font-size:13px;font-weight:600;opacity:.85;">Turn this into FunTopia Pro — the separate version with a new look, new character and new fun →</span></a>
+    <a href="https://funtopiapro.vercel.app/" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ffd700,#ff9d00);color:#1a0b2e;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(255,215,0,.35);"><span style="font-weight:900;font-size:18px;">👑 FunTopia Pro</span><span style="display:block;font-size:13px;font-weight:600;opacity:.85;">Turn this into FunTopia Pro — the separate version with a new look, new character and new fun →</span></a>
     <section class="admin-section"><h3>🔊 Sound</h3>
       <label class="set-row"><span>Sound effects</span><input type="checkbox" class="set-sfx" ${sfxOn ? 'checked' : ''}></label>
       <label class="set-row"><span>Music</span><input type="checkbox" class="set-music" ${musicOn ? 'checked' : ''}></label>
