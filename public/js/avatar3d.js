@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=collab26';
 import { renderToDataURL } from './three-util.js?v=ac3e6f2b';
+import { isVerified } from './verified.js?v=6fb5be32';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
@@ -684,16 +685,27 @@ export function buildVehicle(id) {
 }
 export function makeNameTag(name, badge) {
   const b = BADGES[badge];
+  const verified = isVerified(name);
   const c = document.createElement('canvas'); c.width = 512; c.height = 96;
   const g = c.getContext('2d');
   g.font = 'bold 48px "Source Sans Pro", Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const x = b ? 278 : 256;
+  const nameW = g.measureText(name).width;
+  const x = (b ? 278 : 256) - (verified ? 20 : 0);
   g.lineWidth = 8; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.strokeText(name, x, 48);
   g.fillStyle = '#fff'; g.fillText(name, x, 48);
   if (b) {
     const p = new Path2D(b.path);
-    g.save(); g.translate(x - g.measureText(name).width / 2 - 54, 22); g.scale(2, 2);
+    g.save(); g.translate(x - nameW / 2 - 54, 22); g.scale(2, 2);
     g.lineWidth = 3; g.stroke(p); g.fillStyle = b.color; g.fill(p); g.restore();
+  }
+  if (verified) {
+    // blue verified check after the name
+    const cx = x + nameW / 2 + 26, cy = 48;
+    g.beginPath(); g.arc(cx, cy, 17, 0, Math.PI * 2);
+    g.fillStyle = '#1d9bf0'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.stroke();
+    g.fillStyle = '#fff'; g.font = 'bold 24px Arial';
+    g.fillText('✓', cx, cy + 1);
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
