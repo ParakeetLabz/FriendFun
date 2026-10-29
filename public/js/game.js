@@ -2,14 +2,14 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=60b969a3';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=f48e5b7d';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music26';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=collab26';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=47d581c2';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -109,7 +109,7 @@ export class Game {
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
     // which survive sanitizing. Covers the seeded game + Studio-made blob games.
     const __isBlobWorld = this.world.stealablob || (Array.isArray(this.world.parts) && this.world.parts.some(p => p.name === 'Conveyor') && this.world.parts.some(p => /^Base[1-8]$/.test(p.name || '')));
-    if (__isBlobWorld) import('./stealablob.js?v=613650b8').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    if (__isBlobWorld) import('./stealablob.js?v=6a85988d').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
     this.last = performance.now();
     this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
   }
