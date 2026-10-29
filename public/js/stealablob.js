@@ -312,14 +312,18 @@ export function startStealABlob(game) {
   // blobs survive leaving and rejoining on the same device/browser. Server
   // persistence isn't an option without a new endpoint (server.js is at its
   // push size cap), and Blob Coins are client-side by design.
-  function saveKey() { return 'sab-save:' + String(game.o.gameId || 'stealablob') + ':' + String(game.myId); }
+  // KEYED BY USERNAME, not session id: game.myId is a per-connection counter
+  // (server nextPid++ on every join), so it changes on every rejoin and a
+  // myId-keyed save would never restore. Usernames are stable.
+  function saveName() { return (game.me && game.me.name) || game.myId; }
+  function saveKey() { return 'sab-save:' + String(game.o.gameId || 'stealablob') + ':' + String(saveName()); }
   function saveProgress() {
     if (game.myId == null || !restoredSave) return; // never save before restore: the start-time HUD refresh would wipe last session's save
     try {
       const owned = [...blobs.values()]
         .filter(b => b.owner === game.myId && (b.state === 'owned' || b.state === 'returning'))
         .map(b => ({ id: b.id, base: b.base, slot: b.slot }));
-      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', pid: game.myId, coins: Math.floor(coins), owned }));
+      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', name: saveName(), coins: Math.floor(coins), owned }));
     } catch (e) { /* storage unavailable (private mode): progress just won't persist */ }
   }
   let restoredSave = false;
@@ -328,7 +332,7 @@ export function startStealABlob(game) {
     restoredSave = true;
     let s = null;
     try { s = JSON.parse(localStorage.getItem(saveKey()) || 'null'); } catch (e) { return; }
-    if (!s || s.v !== 1 || s.gameId !== (game.o.gameId || 'stealablob') || s.pid !== game.myId) return;
+    if (!s || s.v !== 1 || s.gameId !== (game.o.gameId || 'stealablob') || s.name !== saveName()) return;
     if (Number.isFinite(s.coins) && s.coins >= 0) coins = Math.floor(s.coins);
     const entries = Array.isArray(s.owned) ? s.owned : [];
     let placed = 0, mySavedBase = -1;
