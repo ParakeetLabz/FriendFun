@@ -221,16 +221,77 @@ export function startStealABlob(game) {
   const baseByPlayer = new Map(); // playerId -> baseIdx
   const steals = new Map(); // playerId -> { blobId, endsAt }
   let coins = 150, spawnIdx = 0, lastSpawn = 0, lastSlap = 0;
+  let rebirths = 0, sellMode = false;
   let mySteal = null; // { blobId, endsAt }
 
   // HUD
   const hud = document.createElement('div');
   hud.className = 'sab-hud';
-  hud.innerHTML = `<span class="sab-pill">🪙 <b class="sab-coins">150</b></span><span class="sab-pill">💰 <b class="sab-inc">0</b>/s</span><span class="sab-pill">🫧 <b class="sab-owned">0</b></span><span class="sab-pill">🏠 <b class="sab-base">…</b></span><span class="sab-hint">Click a walking blob to buy · enemy blob to steal · player to slap</span>`;
+  hud.innerHTML = `<span class="sab-pill">🪙 <b class="sab-coins">150</b></span><span class="sab-pill">💰 <b class="sab-inc">0</b>/s</span><span class="sab-pill">🫧 <b class="sab-owned">0</b></span><span class="sab-pill">🏠 <b class="sab-base">…</b></span><span class="sab-hint">Click a walking blob to buy · enemy blob to steal · Sell mode: click your blob to sell</span>`;
   const style = document.createElement('style');
-  style.textContent = `.sab-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;flex-wrap:wrap;justify-content:center}.sab-pill{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700}.sab-hint{font-size:12px;color:#cfd8e3;align-self:center}`;
+  style.textContent = `.sab-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;flex-wrap:wrap;justify-content:center}.sab-pill{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700}.sab-hint{font-size:12px;color:#cfd8e3;align-self:center}.sab-btn{cursor:pointer;color:#fff;font-family:inherit}.sab-panel{position:absolute;top:64px;left:50%;transform:translateX(-50%);z-index:6;background:rgba(10,10,20,.94);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:12px 14px;flex-direction:column;gap:8px;min-width:290px;color:#fff;font-size:14px}.sab-prow{display:flex;gap:8px;align-items:center;justify-content:space-between}.sab-buy{background:#7c3aed;color:#fff;border:0;border-radius:999px;padding:6px 12px;font-weight:700;cursor:pointer;font-family:inherit}.sab-owned{color:#3ee6c4;font-weight:700}`;
   game.c.appendChild(style); game.c.appendChild(hud);
   const coinsEl = hud.querySelector('.sab-coins'), incEl = hud.querySelector('.sab-inc'), ownedEl = hud.querySelector('.sab-owned'), baseEl = hud.querySelector('.sab-base');
+
+  // action buttons: sell-mode toggle, rebirth, game-passes shop
+  function hudBtn(cls, label) { const b = document.createElement('button'); b.className = 'sab-pill sab-btn ' + cls; b.textContent = label; hud.appendChild(b); return b; }
+  const sellBtn = hudBtn('sab-sell', '💰 Sell: OFF');
+  const rebBtn = hudBtn('sab-reb', '♻️ Rebirth');
+  const passBtn = hudBtn('sab-pass', '🎟️ Passes');
+  let rebArmAt = 0;
+  sellBtn.onclick = () => {
+    sellMode = !sellMode;
+    sellBtn.textContent = sellMode ? '💰 Sell: ON' : '💰 Sell: OFF';
+    sellBtn.style.background = sellMode ? '#b8860b' : '';
+    game.sys(sellMode ? '💰 Sell mode ON — click one of YOUR blobs to sell it for half price' : '💰 Sell mode off');
+  };
+  rebBtn.onclick = () => {
+    const now = Date.now();
+    if (now - rebArmAt < 4000) { rebArmAt = 0; doRebirth(); return; }
+    rebArmAt = now;
+    rebBtn.textContent = '⚠️ Tap again!';
+    game.sys(`♻️ Tap Rebirth again to confirm: you lose your coins + blobs, but your income becomes ×${multFor(rebirths + 1)} FOREVER (cost ${rebirthCost().toLocaleString()} coins)`);
+    setTimeout(() => { if (Date.now() - rebArmAt >= 4000) refreshHud(); }, 4100);
+  };
+  // game-passes panel (passes are catalog items, bought with FunTix)
+  const panel = document.createElement('div');
+  panel.className = 'sab-panel'; panel.style.display = 'none';
+  game.c.appendChild(panel);
+  function renderPasses() {
+    panel.innerHTML = '';
+    const head = document.createElement('div');
+    head.innerHTML = `🎟️ <b>Game Passes</b> · you have <b>${(game.me?.funtix ?? 0).toLocaleString()}</b> FunTix`;
+    panel.appendChild(head);
+    for (const p of PASSES) {
+      const row = document.createElement('div'); row.className = 'sab-prow';
+      const txt = document.createElement('span');
+      txt.innerHTML = `${p.emoji} <b>${p.name}</b><br><span style="color:#cfd8e3;font-size:12px">${p.desc}</span>`;
+      row.appendChild(txt);
+      if (hasPass(p.id)) {
+        const o = document.createElement('span'); o.className = 'sab-owned'; o.textContent = '✓ Owned'; row.appendChild(o);
+      } else {
+        const b = document.createElement('button'); b.className = 'sab-buy'; b.textContent = p.price + ' FunTix'; b.onclick = () => buyPass(p); row.appendChild(b);
+      }
+      panel.appendChild(row);
+    }
+  }
+  async function buyPass(p) {
+    if (hasPass(p.id)) return;
+    try {
+      const r = await fetch('/api/buy/' + p.id, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + game.o.token } });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { game.sys('❌ ' + (d.error || 'Could not buy that pass')); return; }
+      if (game.me) { game.me.funtix = d.funtix; game.me.inventory = d.inventory; }
+      if (typeof game.setMoney === 'function') game.setMoney({ funtix: d.funtix });
+      game.sys(`🎟️ You bought ${p.name}!`);
+      renderPasses(); refreshHud();
+    } catch (e) { game.sys('❌ Could not reach the shop'); }
+  }
+  passBtn.onclick = () => {
+    const open = panel.style.display === 'none';
+    panel.style.display = open ? 'flex' : 'none';
+    if (open) renderPasses();
+  };
 
   // one-shot particle bursts (buy / steal celebrations)
   const bursts = [];
@@ -308,6 +369,21 @@ export function startStealABlob(game) {
     baseEl.textContent = `Base ${idx + 1} (${bc.name})`;
     game.sys(`⭐ Your base is Base ${idx + 1} (${bc.name}) — follow the gold marker!`);
   }
+  // --- game passes + rebirths ---
+  // Passes are catalog items (type 'pass') bought with FunTix via POST
+  // /api/buy/:item; ownership lives in the account inventory (server-side),
+  // so passes work on any device. Effects are read live from game.me.
+  const PASSES = [
+    { id: 'pass_income2x', emoji: '💰', name: '2x Blob Income', desc: 'Your blobs earn double coins, forever.', price: 500 },
+    { id: 'pass_faststeal', emoji: '⚡', name: 'Fast Steal', desc: 'Steal enemy blobs in 1.5s instead of 3s.', price: 250 },
+    { id: 'pass_bigstart', emoji: '🪙', name: 'Big Start', desc: '+500 starting Blob Coins every join.', price: 200 },
+  ];
+  function hasPass(id) { return !!(game.me && Array.isArray(game.me.inventory) && game.me.inventory.includes(id)); }
+  function startCoins() { return 150 + (hasPass('pass_bigstart') ? 500 : 0); }
+  function multFor(r) { return (1 + r) * (hasPass('pass_income2x') ? 2 : 1); }
+  function incomeMult() { return multFor(rebirths); }
+  function rebirthCost() { return 2500 * (rebirths + 1) * (rebirths + 1); }
+
   // Progress autosave (localStorage, per game + player): Blob Coins and owned
   // blobs survive leaving and rejoining on the same device/browser. Server
   // persistence isn't an option without a new endpoint (server.js is at its
@@ -323,7 +399,7 @@ export function startStealABlob(game) {
       const owned = [...blobs.values()]
         .filter(b => b.owner === game.myId && (b.state === 'owned' || b.state === 'returning'))
         .map(b => ({ id: b.id, base: b.base, slot: b.slot }));
-      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', name: saveName(), coins: Math.floor(coins), owned }));
+      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', name: saveName(), coins: Math.floor(coins), rebirths, owned }));
     } catch (e) { /* storage unavailable (private mode): progress just won't persist */ }
   }
   let restoredSave = false;
@@ -334,6 +410,7 @@ export function startStealABlob(game) {
     try { s = JSON.parse(localStorage.getItem(saveKey()) || 'null'); } catch (e) { return; }
     if (!s || s.v !== 1 || s.gameId !== (game.o.gameId || 'stealablob') || s.name !== saveName()) return;
     if (Number.isFinite(s.coins) && s.coins >= 0) coins = Math.floor(s.coins);
+    if (Number.isFinite(s.rebirths) && s.rebirths >= 0) rebirths = Math.min(100, Math.floor(s.rebirths));
     const entries = Array.isArray(s.owned) ? s.owned : [];
     let placed = 0, mySavedBase = -1;
     for (const e of entries) {
@@ -359,7 +436,7 @@ export function startStealABlob(game) {
     }
     if (mySavedBase >= 0) baseByPlayer.set(game.myId, mySavedBase);
     refreshHud();
-    if (placed > 0 || coins !== 150) game.sys(`💾 Progress restored: ${placed} blob${placed === 1 ? '' : 's'}, ${Math.floor(coins)} coins`);
+    if (placed > 0 || coins !== startCoins()) game.sys(`💾 Progress restored: ${placed} blob${placed === 1 ? '' : 's'}, ${Math.floor(coins)} coins`);
   }
   function spawnBlob(idx) {
     if (blobs.has(idx)) return; // never double-spawn (restore pre-creates ids)
@@ -379,8 +456,9 @@ export function startStealABlob(game) {
   function refreshHud() {
     const mine = [...blobs.values()].filter(b => b.owner === game.myId && b.state === 'owned');
     coinsEl.textContent = Math.floor(coins).toLocaleString();
-    incEl.textContent = mine.reduce((s, b) => s + b.income, 0);
+    incEl.textContent = mine.reduce((s, b) => s + b.income, 0) * incomeMult();
     ownedEl.textContent = mine.length;
+    if (Date.now() - rebArmAt >= 4000) rebBtn.textContent = `♻️×${rebirths} Rebirth ${rebirthCost().toLocaleString()}`;
     saveProgress(); // autosave on every HUD refresh (buys, events, income ticks)
   }
   function playerPos(pid) {
@@ -433,6 +511,14 @@ export function startStealABlob(game) {
       b.state = 'returning'; b.owner = from; b.base = base; b.slot = slot; b.thief = null;
       burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
       game.sys(`🫧 ${playerName(from)} stole ${b.name}!`);
+    } else if (a === 'sell') {
+      const b = blobs.get(bid);
+      if (b && b.owner === from && (b.state === 'owned' || b.state === 'returning')) removeBlob(bid);
+    } else if (a === 'reb') {
+      if (bid === from) { // track id must be the sender's own pid (anti-grief)
+        applyRebirth(from);
+        if (from !== game.myId) game.sys(`♻️ ${playerName(from)} rebirthed!`);
+      }
     } else if (a === 'slap') {
       const target = bid;
       steals.delete(target);
@@ -466,10 +552,40 @@ export function startStealABlob(game) {
     game.sys(`🫧 You bought ${b.name}!`);
     refreshHud();
   }
+  function doSell(b) {
+    if (b.state !== 'owned' || b.owner !== game.myId) return;
+    const refund = Math.floor(b.price / 2);
+    coins += refund;
+    removeBlob(b.id);
+    sendBlob('sell', b.id);
+    game.sys(`💰 Sold ${b.name} for ${refund} Blob Coins`);
+    refreshHud();
+  }
+  // Rebirth wipes a player's blobs: owned/returning are removed, a blob they
+  // were carrying drops back onto the belt. Applied locally for the rebirther
+  // and mirrored on every other client via the 'reb' relay.
+  function applyRebirth(pid) {
+    for (const b of [...blobs.values()]) {
+      if (b.owner === pid && (b.state === 'owned' || b.state === 'returning')) removeBlob(b.id);
+      else if (b.thief === pid && b.state === 'following') { b.state = 'walking'; b.thief = null; b.owner = null; b.z = -55; b.x = Math.max(-4, Math.min(4, b.x)); drawLabel(b); }
+    }
+    steals.delete(pid);
+    if (pid === game.myId) mySteal = null;
+  }
+  function doRebirth() {
+    const cost = rebirthCost();
+    if (coins < cost) { game.sys(`♻️ You need ${cost.toLocaleString()} Blob Coins to rebirth (you have ${Math.floor(coins).toLocaleString()})`); refreshHud(); return; }
+    sendBlob('reb', game.myId);
+    applyRebirth(game.myId);
+    coins = startCoins();
+    rebirths++;
+    game.sys(`♻️ REBIRTH! Your income is now ×${incomeMult()} forever.`);
+    refreshHud();
+  }
   function doSteal(b) {
     if (b.state !== 'owned' || b.owner === game.myId) return;
     if (game.pos.distanceTo(new THREE.Vector3(b.x, game.pos.y, b.z)) > 8) { game.sys('Too far from that blob!'); return; }
-    mySteal = { blobId: b.id, endsAt: Date.now() + 3000 };
+    mySteal = { blobId: b.id, endsAt: Date.now() + (hasPass('pass_faststeal') ? 1500 : 3000) };
     steals.set(game.myId, mySteal);
     sendBlob('steal', b.id);
     game.sys(`🫧 Stealing ${b.name}… stay close!`);
@@ -511,6 +627,7 @@ export function startStealABlob(game) {
         if (b) {
           if (b.state === 'walking') doBuy(b);
           else if (b.state === 'owned' && b.owner !== game.myId) doSteal(b);
+          else if (b.state === 'owned' && sellMode) doSell(b);
           return;
         }
       }
@@ -637,11 +754,12 @@ export function startStealABlob(game) {
       lastIncome = t;
       let inc = 0;
       for (const b of blobs.values()) if (b.owner === game.myId && b.state === 'owned') inc += b.income;
-      coins += inc;
+      coins += inc * incomeMult();
       refreshHud();
     }
   }
   // seed a few blobs immediately
+  coins = startCoins(); // Big Start pass; a restored save overrides this on the first tick
   for (let i = 0; i < 6; i++) spawnBlob(spawnIdx++);
   refreshHud();
   game.sys('🫧 Steal a Blob! Buy blobs on the conveyor, steal from rivals, slap thieves!');
@@ -659,7 +777,7 @@ export function startStealABlob(game) {
       bursts.length = 0;
       blobs.clear();
       if (baseMarker) game.scene.remove(baseMarker.grp);
-      hud.remove(); style.remove();
+      hud.remove(); style.remove(); panel.remove();
     },
   };
 }
