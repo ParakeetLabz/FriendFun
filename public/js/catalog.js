@@ -288,6 +288,9 @@ export const CATALOG = [
   { id: 'gear_lasersword', type: 'gear', name: 'Laser Sword', price: 850, emoji: '✨' },
   { id: 'gear_cannon', type: 'gear', name: 'Cannon', price: 950, emoji: '💣' },
   { id: 'gear_bazooka', type: 'gear', name: 'Bazooka', price: 1100, emoji: '🧨' },
+  { id: 'pass_income2x', type: 'pass', name: '2x Blob Income', price: 500, emoji: '💰', color: '#ffd700' },
+  { id: 'pass_faststeal', type: 'pass', name: 'Fast Steal', price: 250, emoji: '⚡', color: '#3ee6c4' },
+  { id: 'pass_bigstart', type: 'pass', name: 'Big Start +500', price: 200, emoji: '🪙', color: '#ff9f43' },
 ];
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at ground, faces +z.
 // ---------- pet voxel models (shared by game.js 3D pets and app.js 2D previews) ----------
