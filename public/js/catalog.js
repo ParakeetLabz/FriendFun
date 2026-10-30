@@ -291,6 +291,19 @@ export const CATALOG = [
   { id: 'pass_income2x', type: 'pass', name: '2x Blob Income', price: 500, emoji: '💰', color: '#ffd700' },
   { id: 'pass_faststeal', type: 'pass', name: 'Fast Steal', price: 250, emoji: '⚡', color: '#3ee6c4' },
   { id: 'pass_bigstart', type: 'pass', name: 'Big Start +500', price: 200, emoji: '🪙', color: '#ff9f43' },
+  { id: 'hat_wizard_star', type: 'hat', name: 'Star Wizard Hat', price: 450, emoji: '🧙', color: '#311b92' },
+  { id: 'hat_party_neon', type: 'hat', name: 'Neon Party Hat', price: 200, emoji: '🎉', color: '#ff2d95' },
+  { id: 'hat_cap_flame', type: 'hat', name: 'Flame Cap', price: 250, emoji: '🔥', color: '#e64a19' },
+  { id: 'shirt_polo_pink', type: 'shirt', name: 'Pink Polo', price: 200, emoji: '👕', color: '#f48fb1' },
+  { id: 'shirt_vest_gold', type: 'shirt', name: 'Gold Vest', price: 400, emoji: '✨', color: '#c9a227' },
+  { id: 'gear_boombox', type: 'gear', name: 'Boombox', price: 300, emoji: '📻', color: '#37474f' },
+  { id: 'pass_income3x', type: 'pass', name: '3x Blob Income', price: 1000, emoji: '💎', color: '#7b2ff7' },
+  { id: 'pass_megastart', type: 'pass', name: 'Mega Start +1500', price: 400, emoji: '🏦', color: '#2ed573' },
+  { id: 'hat_crown_rosegold', type: 'hat', name: 'Rose Gold Crown', price: 850, emoji: '👑', color: '#f4a6b8' },
+  { id: 'shirt_hoodie_teal', type: 'shirt', name: 'Teal Hoodie', price: 210, emoji: '👕', color: '#00897b' },
+  { id: 'shirt_jacket_camo', type: 'shirt', name: 'Camo Jacket', price: 375, emoji: '🧥', color: '#558b2f' },
+  { id: 'pet_owl', type: 'pet', name: 'Owl', price: 425, emoji: '🦉', color: '#795548' },
+  { id: 'gear_microphone', type: 'gear', name: 'Microphone', price: 275, emoji: '🎤', color: '#90a4ae' },
 ];
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at ground, faces +z.
 // ---------- pet voxel models (shared by game.js 3D pets and app.js 2D previews) ----------
@@ -345,6 +358,15 @@ export const PET_MODELS = {
     [0, 0.32, 0.36, 0.4, 0.06, 0.03, '#33691e'],
     [-0.32, 0.12, 0.12, 0.18, 0.24, 0.3, '#558b2f'], [0.32, 0.12, 0.12, 0.18, 0.24, 0.3, '#558b2f'],
     [-0.32, 0.12, -0.28, 0.18, 0.24, 0.18, '#558b2f'], [0.32, 0.12, -0.28, 0.18, 0.24, 0.18, '#558b2f'],
+  ] },
+  pet_owl: { boxes: [
+    [0, 0.4, 0, 0.55, 0.65, 0.45, '#795548'],
+    [-0.13, 0.62, 0.24, 0.16, 0.16, 0.03, '#ffffff'], [0.13, 0.62, 0.24, 0.16, 0.16, 0.03, '#ffffff'],
+    [-0.13, 0.62, 0.27, 0.07, 0.07, 0.02, '#212121'], [0.13, 0.62, 0.27, 0.07, 0.07, 0.02, '#212121'],
+    [0, 0.5, 0.26, 0.12, 0.1, 0.1, '#ffb300'],
+    [-0.2, 0.78, 0, 0.1, 0.18, 0.1, '#795548'], [0.2, 0.78, 0, 0.1, 0.18, 0.1, '#795548'],
+    [-0.33, 0.4, 0, 0.09, 0.4, 0.3, '#5d4037'], [0.33, 0.4, 0, 0.09, 0.4, 0.3, '#5d4037'],
+    [-0.12, 0.03, 0.08, 0.16, 0.06, 0.22, '#ffb300'], [0.12, 0.03, 0.08, 0.16, 0.06, 0.22, '#ffb300'],
   ] },
   pet_piggy: { boxes: [
     [0, 0.4, -0.1, 0.75, 0.6, 1.0, '#f48fb1'],
@@ -630,6 +652,18 @@ export const PET_MODELS = {
 // ---------- gear voxel models (classic Roblox-style tools) ----------
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at grip, faces +z.
 export const GEAR_MODELS = {
+  gear_boombox: { boxes: [
+    [0, 2.0, 0, 1.0, 0.6, 0.35, '#37474f'],
+    [-0.28, 2.0, 0.2, 0.34, 0.34, 0.06, '#212121'], [0.28, 2.0, 0.2, 0.34, 0.34, 0.06, '#212121'],
+    [-0.28, 2.0, 0.24, 0.18, 0.18, 0.03, '#90a4ae'], [0.28, 2.0, 0.24, 0.18, 0.18, 0.03, '#90a4ae'],
+    [0, 2.42, 0, 0.5, 0.08, 0.08, '#212121'],
+    [0.4, 2.65, 0, 0.04, 0.6, 0.04, '#b0bec5'],
+  ] },
+  gear_microphone: { boxes: [
+    [0, 1.9, 0, 0.09, 0.7, 0.09, '#37474f'],
+    [0, 2.45, 0, 0.3, 0.35, 0.3, '#90a4ae'],
+    [0, 2.28, 0, 0.32, 0.08, 0.32, '#212121'],
+  ] },
   gear_foamsword: { boxes: [
     [0, 1.7, 0, 0.34, 2.4, 0.34, '#2ee06f'],
     [0, 3.0, 0, 0.36, 0.3, 0.36, '#7dffab'],
@@ -751,6 +785,22 @@ export const GEAR_MODELS = {
 export const ECON = { START_TIX: 100, DAILY_TIX: 25, PLAY_TIX: 2, PLAY_TIX_EVERY: 60000, COIN_TIX: 1, WIN_TIX: 25,
   CLUB_PRICE: 300, CLUB_DAYS: 30, CLUB_DAILY: 25, CLUB_PLAY_MULT: 2, CLUB_COIN_BONUS: 1 };
 export const ITEM = Object.fromEntries(CATALOG.map(i => [i.id, i]));
+// 🎃 Scary costumes forced on every player while Halloween is active
+// (game.js + lobby.js). Each entry is a combo of catalog ids applied by slot;
+// the pick is deterministic per player name so a player matches everywhere.
+export const SCARY_COSTUMES = [
+  ['head_pumpkin'],
+  ['head_ghost'],
+  ['hat_witch', 'face_fangs'],
+  ['shirt_mummy', 'face_stitches'],
+];
+export function scaryAvatar(av, name) {
+  if (!av) return av;
+  const h = [...String(name || '')].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const out = { ...av };
+  for (const id of SCARY_COSTUMES[h % SCARY_COSTUMES.length]) { const it = ITEM[id]; if (it) out[it.type] = id; }
+  return out;
+}
 // UGC (player-created items): remixable templates per slot. A UGC item stores
 // { template, color } and renders with the template's geometry/texture.
 export const UGC_TEMPLATES = {
