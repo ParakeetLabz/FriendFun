@@ -161,6 +161,12 @@ function userTile(u) {
 
 // ---------- layout ----------
 const UPDATES = [
+  { id: 'u14', date: 'Oct 29, 2026', title: 'Steal a Blob: saving, selling, rebirths + game passes', items: [
+    'Progress saves: your Blob Coins and owned blobs come back when you rejoin (same device) — look for the 💾 Progress restored message',
+    'Selling: turn on the 💰 Sell button, click one of your blobs, get half its price back in Blob Coins',
+    'Rebirths: ♻️ button — 2,500 coins, then 10,000, then 22,500 — wipes your coins and blobs, but +100% income forever (double-tap to confirm)',
+    'Game passes, bought with FunTix: 2x Blob Income (500), Fast Steal (250), Big Start +500 starting coins (200) — in the in-game 🎟️ Passes shop and the Marketplace',
+  ]},
   { id: 'u13', date: 'Oct 26, 2026', title: 'FunTopia Pro is live', items: [
     'A separate violet + gold version of the whole website — home, discover, avatar, marketplace, create, friends, groups, profile, settings',
     'The new Pro character: a restylable visor bot — change its body, visor and outfit trim on the Avatar page',
