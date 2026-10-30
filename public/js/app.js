@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=f48e5b7d').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=d0d9f712').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -64,7 +64,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=47d581c2';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=d30d849a';
 import { templates } from './worlds.js?v=5ffe510d';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
@@ -161,6 +161,14 @@ function userTile(u) {
 
 // ---------- layout ----------
 const UPDATES = [
+  { id: 'u15', date: 'Oct 30, 2026', title: 'Mega drop: 22 updates + scary mode', items: [
+    '🎃 Scary mode is ON: every player wears a Halloween costume in-game and in the lobby, and the whole site went blood-dark with bats + webs until Sunday 7pm',
+    'Steal a Blob: 3 new blobs — Shadow Blob (5,000), Galaxy Blob (25,000, it color-cycles!), Void Blob (75,000)',
+    'Steal a Blob: 2 new passes — 💎 3x Blob Income (1,000 FunTix, stacks with 2x) and 🏦 Mega Start +1,500 coins (400 FunTix)',
+    'Steal a Blob: new 💰 Sell all button — sells every blob you own in one tap',
+    'Marketplace: 11 new items — Star Wizard Hat, Neon Party Hat, Flame Cap, Rose Gold Crown, Pink Polo, Gold Vest, Teal Hoodie, Camo Jacket, Owl pet, Boombox gear, Microphone gear',
+    'Lobby: 4 new emotes — 🫡 salute, 🎸 guitar, 🥳 party, 🤟 rock on',
+  ]},
   { id: 'u14', date: 'Oct 29, 2026', title: 'Steal a Blob: saving, selling, rebirths + game passes', items: [
     'Progress saves: your Blob Coins and owned blobs come back when you rejoin (same device) — look for the 💾 Progress restored message',
     'Selling: turn on the 💰 Sell button, click one of your blobs, get half its price back in Blob Coins',
@@ -303,6 +311,7 @@ function updatesPage() {
 }
 function shell(active, content) {
   return `
+  ${halloweenActive() ? '<div class="scary-decor"><span>🕸️</span><span class="sd-bats">🦇 🦇 🦇</span><span>🕸️</span></div>' : ''}
   <header class="topbar">
     <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
     <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
@@ -456,7 +465,7 @@ function mount(active, html, after) {
     after?.(); fillThumbs();
     return;
   }
-  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
+  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive()); document.body.classList.toggle('scary', halloweenActive());
   app.className = ''; app.innerHTML = shell(active, html);
   refreshPartyBar();
   refreshSiteBanner();
@@ -550,7 +559,7 @@ function dailyToast(r) {
 
 // ---------- pages ----------
 function loginPage() {
-  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive());
+  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive()); document.body.classList.toggle('scary', halloweenActive());
   app.className = 'landing';
   app.innerHTML = `
   <div class="landing-bg"></div>
@@ -739,7 +748,7 @@ async function playPage(id, server) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=b68054e1');
+  const { Game } = await import('./game.js?v=ab1c5e9c');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1315,7 +1324,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=b68054e1');
+      const { Game: GameClass } = await import('./game.js?v=ab1c5e9c');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1613,7 +1622,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=5cd77bca'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=e37d35e9'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
