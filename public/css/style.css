@@ -829,3 +829,11 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-eyes { position: absolute; top: 18%; right: 12%; z-index: 5; font-size: 34px; pointer-events: none; opacity: 0; animation: lb-eyes-blink 5s infinite; }
 @keyframes lb-eyes-blink { 0%, 70%, 100% { opacity: 0; } 75%, 85% { opacity: .9; } 80% { opacity: .2; } }
 .lb-emotes button.on { background: rgba(124,108,245,.35); border-color: rgba(124,108,245,.7); }
+
+/* 🎃 SCARY MODE — while Halloween is active the whole site goes blood-dark */
+body.scary { --bg: #070203; --bg2: #0d0407; --card: #170709; --card2: #20090d; --line: #4a0f18; --text: #ffe9e9; --muted: #b08a8a; --blue: #ff2d40; --blue2: #c40f24; --pink: #ff9f43; --grad: linear-gradient(135deg, #ff2d40, #7a0c1c); --glow: 0 0 18px rgba(255,45,64,.45); }
+body.scary .topbar { background: linear-gradient(180deg, #1c0208, #0d0104); border-bottom: 3px solid #a31220; }
+body.scary .sidebar { background: #0d0104; }
+.scary-decor { position: fixed; top: 58px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 10px; font-size: 26px; pointer-events: none; z-index: 40; }
+.scary-decor .sd-bats { display: inline-block; animation: sd-drift 7s ease-in-out infinite alternate; }
+@keyframes sd-drift { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
