@@ -32,6 +32,9 @@ export const SAB_BLOBS = [
   { name: 'Mochi', rarity: 'epic', price: 1200, income: 35, color: '#f5f5f5', hat: 'ears' },
   { name: 'King Blob', rarity: 'legendary', price: 3000, income: 90, color: '#ffd700', hat: 'crown' },
   { name: 'Rainbow Blob', rarity: 'mythic', price: 10000, income: 300, color: '#ff5e8a', hat: 'halo' },
+  { name: 'Shadow Blob', rarity: 'legendary', price: 5000, income: 150, color: '#5a4a8a', hat: null },
+  { name: 'Galaxy Blob', rarity: 'mythic', price: 25000, income: 900, color: '#7b2ff7', hat: 'sparkle' },
+  { name: 'Void Blob', rarity: 'mythic', price: 75000, income: 2500, color: '#17141f', hat: 'crown' },
 ];
 const RARITY_COLOR = { common: 0x9aa5b1, rare: 0x4a90e2, epic: 0x9b59e6, legendary: 0xf5b301, mythic: 0xff5e8a };
 
@@ -236,6 +239,7 @@ export function startStealABlob(game) {
   // action buttons: sell-mode toggle, rebirth, game-passes shop
   function hudBtn(cls, label) { const b = document.createElement('button'); b.className = 'sab-pill sab-btn ' + cls; b.textContent = label; hud.appendChild(b); return b; }
   const sellBtn = hudBtn('sab-sell', '💰 Sell: OFF');
+  const sellAllBtn = hudBtn('sab-sellall', '💰 Sell all');
   const rebBtn = hudBtn('sab-reb', '♻️ Rebirth');
   const passBtn = hudBtn('sab-pass', '🎟️ Passes');
   let rebArmAt = 0;
@@ -244,6 +248,11 @@ export function startStealABlob(game) {
     sellBtn.textContent = sellMode ? '💰 Sell: ON' : '💰 Sell: OFF';
     sellBtn.style.background = sellMode ? '#b8860b' : '';
     game.sys(sellMode ? '💰 Sell mode ON — click one of YOUR blobs to sell it for half price' : '💰 Sell mode off');
+  };
+  sellAllBtn.onclick = () => {
+    const mine = [...blobs.values()].filter(b => b.state === 'owned' && b.owner === game.myId);
+    if (!mine.length) { game.sys('💰 You have no blobs to sell'); return; }
+    for (const b of mine) doSell(b);
   };
   rebBtn.onclick = () => {
     const now = Date.now();
@@ -377,10 +386,12 @@ export function startStealABlob(game) {
     { id: 'pass_income2x', emoji: '💰', name: '2x Blob Income', desc: 'Your blobs earn double coins, forever.', price: 500 },
     { id: 'pass_faststeal', emoji: '⚡', name: 'Fast Steal', desc: 'Steal enemy blobs in 1.5s instead of 3s.', price: 250 },
     { id: 'pass_bigstart', emoji: '🪙', name: 'Big Start', desc: '+500 starting Blob Coins every join.', price: 200 },
+    { id: 'pass_income3x', emoji: '💎', name: '3x Blob Income', desc: 'Your blobs earn triple coins, forever. Stacks with the 2x pass!', price: 1000 },
+    { id: 'pass_megastart', emoji: '🏦', name: 'Mega Start', desc: '+1,500 starting Blob Coins every join. Stacks with Big Start!', price: 400 },
   ];
   function hasPass(id) { return !!(game.me && Array.isArray(game.me.inventory) && game.me.inventory.includes(id)); }
-  function startCoins() { return 150 + (hasPass('pass_bigstart') ? 500 : 0); }
-  function multFor(r) { return (1 + r) * (hasPass('pass_income2x') ? 2 : 1); }
+  function startCoins() { return 150 + (hasPass('pass_bigstart') ? 500 : 0) + (hasPass('pass_megastart') ? 1500 : 0); }
+  function multFor(r) { return (1 + r) * (hasPass('pass_income2x') ? 2 : 1) * (hasPass('pass_income3x') ? 3 : 1); }
   function incomeMult() { return multFor(rebirths); }
   function rebirthCost() { return 2500 * (rebirths + 1) * (rebirths + 1); }
 
@@ -745,7 +756,7 @@ export function startStealABlob(game) {
         if (refs.halo) { refs.halo.rotation.y = t / 1000 * 0.8; refs.halo.position.y = 2.75 + Math.sin(t / 800) * 0.08; }
         if (refs.spinHat) { refs.spinHat.rotation.y = t / 1000 * 2; refs.spinHat.position.y = 2.65 + Math.sin(t / 700) * 0.1; }
         // rainbow blob cycles hue
-        if (b.name === 'Rainbow Blob') refs.bodyMat.color.setHSL(((t / 3000) + b.id * 0.13) % 1, 0.85, 0.6);
+        if (b.name === 'Rainbow Blob' || b.name === 'Galaxy Blob') refs.bodyMat.color.setHSL(((t / 3000) + b.id * 0.13) % 1, 0.85, 0.6);
       }
     }
     tickBursts(dt);
