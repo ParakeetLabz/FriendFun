@@ -1,7 +1,8 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=97bd0103';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=d0d9f712';
+import { scaryAvatar } from './catalog.js?v=d30d849a';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -109,7 +110,7 @@ export async function lobbyPage(D) {
       </div>
     </aside>
     <div class="lb-nameplate"><b>${esc(me.name)}</b><span>🏅 ${(me.badges || []).length} badges · 🔥 ${me.streak || 0} day streak</span></div>
-    <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
+    <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑'], ['bow', '🫡'], ['dance', '🎸'], ['cheer', '🥳'], ['dab', '🤟']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
     <footer class="lb-tiles">
       ${recent ? `<a class="lb-tile" href="#/play/${recent.id}"><span>⏩</span><b>Continue</b><i>${esc(recent.name)}</i></a>` : ''}
       <a class="lb-tile" href="#/discover"><span>🏆</span><b>Charts</b><i>Top games right now</i></a>
@@ -194,7 +195,7 @@ export async function lobbyPage(D) {
   const chars = [];
   const addChar = (avatar, name, x, z, s) => {
     try {
-      const c = buildCharacter(avatar, { pet: false, gear: false });
+      const c = buildCharacter(halloweenCountdown() ? scaryAvatar(avatar, name) : avatar, { pet: false, gear: false });
       c.position.set(x, 0, z); c.scale.setScalar(s);
       const tag = makeNameTag(name); tag.position.y = 5.7; tag.scale.multiplyScalar(0.5); c.add(tag);
       stage.add(c); chars.push(c); return c;
