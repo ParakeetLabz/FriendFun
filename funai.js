@@ -166,13 +166,16 @@ async function callAI(key, messages) {
   // reasoning models sometimes return empty or non-JSON content, and
   // one retry with "ONLY the JSON, keep it short" fixes most of those.
   let lastErr = null;
-  // Last resort is Llama 3.3 70B (ZStudio maps it to Groq's
-  // llama-3.3-70b-versatile): it is not a reasoning model, so it does
-  // not suffer the gpt-oss empty-content failures.
-  for (const model of ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'meta-llama/llama-3.3-70b-instruct']) {
-    for (let attempt = 0; attempt < 2; attempt++) {
+  // NOTE: llama-3.3-70b-versatile is NOT usable here — Groq moved it to
+  // Enterprise and Zayd's key gets "does not exist or you do not have
+  // access" (tried Nov 1, 2026). Only the gpt-oss models work, and they
+  // intermittently return EMPTY content; empty replies come back fast,
+  // so each model gets 3 attempts and later attempts demand a smaller,
+  // simpler world (less reasoning = less likely to come back empty).
+  for (const model of ['openai/gpt-oss-120b', 'openai/gpt-oss-20b']) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Parts MUST be compact arrays like ["Platform",0,2,-10,6,1,6,"#ff595e","part","plastic"]. Use 30 to 60 parts. Make sure the JSON is complete and closes with ]}.' }];
+        const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Parts MUST be compact arrays like ["Platform",0,2,-10,6,1,6,"#ff595e","part","plastic"]. ' + (attempt >= 2 ? 'Use at most 30 parts and the simplest layout that works. ' : 'Use 30 to 60 parts. ') + 'Make sure the JSON is complete and closes with ]}.' }];
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 90000);
         const r = await fetch(ZSTUDIO_URL, {
