@@ -161,6 +161,11 @@ function userTile(u) {
 
 // ---------- layout ----------
 const UPDATES = [
+  { id: 'u18', date: 'Oct 31, 2026', title: '✨ FunAI now builds Studio games', items: [
+    '🏗️ FunAI now designs real Funtopia Studio worlds — hit "Open in Studio" and the whole game lands in your Studio, ready to edit and play',
+    '🌍 Or publish straight from FunAI: your AI-built game goes live in Discover for everyone',
+    '🗺️ See your world before you save it: a top-down map of every block FunAI placed',
+  ]},
   { id: 'u17', date: 'Oct 31, 2026', title: '✨ FunAI is here — the game maker AI', items: [
     '✨ New in Create + the sidebar: FunAI — describe any game ("a cat catching falling pizzas") and FunAI builds a playable game right on the page',
     '🔁 Remix your game with follow-ups: "make it faster", "add coins", "make it spooky"',
@@ -1304,7 +1309,7 @@ async function createPage() {
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button><button data-goto="#/funai">✨ FunAI</button></div>
-    <a href="#/funai" style="display:block;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(124,58,237,.35)"><span style="font-weight:900;font-size:18px">✨ Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it, playable instantly →</span></a>
+    <a href="#/funai" style="display:block;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(124,58,237,.35)"><span style="font-weight:900;font-size:18px">✨ Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>My Experiences (${mine.length})</h2></div>
@@ -1659,7 +1664,7 @@ async function route() {
       case 'funtix': case 'funbux': return funtixPage();
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
-      case 'funai': { const m = await import('./funai.js?v=124ccf43'); return m.funaiPage(funaiDeps); }
+      case 'funai': { const m = await import('./funai.js?v=9b6a7010'); return m.funaiPage(funaiDeps); }
       default: return await homePage();
     }
   } catch (e) {

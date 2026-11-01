@@ -862,3 +862,4 @@ body.scary .sidebar { background: #0d0104; }
 .funai-card{background:var(--card,#fff);border:1px solid var(--border,#e0e0e0);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
 .funai-card b{font-size:15px}
 @media (max-width:640px){.funai-frame{height:440px}}
+.funai-map{width:100%;max-width:720px;border:3px solid #7c3aed;border-radius:14px;display:block}
