@@ -69,6 +69,21 @@ function cleanParts(raw) {
   // Guarantee walkable ground somewhere under the action.
   const hasGround = parts.some(p => p.s[0] >= 20 && p.s[2] >= 20 && p.p[1] <= 1.5);
   if (!hasGround) parts.unshift({ id: 'p0', name: 'Ground', p: [0, -0.5, 0], s: [80, 1, 80], c: '#4caf50', k: 'part', m: 'grass' });
+  // Guarantee a finish for course-like worlds (they have checkpoints but
+  // the AI sometimes forgets the win pad): put a WinPad on top of the
+  // platform farthest from the spawn — by construction it is on the course.
+  if (!parts.some(p => p.k === 'win') && parts.some(p => p.k === 'checkpoint')) {
+    const spawn = parts.find(p => p.k === 'spawn');
+    const cands = parts.filter(p => ['part', 'checkpoint', 'bounce'].includes(p.k) && p.s[0] >= 3 && p.s[2] >= 3);
+    if (spawn && cands.length) {
+      const far = cands.reduce((a, b) => {
+        const da = (a.p[0] - spawn.p[0]) ** 2 + (a.p[2] - spawn.p[2]) ** 2;
+        const db = (b.p[0] - spawn.p[0]) ** 2 + (b.p[2] - spawn.p[2]) ** 2;
+        return db > da ? b : a;
+      });
+      parts.push({ id: 'p' + (parts.length + 1), name: 'WinPad', p: [far.p[0], far.p[1] + far.s[1] / 2 + 0.26, far.p[2]], s: [5, 0.5, 5], c: '#ffd700', k: 'win', m: 'neon' });
+    }
+  }
   return parts;
 }
 
