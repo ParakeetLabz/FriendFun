@@ -13,15 +13,15 @@ const SYSTEM = [
   'You are FunAI, a game maker AI inside Funtopia. You design a 3D block world for Funtopia Studio.',
   'Reply with ONLY a JSON object, no markdown, no commentary:',
   '{"title":"short game title","description":"one fun sentence","sky":"#8fc8ff","parts":[ ... ]}',
-  'Each part is: {"name":"Platform","p":[x,y,z],"s":[sx,sy,sz],"c":"#hexcolor","k":"part","m":"plastic"}',
-  '- p = CENTER position, s = size. y is UP. Ground level is y=0: a ground part like {"name":"Ground","p":[0,-0.5,0],"s":[120,1,120],"c":"#4caf50","k":"part","m":"grass"}.',
-  '- k (kind) must be one of: part, spawn, kill, checkpoint, win, bounce, coin, speed, npc, heal. Exactly ONE spawn part: {"name":"SpawnLocation","p":[0,0.25,-40],"s":[6,0.5,6],"c":"#3a7bd5","k":"spawn","m":"spawn"} placed ON the ground near the start.',
-  '- m (material) must be one of: plastic, neon, grass, wood, brick, glass, concrete, sand, baseplate, spawn, metal.',
-  '- Gameplay: an obby/course needs platforms spaced for jumping (gaps of 4-8 blocks, height steps of 1-3), kill parts (lava) below or as hazards, checkpoint parts along the way, coin parts as rewards, and ONE win part at the end. A hangout needs buildings, trees, furniture-ish blocks and an npc with a "dialog" string.',
-  '- npc parts may add "dialog":"..." (max 120 chars) and are sized like a person: s:[2,5,2].',
-  '- A part may move: add "mv":{"a":"x","d":6,"s":1} (slides along axis a by d blocks at speed s) — great for moving platforms. Or blink: "blink":{"on":2.5,"off":1.3}.',
-  '- Use 50 to 160 parts. Keep numbers tidy (whole or .5 steps). z usually runs from the spawn (positive z or 0) toward negative z for courses, but any layout that makes sense is fine. Everything must connect: a player must be able to REACH the win part from the spawn by walking/jumping.',
-  '- Keep the JSON compact: short names, no comments, no extra fields.',
+  'Each part is a compact ARRAY: [name, x,y,z, sx,sy,sz, "#hexcolor", kind, material]',
+  'Example part: ["Platform",0,2,-10, 6,1,6, "#ff595e","part","plastic"]',
+  '- (x,y,z) is the part CENTER, (sx,sy,sz) its size. y is UP. Ground level is y=0: include a ground like ["Ground",0,-0.5,0, 120,1,120, "#4caf50","part","grass"].',
+  '- kind must be one of: part, spawn, kill, checkpoint, win, bounce, coin, speed, npc, heal. Exactly ONE spawn: ["SpawnLocation",0,0.25,-40, 6,0.5,6, "#3a7bd5","spawn","spawn"] placed ON the ground near the start.',
+  '- material must be one of: plastic, neon, grass, wood, brick, glass, concrete, sand, baseplate, spawn, metal.',
+  '- Gameplay: an obby/course needs platforms spaced for jumping (gaps of 4-8 blocks, height steps of 1-3), kill parts (lava) below or as hazards, checkpoint parts along the way, coin parts as rewards, and ONE win part at the end. A hangout needs buildings, trees, furniture-ish blocks and one npc.',
+  '- An npc part may add a 10th element: an object like {"dialog":"Welcome!"} — npc size is [2,5,2]. Any part may add that object with "mv":{"a":"x","d":6,"s":1} (slides along an axis) or "blink":{"on":2.5,"off":1.3}.',
+  '- Use 40 to 90 parts. Keep numbers tidy (whole or .5 steps). Everything must connect: a player must be able to REACH the win part from the spawn by walking/jumping.',
+  '- Keep the JSON compact: short names, no spaces you do not need, no comments, no extra fields.',
 ].join('\n');
 
 const KINDS = ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'heal', 'jump'];
@@ -29,9 +29,20 @@ const MATS = ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 
 const num = (v, d = 0) => (Number.isFinite(+v) ? +v : d);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
+// The AI may answer with array rows (the requested format) or, if it
+// ignores instructions, plain part objects. Accept both.
+function normalizePart(p) {
+  if (Array.isArray(p)) {
+    const ex = (p[10] && typeof p[10] === 'object') ? p[10] : {};
+    return { name: p[0], p: [p[1], p[2], p[3]], s: [p[4], p[5], p[6]], c: p[7], k: p[8], m: p[9], ...ex };
+  }
+  return p || {};
+}
+
 // Mirror of server.js sanitizeWorld's part rules, tightened for AI output.
 function cleanParts(raw) {
-  const parts = (Array.isArray(raw) ? raw : []).slice(0, 240).map((p, i) => {
+  const parts = (Array.isArray(raw) ? raw : []).slice(0, 240).map((rawP, i) => {
+    const p = normalizePart(rawP);
     const k = KINDS.includes(p?.k) ? p.k : 'part';
     const out = {
       id: 'p' + (i + 1),
@@ -48,8 +59,8 @@ function cleanParts(raw) {
     if (p?.blink) out.blink = { on: clamp(num(p.blink.on, 2), 0.3, 30), off: clamp(num(p.blink.off, 1.5), 0.3, 30) };
     return out;
   });
-  // Guarantee a spawn: keep the first one the AI made, drop extra spawns
-  // down to kind 'part', or add one if there is none.
+  // Guarantee a spawn: keep the first one the AI made, demote extras,
+  // or add one if there is none.
   let seenSpawn = false;
   for (const p of parts) {
     if (p.k === 'spawn') { if (seenSpawn) p.k = 'part'; seenSpawn = true; }
@@ -69,17 +80,56 @@ function stripToJson(text) {
   return t;
 }
 
-function extractWorld(text) {
-  try {
-    const j = JSON.parse(stripToJson(text));
-    if (j && Array.isArray(j.parts) && j.parts.length >= 8) {
-      return {
-        title: String(j.title || 'FunAI Game').slice(0, 50),
-        description: String(j.description || 'Made with ✨ FunAI').slice(0, 300),
-        world: { sky: /^#[0-9a-fA-F]{6}$/.test(j.sky || '') ? j.sky : '#8fc8ff', parts: cleanParts(j.parts) },
-      };
+const strField = (t, f) => { const m = t.match(new RegExp('"' + f + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"')); if (!m) return ''; try { return JSON.parse('"' + m[1] + '"'); } catch { return m[1]; } };
+
+// If the reply was cut off mid-JSON (long worlds can hit the model's
+// output limit), salvage every COMPLETE part element from the parts
+// array instead of failing the whole generation.
+function salvageParts(text) {
+  const at = text.indexOf('"parts"');
+  if (at < 0) return [];
+  const open = text.indexOf('[', at);
+  if (open < 0) return [];
+  const out = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = open + 1; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === '[' || ch === '{') { if (depth === 0) start = i; depth++; }
+    else if (ch === ']' || ch === '}') {
+      if (depth === 0) break; // the parts array itself closed
+      depth--;
+      if (depth === 0 && start >= 0) {
+        try { out.push(JSON.parse(text.slice(start, i + 1))); } catch {}
+        start = -1;
+      }
     }
+  }
+  return out;
+}
+
+function buildWorld(title, description, sky, rawParts) {
+  if (!Array.isArray(rawParts) || rawParts.length < 8) return null;
+  return {
+    title: String(title || 'FunAI Game').slice(0, 50),
+    description: String(description || 'Made with ✨ FunAI').slice(0, 300),
+    world: { sky: /^#[0-9a-fA-F]{6}$/.test(sky || '') ? sky : '#8fc8ff', parts: cleanParts(rawParts) },
+  };
+}
+
+function extractWorld(text) {
+  const raw = String(text || '');
+  try {
+    const j = JSON.parse(stripToJson(raw));
+    const g = j && buildWorld(j.title, j.description, j.sky, j.parts);
+    if (g) return g;
   } catch {}
+  // Truncated or slightly broken JSON: salvage complete parts.
+  const parts = salvageParts(raw);
+  if (parts.length >= 8) {
+    return buildWorld(strField(raw, 'title'), strField(raw, 'description'), strField(raw, 'sky'), parts);
+  }
   return null;
 }
 
@@ -132,7 +182,7 @@ export function createFunAI(D) {
     const prev = req.body?.world && Array.isArray(req.body.world.parts) ? { sky: req.body.world.sky, parts: cleanParts(req.body.world.parts) } : null;
     const messages = [{ role: 'system', content: SYSTEM }];
     if (prev) {
-      messages.push({ role: 'user', content: 'Here is an existing Funtopia world you designed:\n' + JSON.stringify(prev).slice(0, 30000) + '\n\nMake this change and return the FULL updated world in the same JSON format: ' + prompt });
+      messages.push({ role: 'user', content: 'Here is an existing Funtopia world you designed (parts shown as objects):\n' + JSON.stringify(prev).slice(0, 30000) + '\n\nMake this change and return the FULL updated world in the same JSON format (parts as compact arrays): ' + prompt });
     } else {
       messages.push({ role: 'user', content: 'Design this game: ' + prompt + (style ? '\nStyle: ' + style : '') });
     }
