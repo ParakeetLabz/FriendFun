@@ -837,3 +837,28 @@ body.scary .sidebar { background: #0d0104; }
 .scary-decor { position: fixed; top: 58px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 10px; font-size: 26px; pointer-events: none; z-index: 40; }
 .scary-decor .sd-bats { display: inline-block; animation: sd-drift 7s ease-in-out infinite alternate; }
 @keyframes sd-drift { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+
+/* ===== ✨ FunAI ===== */
+.funai-hero{background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:16px;padding:22px 24px;margin-bottom:16px;box-shadow:0 0 28px rgba(124,58,237,.35)}
+.funai-hero h1{margin:0 0 6px;font-size:32px}
+.funai-hero p{margin:0;opacity:.92;font-weight:600}
+.funai-panel{background:var(--card,#fff);border:1px solid var(--border,#e0e0e0);border-radius:14px;padding:16px;margin-bottom:20px}
+.funai-input{width:100%;box-sizing:border-box;border-radius:10px;padding:12px;font:inherit;resize:vertical}
+.funai-chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.funai-chip{border:1px solid var(--border,#ddd);background:transparent;color:inherit;border-radius:999px;padding:6px 12px;cursor:pointer;font:inherit;font-size:13px}
+.funai-chip:hover{border-color:#7c3aed}
+.funai-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.funai-row select,.funai-row input{font:inherit;padding:10px;border-radius:10px}
+.funai-row input{flex:1;min-width:220px}
+.funai-status{margin:10px 0 0;min-height:1em}
+.funai-stage{margin-bottom:24px}
+.funai-stage-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.funai-actions{display:flex;gap:8px;flex-wrap:wrap}
+.funai-frame{width:100%;height:540px;border:3px solid #7c3aed;border-radius:14px;background:#111}
+.funai-remix-row{margin-top:12px}
+.funai-codewrap{margin-top:12px}
+.funai-code{max-height:320px;overflow:auto;background:#0d1117;color:#c9d1d9;padding:12px;border-radius:10px;font-size:12px;white-space:pre-wrap;word-break:break-word}
+.funai-shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.funai-card{background:var(--card,#fff);border:1px solid var(--border,#e0e0e0);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.funai-card b{font-size:15px}
+@media (max-width:640px){.funai-frame{height:440px}}

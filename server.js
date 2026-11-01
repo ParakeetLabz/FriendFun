@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createNews } from './news.js';
 import { createUgc, ugcState } from './ugc.js';
 import { createHacker } from './hacker.js';
+import { createFunAI } from './funai.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -1647,6 +1648,7 @@ function broadcast(room, msg, except) { const s = JSON.stringify(msg); for (cons
 createNews({ app, auth, rooms, broadcast, isOwner });
 createUgc({ app, auth, modOnly, supabase, supabaseAdmin, SUPABASE_URL, ITEM, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT, UGC_BUCKET, UGC_GLB_MAX, filter, key, list, ugcDef, validUgcTransform, ensureUgcBucket });
 createHacker({ app, auth, rooms, broadcast, isOwner });
+createFunAI({ app, auth });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;
