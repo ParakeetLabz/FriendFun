@@ -166,7 +166,10 @@ async function callAI(key, messages) {
   // reasoning models sometimes return empty or non-JSON content, and
   // one retry with "ONLY the JSON, keep it short" fixes most of those.
   let lastErr = null;
-  for (const model of ['openai/gpt-oss-120b', 'openai/gpt-oss-20b']) {
+  // Last resort is Llama 3.3 70B (ZStudio maps it to Groq's
+  // llama-3.3-70b-versatile): it is not a reasoning model, so it does
+  // not suffer the gpt-oss empty-content failures.
+  for (const model of ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'meta-llama/llama-3.3-70b-instruct']) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Parts MUST be compact arrays like ["Platform",0,2,-10,6,1,6,"#ff595e","part","plastic"]. Use 30 to 60 parts. Make sure the JSON is complete and closes with ]}.' }];
