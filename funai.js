@@ -30,13 +30,25 @@ const num = (v, d = 0) => (Number.isFinite(+v) ? +v : d);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // The AI may answer with array rows (the requested format) or, if it
-// ignores instructions, plain part objects. Accept both.
+// ignores instructions, plain part objects. Accept both — including
+// objects that use position/size keys or {x,y,z} vectors.
+const vec3 = v => Array.isArray(v) ? v : (v && typeof v === 'object' ? [v.x, v.y, v.z] : v);
 function normalizePart(p) {
   if (Array.isArray(p)) {
     const ex = (p[10] && typeof p[10] === 'object') ? p[10] : {};
     return { name: p[0], p: [p[1], p[2], p[3]], s: [p[4], p[5], p[6]], c: p[7], k: p[8], m: p[9], ...ex };
   }
-  return p || {};
+  if (p && typeof p === 'object') {
+    return {
+      ...p,
+      p: vec3(p.p ?? p.position ?? p.pos),
+      s: vec3(p.s ?? p.size ?? p.scale),
+      c: p.c ?? p.color ?? p.colour,
+      k: String(p.k ?? p.kind ?? p.type ?? 'part').toLowerCase(),
+      m: String(p.m ?? p.material ?? 'plastic').toLowerCase(),
+    };
+  }
+  return {};
 }
 
 // Mirror of server.js sanitizeWorld's part rules, tightened for AI output.
@@ -125,7 +137,7 @@ function salvageParts(text) {
 }
 
 function buildWorld(title, description, sky, rawParts) {
-  if (!Array.isArray(rawParts) || rawParts.length < 8) return null;
+  if (!Array.isArray(rawParts) || rawParts.length < 6) return null;
   return {
     title: String(title || 'FunAI Game').slice(0, 50),
     description: String(description || 'Made with ✨ FunAI').slice(0, 300),
@@ -142,7 +154,7 @@ function extractWorld(text) {
   } catch {}
   // Truncated or slightly broken JSON: salvage complete parts.
   const parts = salvageParts(raw);
-  if (parts.length >= 8) {
+  if (parts.length >= 6) {
     return buildWorld(strField(raw, 'title'), strField(raw, 'description'), strField(raw, 'sky'), parts);
   }
   return null;
@@ -150,23 +162,31 @@ function extractWorld(text) {
 
 async function callAI(key, messages) {
   // gpt-oss-120b designs the best worlds; fall back to the faster 20b.
+  // Each model gets a second attempt with a corrective nudge — the
+  // reasoning models sometimes return empty or non-JSON content, and
+  // one retry with "ONLY the JSON, keep it short" fixes most of those.
   let lastErr = null;
   for (const model of ['openai/gpt-oss-120b', 'openai/gpt-oss-20b']) {
-    try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), 90000);
-      const r = await fetch(ZSTUDIO_URL, {
-        method: 'POST', signal: ctl.signal,
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
-        body: JSON.stringify({ model, messages }),
-      });
-      clearTimeout(timer);
-      const data = await r.json().catch(() => null);
-      if (!r.ok) { lastErr = new Error(data?.error?.message || ('AI request failed (' + r.status + ')')); continue; }
-      const game = extractWorld(data?.choices?.[0]?.message?.content || '');
-      if (game) return game;
-      lastErr = new Error('The AI did not return a usable world. Try again!');
-    } catch (e) { lastErr = e; }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Parts MUST be compact arrays like ["Platform",0,2,-10,6,1,6,"#ff595e","part","plastic"]. Use 30 to 60 parts. Make sure the JSON is complete and closes with ]}.' }];
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 90000);
+        const r = await fetch(ZSTUDIO_URL, {
+          method: 'POST', signal: ctl.signal,
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+          body: JSON.stringify({ model, messages: msgs }),
+        });
+        clearTimeout(timer);
+        const data = await r.json().catch(() => null);
+        if (!r.ok) { lastErr = new Error(data?.error?.message || ('AI request failed (' + r.status + ')')); continue; }
+        const content = data?.choices?.[0]?.message?.content || '';
+        const game = extractWorld(content);
+        if (game) return game;
+        lastErr = new Error('The AI did not return a usable world. Try again!');
+        lastErr.raw = String(content).slice(0, 1500);
+      } catch (e) { lastErr = e; }
+    }
   }
   throw lastErr || new Error('FunAI request failed');
 }
@@ -205,7 +225,11 @@ export function createFunAI(D) {
       const game = await callAI(key, messages);
       res.json(game);
     } catch (e) {
-      res.status(502).json({ error: 'FunAI failed: ' + (e.name === 'AbortError' ? 'the AI took too long — try a simpler idea!' : e.message) });
+      const body = { error: 'FunAI failed: ' + (e.name === 'AbortError' ? 'the AI took too long — try a simpler idea!' : e.message) };
+      // Owner/test accounts get the raw AI reply snippet so a bad
+      // generation can actually be diagnosed instead of guessed at.
+      if (e.raw && ['fun', 'funaitest31'].includes(req.user.name.toLowerCase())) body.debug = e.raw;
+      res.status(502).json(body);
     }
   });
 }
