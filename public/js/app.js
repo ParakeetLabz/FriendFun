@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=d0d9f712').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=u50').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -64,8 +64,8 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=d30d849a';
-import { templates } from './worlds.js?v=5ffe510d';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=u50';
+import { templates } from './worlds.js?v=u50';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
@@ -161,6 +161,22 @@ function userTile(u) {
 
 // ---------- layout ----------
 const UPDATES = [
+  { id: 'u19', date: 'Nov 4, 2026', title: '🎉 57 updates: chat tags, new moves, new worlds + social', items: [
+    '💬 Chat tags: OWNER, ADMIN, MOD and CLUB tags now show next to names in chat and the player list',
+    '😀 9 new faces (Starstruck, Shades, Vampire, Sly, Nervous, Sparkling, Glitch, Kitty, Pirate) + 4 shirts (Checkerboard, Plaid, Denim, Galaxy)',
+    '🫡 2 new emotes: Salute and Shrug — try /e salute and /e shrug',
+    '🦘 New moves: double jump, double-tap W to sprint, Q to dash, C to crouch',
+    '🌀 New Studio parts: teleporter pads (pair by name), conveyors, low-gravity zones, ice slides, water, coin magnets, shields and safe zones',
+    '🏝️ 4 new worlds: Sky Islands, Race Track, Volcano Escape and Snow Peak',
+    '👥 Follow players, set a status, gift FunTix, pin a showcase game, and claim streak rewards at 7, 14 and 30 days',
+    '♥ Wishlist catalog items, sort the Marketplace by price, and filter free-only',
+    '🔥 Trending creators on the dashboard, friend activity feed, and notes on friend requests',
+    '🎲 Discover: sort by playing/newest/rated/A–Z, genre filters, and a Surprise Me button',
+    '🏆 Win screen now has Play Again and Next Game buttons, plus checkpoint progress (3/8)',
+    '🎮 New settings: FPS + ping display, reduce motion, chat timestamps — and /me chat actions',
+    '🔨 Studio: staircase builder, mirror selection, and a live part counter in the Explorer',
+    '🛠️ Fixed the Marketplace grid — items now lay out in the grid properly instead of stacking',
+  ]},
   { id: 'u18', date: 'Oct 31, 2026', title: '✨ FunAI now builds Studio games', items: [
     '🏗️ FunAI now designs real Funtopia Studio worlds — hit "Open in Studio" and the whole game lands in your Studio, ready to edit and play',
     '🌍 Or publish straight from FunAI: your AI-built game goes live in Discover for everyone',
@@ -257,6 +273,9 @@ function settingsPage() {
   const sfxOn = localStorage.getItem('ff_sfx') !== '0';
   const musicOn = localStorage.getItem('ff_music') !== '0';
   const gfxMode = localStorage.getItem('ff_gfx') || 'classic';
+  const fpsOn = localStorage.getItem('ff_fps') === '1';
+  const rmOn = localStorage.getItem('ff_reduce_motion') === '1';
+  const ctOn = localStorage.getItem('ff_chat_time') === '1';
   mount('settings', `<h1>⚙️ Settings</h1>
     <p class="muted">Make Funtopia yours.</p>
     <a href="https://funtopiapro.vercel.app/" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ffd700,#ff9d00);color:#1a0b2e;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(255,215,0,.35);"><span style="font-weight:900;font-size:18px;">👑 FunTopia Pro</span><span style="display:block;font-size:13px;font-weight:600;opacity:.85;">Turn this into FunTopia Pro — the separate version with a new look, new character and new fun →</span></a>
@@ -271,6 +290,11 @@ function settingsPage() {
         <button class="btn-secondary gfx-pick ${gfxMode === 'advanced' ? 'active' : ''}" data-gfx="advanced">✨ Advanced</button>
       </div>
       <p class="muted small">Advanced: smooth Roblox-style characters, dynamic shadows, richer lighting.</p>
+    </section>
+    <section class="admin-section"><h3>🎮 In game</h3>
+      <label class="set-row"><span>FPS + ping display</span><input type="checkbox" class="set-fps" ${fpsOn ? 'checked' : ''}></label>
+      <label class="set-row"><span>Reduce motion</span><input type="checkbox" class="set-rm" ${rmOn ? 'checked' : ''}></label>
+      <label class="set-row"><span>Chat timestamps</span><input type="checkbox" class="set-ct" ${ctOn ? 'checked' : ''}></label>
     </section>
     <section class="admin-section"><h3>🔒 Account</h3>
       <div class="set-row"><span>Change password</span></div>
@@ -295,6 +319,9 @@ function settingsPage() {
       if (!on) { try { stopSpooky(); } catch {} }
       toast(on ? 'Music on' : 'Music off');
     };
+    app.querySelector('.set-fps').onchange = e => { try { localStorage.setItem('ff_fps', e.target.checked ? '1' : '0'); } catch {} toast(e.target.checked ? 'FPS + ping display on' : 'FPS + ping display off'); };
+    app.querySelector('.set-rm').onchange = e => { try { localStorage.setItem('ff_reduce_motion', e.target.checked ? '1' : '0'); } catch {} toast(e.target.checked ? 'Reduce motion on' : 'Reduce motion off'); };
+    app.querySelector('.set-ct').onchange = e => { try { localStorage.setItem('ff_chat_time', e.target.checked ? '1' : '0'); } catch {} toast(e.target.checked ? 'Chat timestamps on' : 'Chat timestamps off'); };
     app.querySelectorAll('.gfx-pick').forEach(b => b.onclick = () => {
       try { localStorage.setItem('ff_gfx', b.dataset.gfx); } catch {}
       toast(b.dataset.gfx === 'advanced' ? '✨ Advanced graphics on — rejoin a game to see it' : '🧱 Classic graphics on');
@@ -623,19 +650,39 @@ async function homePage() {
     ${blockverseActive() && bvGames.length ? `<section><div class="sec-h"><h2>🟩 Blockverse Collab Games</h2><a href="#/blockverse">Collab Hub &rsaquo;</a></div><div class="game-row">${bvGames.map(gameCard).join('')}</div></section>` : ''}
     ${recent.length ? `<section><div class="sec-h"><h2>Continue</h2></div><div class="game-row">${recent.map(gameCard).join('')}</div></section>` : ''}
     <section><div class="sec-h"><h2>Recommended For You</h2><a href="#/discover">See All &rsaquo;</a></div><div class="game-row">${games.slice(0, 12).map(gameCard).join('')}</div></section>
+    ${(() => { const cc = {}; games.forEach(g => { cc[g.creator] = (cc[g.creator] || 0) + (g.playing || 0); }); const top = Object.entries(cc).sort((x, y) => y[1] - x[1]).slice(0, 6); return top.length ? `<section><div class="sec-h"><h2>🔥 Trending Creators</h2></div><div class="creator-row">${top.map(([n, p]) => `<a class="creator-chip" href="#/users/${encodeURIComponent(n)}">@${esc(n)} · ${fmt(p)} playing</a>`).join('')}</div></section>` : ''; })()}
     ${favs.length ? `<section><div class="sec-h"><h2>Favorites</h2></div><div class="game-row">${favs.map(gameCard).join('')}</div></section>` : ''}
   `);
 }
 
 async function discoverPage(q) {
   const games = await api('GET', '/api/games' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  const genreOf = g => /obby|course|gauntlet|tower|climb/i.test(g.name) ? 'obby' : /shooter|arena|rivals|gun|battle/i.test(g.name) ? 'shooter' : /hangout|town|plaza|house|garden|mansion/i.test(g.name) ? 'hangout' : /tycoon/i.test(g.name) ? 'tycoon' : 'other';
+  if (q) { mount('discover', `<h1>Results for "${esc(q)}"</h1><div class="game-grid">${games.map(gameCard).join('') || '<p class="muted">No games found.</p>'}</div>`); return; }
   const top = [...games].sort((a, b) => (b.likes / (b.likes + b.dislikes || 1)) - (a.likes / (a.likes + a.dislikes || 1)));
   const fresh = [...games].sort((a, b) => b.updated - a.updated);
-  mount('discover', q ? `<h1>Results for "${esc(q)}"</h1><div class="game-grid">${games.map(gameCard).join('') || '<p class="muted">No games found.</p>'}</div>`
-    : `<h1>Charts</h1>
-    <section><div class="sec-h"><h2>Most Popular</h2></div><div class="game-grid">${games.map(gameCard).join('')}</div></section>
+  let sort = 'playing', genre = 'all';
+  const renderResults = () => {
+    let list = genre === 'all' ? games : games.filter(g => genreOf(g) === genre);
+    if (sort === 'playing') list = [...list].sort((a, b) => b.playing - a.playing);
+    else if (sort === 'newest') list = [...list].sort((a, b) => b.updated - a.updated);
+    else if (sort === 'rated') list = [...list].sort((a, b) => (b.likes / (b.likes + b.dislikes || 1)) - (a.likes / (a.likes + a.dislikes || 1)));
+    else if (sort === 'az') list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    const el = app.querySelector('.disc-results');
+    if (el) el.innerHTML = `<div class="game-grid">${list.map(gameCard).join('') || '<p class="muted">No games in this category.</p>'}</div>`;
+  };
+  mount('discover', `<h1>Charts</h1>
+    <div class="disc-controls"><select class="disc-sort"><option value="playing">Most playing</option><option value="newest">Newest</option><option value="rated">Top rated</option><option value="az">A–Z</option></select>
+    <span class="disc-genres">${['all', 'obby', 'hangout', 'shooter', 'tycoon', 'other'].map(x => `<button data-genre="${x}" class="${x === 'all' ? 'active' : ''}">${{ all: 'All', obby: 'Obby', hangout: 'Hangout', shooter: 'Shooter', tycoon: 'Tycoon', other: 'Other' }[x]}</button>`).join('')}</span>
+    <button class="btn-secondary disc-random">🎲 Surprise me</button></div>
+    <div class="disc-results"></div>
     <section><div class="sec-h"><h2>Top Rated</h2></div><div class="game-row">${top.map(gameCard).join('')}</div></section>
-    <section><div class="sec-h"><h2>Recently Updated</h2></div><div class="game-row">${fresh.map(gameCard).join('')}</div></section>`);
+    <section><div class="sec-h"><h2>Recently Updated</h2></div><div class="game-row">${fresh.map(gameCard).join('')}</div></section>`, () => {
+    renderResults();
+    app.querySelector('.disc-sort').onchange = e => { sort = e.target.value; renderResults(); };
+    app.querySelectorAll('[data-genre]').forEach(b => b.onclick = () => { genre = b.dataset.genre; app.querySelectorAll('[data-genre]').forEach(x => x.classList.toggle('active', x === b)); renderResults(); });
+    app.querySelector('.disc-random').onclick = () => { const g = games[Math.floor(Math.random() * games.length)]; if (g) location.hash = '#/games/' + g.id; };
+  });
 }
 
 async function tourneyPage() {
@@ -695,6 +742,9 @@ async function tourneyPage() {
 
 async function gamePage(id) {
   const g = await api('GET', '/api/games/' + id);
+  const allGames = await api('GET', '/api/games').catch(() => []);
+  const words = new Set(g.name.toLowerCase().split(/\W+/).filter(w => w.length > 3));
+  const similar = [...allGames.filter(x => x.id !== g.id && x.creator === g.creator), ...allGames.filter(x => x.id !== g.id && x.creator !== g.creator).sort((x, y) => { const sx = x.name.toLowerCase().split(/\W+/).filter(w => words.has(w)).length, sy = y.name.toLowerCase().split(/\W+/).filter(w => words.has(w)).length; return sy - sx; })].slice(0, 6);
   const mine = g.creator.toLowerCase() === me.name.toLowerCase();
   const total = g.likes + g.dislikes;
   mount('discover', `
@@ -721,6 +771,7 @@ async function gamePage(id) {
         <div><span>Active</span><b>${fmt(g.playing)}</b></div><div><span>Favorites</span><b>${fmt(g.favorites)}</b></div><div><span>Visits</span><b>${fmt(g.visits)}</b></div>
         <div><span>Created</span><b>${new Date(g.created).toLocaleDateString()}</b></div><div><span>Updated</span><b>${new Date(g.updated).toLocaleDateString()}</b></div><div><span>Server Size</span><b>${g.maxPlayers}</b></div>
       </div>
+      <section><div class="sec-h"><h2>Similar Games</h2></div><div class="game-row">${similar.map(gameCard).join('') || '<p class="muted">Nothing similar yet.</p>'}</div></section>
     </div>`, () => {
     app.querySelector('.play-btn').onclick = () => (location.hash = '#/play/' + g.id);
     api('GET', '/api/party').then(p => {
@@ -759,7 +810,7 @@ async function playPage(id, server) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=ab1c5e9c');
+  const { Game } = await import('./game.js?v=u50');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -774,7 +825,7 @@ async function avatarPage(tab = 'body') {
   const av = structuredClone(me.avatar); av.head ??= 'head_classic';
   let part = 'all';
   mount('avatar', `
-    <h1>Avatar Editor</h1>
+    <h1>Avatar Editor</h1><button class="btn-secondary av-random">🎲 Randomize outfit</button>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
@@ -783,6 +834,11 @@ async function avatarPage(tab = 'body') {
       </div>
     </div>`, () => {
     const canvas = app.querySelector('.av-canvas');
+    app.querySelector('.av-random').onclick = () => {
+      const pick = t => { const pool = CATALOG.filter(i => i.type === t && (me.inventory.includes(i.id) || i.free)); return pool.length ? pool[Math.floor(Math.random() * pool.length)].id : av[t]; };
+      av.hat = pick('hat'); av.face = pick('face'); av.shirt = pick('shirt'); av.pet = pick('pet');
+      rebuild(); render(); save(); toast('Randomized!');
+    };
     const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); r.outputColorSpace = THREE.SRGBColorSpace;
     const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#fff', '#888', 1.5)); const dl = new THREE.DirectionalLight('#fff', 1.6); dl.position.set(3, 6, 8); sc.add(dl);
     const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100); cam.position.set(0, 3.6, 14); cam.lookAt(0, 3, 0);
@@ -846,21 +902,49 @@ async function catalogPage(filter = 'all') {
   const filters = ['all', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'vehicle', 'ugc'];
   const labels = { all: 'All', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles', ugc: 'UGC 🎨' };
   const list = filter === 'ugc' ? UGC_LIST : CATALOG.filter(i => !i.limited && (filter === 'all' || i.type === filter));
+  const soc = await api('GET', '/api/social/me').catch(() => ({ wishlist: [] }));
+  const wish = new Set(soc.wishlist || []);
+  const itemHtml = i => `
+      <div class="cat-item">${i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : (i.ugc && i.model_url ? `<div class="cat-img">${glbCardImg()}</div>` : `<div class="cat-img"><img src="${itemImage(i)}"></div>`)}<div class="cat-name">${esc(i.name)}</div>
+        ${i.ugc ? `<div class="muted small">by ${esc(i.creator)} · ${i.sales} sold</div>` : ''}
+        <div class="cat-price">${priceHtml(i)}</div>
+        <button class="btn-wish ${wish.has(i.id) ? 'on' : ''}" data-wish="${i.id}" title="Wishlist">${wish.has(i.id) ? '♥' : '♡'}</button>
+        ${me.inventory.includes(i.id) ? '<button class="btn-owned" disabled>Owned</button>' : i.club && !me.club ? '<a class="btn-club" href="#/club">Members Only</a>' : `<button class="btn-buy" data-id="${i.id}"${i.ugc ? ' data-ugc="1"' : ''}>Buy</button>`}</div>`;
   mount('catalog', `
     <h1>Marketplace</h1>
     <div class="cat-filters">${filters.map(f => `<a href="#/catalog/${f}" class="${f === filter ? 'active' : ''}">${labels[f]}</a>`).join('')}</div>
     ${filter === 'ugc' ? '<p class="muted small">Player-created items. Creators earn 70% of every sale. <a href="#/ugc">Make your own →</a></p>' : ''}
-    <div class="cat-grid">${list.map(i => `
-      <div class="cat-item">${i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : (i.ugc && i.model_url ? `<div class="cat-img">${glbCardImg()}</div>` : `<div class="cat-img"><img src="${itemImage(i)}"></div>`)}</div><div class="cat-name">${esc(i.name)}</div>
-        ${i.ugc ? `<div class="muted small">by ${esc(i.creator)} · ${i.sales} sold</div>` : ''}
-        <div class="cat-price">${priceHtml(i)}</div>
-        ${me.inventory.includes(i.id) ? '<button class="btn-owned" disabled>Owned</button>' : i.club && !me.club ? '<a class="btn-club" href="#/club">Members Only</a>' : `<button class="btn-buy" data-id="${i.id}"${i.ugc ? ' data-ugc="1"' : ''}>Buy</button>`}</div>`).join('') || '<p class="muted">Nothing here yet.</p>'}</div>`, () => {
+    <div class="cat-controls"><select class="cat-sort"><option value="default">Featured</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="name">Name A–Z</option></select><label><input type="checkbox" class="cat-free"> Free only</label><label><input type="checkbox" class="cat-wishonly"> ♥ Wishlist</label></div>
+    <div class="cat-grid">${list.map(itemHtml).join('') || '<p class="muted">Nothing here yet.</p>'}</div>`, () => {
     paintPetVoxels(app);
-    app.querySelectorAll('.btn-buy').forEach(b => b.onclick = () => {
-      const it = ITEM[b.dataset.id];
-      if (b.dataset.ugc) ugcBuyModal(it, () => catalogPage(filter));
-      else buyModal(it, () => catalogPage(filter));
-    });
+    const bindAll = () => {
+      app.querySelectorAll('.btn-buy').forEach(b => b.onclick = () => {
+        const it = ITEM[b.dataset.id];
+        if (b.dataset.ugc) ugcBuyModal(it, () => catalogPage(filter));
+        else buyModal(it, () => catalogPage(filter));
+      });
+      app.querySelectorAll('[data-wish]').forEach(b => b.onclick = async () => {
+        const r = await api('POST', '/api/social/wishlist/' + b.dataset.wish);
+        if (r.wishlisted) wish.add(b.dataset.wish); else wish.delete(b.dataset.wish);
+        b.textContent = r.wishlisted ? '♥' : '♡'; b.classList.toggle('on', r.wishlisted);
+        toast(r.wishlisted ? 'Added to wishlist ♥' : 'Removed from wishlist');
+      });
+    };
+    bindAll();
+    const renderCat = () => {
+      let l = [...list];
+      if (app.querySelector('.cat-free').checked) l = l.filter(i => i.free || i.price === 0);
+      if (app.querySelector('.cat-wishonly').checked) l = l.filter(i => wish.has(i.id));
+      const s = app.querySelector('.cat-sort').value;
+      if (s === 'price-asc') l.sort((x, y) => (x.price || 0) - (y.price || 0));
+      else if (s === 'price-desc') l.sort((x, y) => (y.price || 0) - (x.price || 0));
+      else if (s === 'name') l.sort((x, y) => x.name.localeCompare(y.name));
+      app.querySelector('.cat-grid').innerHTML = l.map(itemHtml).join('') || '<p class="muted">Nothing here yet.</p>';
+      paintPetVoxels(app); bindAll();
+    };
+    app.querySelector('.cat-sort').onchange = renderCat;
+    app.querySelector('.cat-free').onchange = renderCat;
+    app.querySelector('.cat-wishonly').onchange = renderCat;
   });
 }
 function ugcBuyModal(it, onDone) {
@@ -1064,12 +1148,16 @@ async function halloweenPage() {
 }
 async function friendsPage() {
   const fr = await api('GET', '/api/friends');
+  const feed = await api('GET', '/api/social/feed').catch(() => ({ games: [], playing: [] }));
   mount('friends', `
     <h1>Friends</h1>
     <form class="user-search"><input name="q" placeholder="Search for people by username"><button class="btn-primary">Search</button></form>
     <div class="search-results"></div>
     ${fr.requests.length ? `<section><div class="sec-h"><h2>Friend Requests (${fr.requests.length})</h2></div><div class="req-list">${fr.requests.map(u => `
-      <div class="req">${avatarImgTag(u.avatar)}<a href="#/users/${encodeURIComponent(u.name)}">${esc(u.name)}</a><button class="btn-primary" data-accept="${esc(u.name)}">Accept</button><button class="btn-secondary" data-decline="${esc(u.name)}">Ignore</button></div>`).join('')}</div></section>` : ''}
+      <div class="req">${avatarImgTag(u.avatar)}<a href="#/users/${encodeURIComponent(u.name)}">${esc(u.name)}</a>${(fr.reqNotes || {})[u.name] ? `<span class="req-note">💬 ${esc(fr.reqNotes[u.name])}</span>` : ''}<button class="btn-primary" data-accept="${esc(u.name)}">Accept</button><button class="btn-secondary" data-decline="${esc(u.name)}">Ignore</button></div>`).join('')}</div></section>` : ''}
+    <section><div class="sec-h"><h2>📰 Friend Activity</h2></div>
+      ${feed.playing.length ? `<p>${feed.playing.map(p => `<a href="#/play/${p.gameId}">${esc(p.name)} is playing ${esc(p.gameName)}</a>`).join(' · ')}</p>` : ''}
+      <div class="game-row">${feed.games.map(gameCard).join('') || '<p class="muted">Nothing new from friends yet.</p>'}</div></section>
     <section><div class="sec-h"><h2>My Friends (${fr.friends.length})</h2></div>
       <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-party="${esc(u.name)}">🎉</button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-accept]').forEach(b => b.onclick = async () => { await api('POST', '/api/friends/' + encodeURIComponent(b.dataset.accept)); toast('You are now friends with ' + b.dataset.accept); me = await api('GET', '/api/me'); friendsPage(); });
@@ -1269,14 +1357,16 @@ function groupsPage() {
 
 async function profilePage(name) {
   const u = await api('GET', '/api/users/' + encodeURIComponent(name));
+  const soc = await api('GET', '/api/social/' + encodeURIComponent(name)).catch(() => null);
   const isMe = u.name.toLowerCase() === me.name.toLowerCase();
   mount('users', `
     <div class="profile-head">
       <div class="ph-img ${u.gameId ? 'ingame' : u.online ? 'online' : ''}">${avatarImgTag(u.avatar)}</div>
       <div class="ph-info"><h1>${esc(u.name)}${vtag(u.name)}${badgeIcon2(u.badge)}</h1><div class="muted">@${esc(u.name)}</div>
-        <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
+        ${soc?.status ? `<div class="ph-status">💬 ${esc(soc.status)}</div>` : ''}
+        <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${soc?.followers ?? 0}</b> Followers</div><div><b>${soc?.following ?? 0}</b> Following</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
       </div>
-      <div class="ph-actions">${isMe ? '<a class="btn-secondary" href="#/avatar">Edit Avatar</a>' : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-primary add-friend">Add Friend</button><button class="btn-secondary report-btn">Report</button>`}</div>
+      <div class="ph-actions">${isMe ? '<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status">💬 Set status</button>' : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
     </div>
     <section><div class="sec-h"><h2>About</h2>${isMe ? '<button class="link edit-bio">Edit</button>' : ''}</div><p class="bio">${esc(u.bio || (isMe ? 'Tell people about yourself!' : 'This user has no bio.'))}</p></section>
     <section><div class="sec-h"><h2>Badges (${u.badges.length})</h2></div>
@@ -1288,8 +1378,13 @@ async function profilePage(name) {
       <div class="profile-avatar"><h2>Currently Wearing</h2>${avatarImgTag(u.avatar, "full")}</div>
       <div><h2>Friends (${u.friendsList.length})</h2><div class="friends-row wrap">${u.friendsList.map(userTile).join('') || '<p class="muted">No friends yet.</p>'}</div></div>
     </section>
-    <section><div class="sec-h"><h2>Creations</h2></div><div class="game-row">${u.games.map(gameCard).join('') || '<p class="muted">No creations yet.</p>'}</div></section>`, () => {
-    app.querySelector('.add-friend')?.addEventListener('click', async () => { const r = await api('POST', '/api/friends/' + encodeURIComponent(u.name)); toast(r.status === 'friends' ? 'You are now friends!' : 'Friend request sent'); profilePage(name); });
+    ${soc?.showcase ? `<section><div class="sec-h"><h2>📌 Showcase</h2></div><div class="game-row">${gameCard(soc.showcase)}</div></section>` : ''}
+    <section><div class="sec-h"><h2>Creations</h2>${isMe ? `<select class="showcase-pick"><option value="">No showcase</option>${u.games.map(gm => `<option value="${gm.id}" ${soc?.showcase?.id === gm.id ? 'selected' : ''}>${esc(gm.name)}</option>`).join('')}</select>` : ''}</div><div class="game-row">${u.games.map(gameCard).join('') || '<p class="muted">No creations yet.</p>'}</div></section>`, () => {
+    app.querySelector('.follow-btn')?.addEventListener('click', async () => { const r = await api('POST', '/api/social/follow/' + encodeURIComponent(u.name)); toast(r.following ? 'Following ' + u.name : 'Unfollowed ' + u.name); profilePage(name); });
+    app.querySelector('.gift-btn')?.addEventListener('click', async () => { const amt = prompt(`Gift how many FunTix to ${u.name}? (1–1000)`, '100'); if (amt == null) return; try { const r = await api('POST', '/api/social/gift', { to: u.name, amount: +amt }); toast(`Sent ${r.sent} FunTix to ${u.name}!`); } catch (e) { toast(e.message, true); } });
+    app.querySelector('.edit-status')?.addEventListener('click', async () => { const v = prompt('Your status (80 chars):', soc?.status || ''); if (v === null) return; await api('POST', '/api/social/status', { status: v }); profilePage(name); });
+    app.querySelector('.showcase-pick')?.addEventListener('change', async e => { await api('POST', '/api/social/showcase', { gameId: e.target.value || null }); toast('Showcase updated'); profilePage(name); });
+    app.querySelector('.add-friend')?.addEventListener('click', async () => { const note = app.querySelector('.friend-note')?.value || ''; const r = await api('POST', '/api/friends/' + encodeURIComponent(u.name), { note }); toast(r.status === 'friends' ? 'You are now friends!' : 'Friend request sent'); profilePage(name); });
     app.querySelector('.report-btn')?.addEventListener('click', () => reportModal(u.name, 'user'));
     app.querySelector('.unfriend')?.addEventListener('click', () => confirmModal('Unfriend', `Unfriend ${esc(u.name)}?`, 'Unfriend', async () => { await api('DELETE', '/api/friends/' + encodeURIComponent(u.name)); profilePage(name); }));
     app.querySelectorAll('button[data-badge]').forEach(b => b.onclick = async () => {
@@ -1305,7 +1400,7 @@ async function profilePage(name) {
 
 async function createPage() {
   const mine = await api('GET', '/api/mygames');
-  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.'], ['blockverse', '🌌 Blockverse Portal Run', 'The Funtopia × Blockverse collab course — moving platforms, blink bridges, sweepers!'], ['bvPlaza', '🟩 Blockverse Plaza', 'Collab hangout plaza with the great portal, duel ring and parkour.'], ['stealablob', '🫧 Steal a Blob', 'Buy blobs on the conveyor, steal from rivals, slap thieves!']];
+  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.'], ['blockverse', '🌌 Blockverse Portal Run', 'The Funtopia × Blockverse collab course — moving platforms, blink bridges, sweepers!'], ['bvPlaza', '🟩 Blockverse Plaza', 'Collab hangout plaza with the great portal, duel ring and parkour.'], ['stealablob', '🫧 Steal a Blob', 'Buy blobs on the conveyor, steal from rivals, slap thieves!'], ['skyIslands', '🏝️ Sky Islands', 'Hop floating islands, ride the sky ferry and portal shortcuts!'], ['raceTrack', '🏁 Race Track', 'Boost straights, an ice-slide corner and checkpoints.'], ['volcanoEscape', '🌋 Volcano Escape', 'Climb the volcano over lava — safe ledges and a shield included.'], ['snowPeak', '🏔️ Snow Peak', 'Ice slides and a low-gravity aurora zone to the summit.']];
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button><button data-goto="#/funai">✨ FunAI</button></div>
@@ -1325,18 +1420,18 @@ function tplThumb(k) { return tplCache[k] ||= worldThumbnail(templates[k]()); }
 
 async function studioPage(id, tpl) {
   let g;
-  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet', blockverse: 'Blockverse Portal Run', bvPlaza: 'Blockverse Plaza', stealablob: 'Steal a Blob' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
+  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet', blockverse: 'Blockverse Portal Run', bvPlaza: 'Blockverse Plaza', stealablob: 'Steal a Blob', skyIslands: 'Sky Islands', raceTrack: 'Race Track', volcanoEscape: 'Volcano Escape', snowPeak: 'Snow Peak' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
   else { g = await api('GET', '/api/games/' + id); if (g.creator.toLowerCase() !== me.name.toLowerCase()) { toast('You can only edit your own games', true); location.hash = '#/games/' + id; return; } }
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=collab26');
+  const { Studio } = await import('./studio.js?v=u50');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=ab1c5e9c');
+      const { Game: GameClass } = await import('./game.js?v=u50');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1635,7 +1730,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=e37d35e9'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u50'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
@@ -1649,7 +1744,7 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=07967ed1'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=u50'); return m.ugcPage(ugcDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e67b220b'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();

@@ -1,8 +1,8 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=d0d9f712';
-import { scaryAvatar } from './catalog.js?v=d30d849a';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=u50';
+import { scaryAvatar } from './catalog.js?v=u50';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -124,6 +124,18 @@ export async function lobbyPage(D) {
     </div>
   </div>`;
 
+  api('GET', '/api/social/me').then(soc => {
+    const tiles = app.querySelector('.lb-tiles'); if (!tiles) return;
+    const streak = me.streak || 0;
+    const claimable = [7, 14, 30].find(m => streak >= m && !(soc.streakClaims || []).includes(m));
+    const tile = document.createElement('div'); tile.className = 'lb-tile';
+    if (claimable) {
+      tile.innerHTML = `<span>🎁</span><b>Streak reward!</b><i>${claimable}-day streak — tap to claim</i>`;
+      tile.style.cursor = 'pointer';
+      tile.onclick = async () => { try { const r = await api('POST', '/api/social/streak-claim', { milestone: claimable }); toast(`+${r.amount} FunTix streak bonus!`); tile.querySelector('b').textContent = 'Claimed!'; } catch (err) { toast(err.message, true); } };
+    } else tile.innerHTML = `<span>🔥</span><b>${streak}-day streak</b><i>${streak >= 30 ? 'All streak rewards claimed!' : `Next reward at ${[7, 14, 30].find(m => m > streak) || 30} days`}</i>`;
+    tiles.appendChild(tile);
+  }).catch(() => {});
   const playBtn = app.querySelector('.lb-play');
   const setFeat = g => {
     feat = g;
@@ -222,7 +234,8 @@ export async function lobbyPage(D) {
   const tick = () => {
     raf = requestAnimationFrame(tick);
     const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
-    if (!dragging) targetSpin += dt * 0.12;
+    let rm = false; try { rm = localStorage.getItem('ff_reduce_motion') === '1'; } catch {}
+    if (!dragging && !rm) targetSpin += dt * 0.12;
     spin += (targetSpin - spin) * Math.min(1, dt * 6);
     stage.rotation.y = spin;
     if (myEmote !== 'idle' && t >= emoteEnd) { myEmote = 'idle'; app.querySelectorAll('.lb-emotes button').forEach(x => x.classList.remove('on')); }

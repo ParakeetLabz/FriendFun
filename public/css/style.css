@@ -863,3 +863,27 @@ body.scary .sidebar { background: #0d0104; }
 .funai-card b{font-size:15px}
 @media (max-width:640px){.funai-frame{height:440px}}
 .funai-map{width:100%;max-width:720px;border:3px solid #7c3aed;border-radius:14px;display:block}
+
+/* Chat tags + FPS HUD (Nov 2026 update batch) */
+.chat-tag { display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .5px; padding: 1px 6px; border-radius: 4px; margin-right: 5px; vertical-align: middle; }
+.chat-tag.tag-owner { background: #ff5252; color: #fff; }
+.chat-tag.tag-admin { background: #42a5f5; color: #fff; }
+.chat-tag.tag-mod { background: #66bb6a; color: #fff; }
+.chat-tag.tag-club { background: #ffd54a; color: #3e2700; }
+.chat-time { color: #888; font-size: 11px; margin-right: 4px; }
+.fps-hud { position: absolute; top: 10px; right: 12px; font-size: 12px; font-weight: 700; color: #cfd2ff; background: rgba(0,0,0,.45); padding: 4px 9px; border-radius: 8px; z-index: 5; }
+
+/* Win panel (Nov 2026 update batch) */
+.win-panel { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); background: rgba(10,10,20,.92); color: #fff; padding: 26px 34px; border-radius: 18px; text-align: center; z-index: 20; box-shadow: 0 0 40px rgba(255,215,0,.4); }
+.win-panel h2 { margin: 0 0 8px; }
+.win-panel button { margin: 10px 6px 0; }
+.disc-controls, .cat-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0 16px; }
+.disc-genres button, .cat-controls select, .disc-controls select { cursor: pointer; }
+.disc-genres button.active { outline: 2px solid #2ec4ff; }
+.creator-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.creator-chip { background: #22263a; color: #fff; padding: 8px 14px; border-radius: 999px; text-decoration: none; font-weight: 700; }
+.ph-status { color: #ffd54a; font-weight: 600; margin-top: 2px; }
+.req-note { color: #aaa; font-size: 13px; margin-left: 6px; }
+.btn-wish { background: none; border: none; font-size: 20px; cursor: pointer; color: #888; }
+.btn-wish.on { color: #ff4081; }
+.ex-count { margin-left: 8px; color: #888; font-size: 12px; }

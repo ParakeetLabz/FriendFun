@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=d30d849a';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=u50';
 import { renderToDataURL } from './three-util.js?v=ac3e6f2b';
 import { isVerified } from './verified.js?v=6fb5be32';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -62,6 +62,14 @@ function faceTexture(id) {
     case 'sick': eyes(10); g.strokeStyle = '#43a047'; g.lineWidth = 6; g.beginPath(); g.moveTo(40, 88); for (let x = 40; x <= 88; x += 8) g.lineTo(x + 4, 92); g.stroke(); g.strokeStyle = '#111'; break;
     case 'silver': g.strokeStyle = '#9aa0a6'; g.fillStyle = '#9aa0a6'; eyes(); g.lineWidth = 7; smile(); break;
     case 'sleepy': g.beginPath(); g.moveTo(34, 52); g.lineTo(54, 52); g.moveTo(74, 52); g.lineTo(94, 52); g.stroke(); g.beginPath(); g.ellipse(64, 92, 8, 10, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#111'; g.font = 'bold 22px Arial'; g.fillText('z', 96, 30); break;
+    case 'starstruck': g.fillStyle = '#fdd835'; const st5 = (x, y) => { g.beginPath(); for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4 : 10; g.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); } g.closePath(); g.fill(); }; st5(44, 50); st5(84, 50); g.fillStyle = '#111'; g.beginPath(); g.ellipse(64, 90, 12, 15, 0, 0, Math.PI * 2); g.fill(); break;
+    case 'shades': g.fillStyle = '#111'; g.beginPath(); g.roundRect(26, 38, 34, 22, 6); g.roundRect(68, 38, 34, 22, 6); g.fill(); g.fillStyle = '#fff'; g.fillRect(32, 42, 14, 4); g.fillRect(74, 42, 14, 4); g.beginPath(); g.moveTo(60, 48); g.lineTo(68, 48); g.stroke(); g.beginPath(); g.moveTo(48, 88); g.quadraticCurveTo(70, 96, 86, 82); g.stroke(); break;
+    case 'vampire': g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(44, 50, 9, 6, -0.3, 0, Math.PI * 2); g.ellipse(84, 50, 9, 6, 0.3, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(34, 84); g.quadraticCurveTo(64, 96, 94, 84); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(48, 86); g.lineTo(56, 86); g.lineTo(52, 102); g.closePath(); g.fill(); g.beginPath(); g.moveTo(72, 86); g.lineTo(80, 86); g.lineTo(76, 102); g.closePath(); g.fill(); break;
+    case 'sly': g.beginPath(); g.ellipse(44, 50, 7, 9, 0, 0, Math.PI * 2); g.ellipse(84, 50, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(48, 50, 2.5, 0, Math.PI * 2); g.arc(88, 50, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(52, 88); g.quadraticCurveTo(74, 82, 88, 88); g.stroke(); break;
+    case 'nervous': g.beginPath(); g.ellipse(44, 50, 8, 10, 0, 0, Math.PI * 2); g.ellipse(84, 50, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(40, 90); for (let x = 40; x <= 88; x += 8) g.lineTo(x + 4, 86); g.stroke(); g.fillStyle = '#29b6f6'; g.beginPath(); g.moveTo(104, 30); g.quadraticCurveTo(112, 44, 104, 56); g.quadraticCurveTo(96, 44, 104, 30); g.fill(); break;
+    case 'sparkle': eyes(); smile(); g.fillStyle = '#fff'; const sp = (x, y, r) => { g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); }; g.fillStyle = '#fdd835'; sp(28, 30, 10); sp(100, 28, 8); sp(108, 78, 7); break;
+    case 'glitch': g.fillStyle = '#e53935'; g.fillRect(36, 44, 16, 12); g.fillStyle = '#26c6da'; g.fillRect(44, 44, 16, 12); g.fillStyle = '#e53935'; g.fillRect(76, 44, 16, 12); g.fillStyle = '#26c6da'; g.fillRect(68, 44, 16, 12); g.fillStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(40, 86); g.lineTo(52, 80); g.lineTo(64, 88); g.lineTo(76, 80); g.lineTo(88, 86); g.stroke(); break;
+    case 'kitty': eyes(); g.fillStyle = '#f48fb1'; g.beginPath(); g.moveTo(58, 66); g.lineTo(70, 66); g.lineTo(64, 72); g.closePath(); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 3; for (const y of [64, 70, 76]) { g.beginPath(); g.moveTo(24, y); g.lineTo(52, y + 2); g.moveTo(104, y); g.lineTo(76, y + 2); g.stroke(); } g.beginPath(); g.moveTo(64, 72); g.lineTo(64, 78); g.moveTo(64, 78); g.quadraticCurveTo(56, 86, 48, 82); g.moveTo(64, 78); g.quadraticCurveTo(72, 86, 80, 82); g.stroke(); break;
     case 'smile': default: eyes(); smile(); break;
     case 'stareyes': g.fillStyle = '#fdd835'; const star2 = (x, y) => { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 5 : 11; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); g.fill(); }; star2(44, 50); star2(84, 50); g.fillStyle = '#111'; smile(); break;
     case 'sus': g.beginPath(); g.ellipse(44, 52, 9, 6, 0, 0, Math.PI * 2); g.ellipse(84, 52, 9, 6, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(46, 50, 2.5, 0, Math.PI * 2); g.arc(86, 50, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(48, 88); g.lineTo(80, 88); g.stroke(); break;
@@ -116,6 +124,11 @@ function shirtTexture(id) {
     case 'polo': g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(48, 0); g.lineTo(80, 0); g.lineTo(64, 26); g.fill(); break;
     case 'dress': g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, 64, 128, 10); break;
     case 'band': g.fillStyle = '#212121'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#fff'; g.font = 'bold 30px Arial'; g.textAlign = 'center'; g.fillText('ROCK', 64, 74); g.strokeStyle = '#e53935'; g.lineWidth = 4; g.strokeRect(14, 40, 100, 48); break;
+    case 'checker': for (let y = 0; y < 128; y += 32) for (let x = 0; x < 128; x += 32) { g.fillStyle = ((x + y) / 32) % 2 ? '#111' : '#fff'; g.fillRect(x, y, 32, 32); } break;
+    case 'plaid': g.fillStyle = '#2e7d32'; g.fillRect(0, 0, 128, 128); g.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 0; x < 128; x += 32) g.fillRect(x, 0, 8, 128); for (let y = 0; y < 128; y += 32) g.fillRect(0, y, 128, 8); g.fillStyle = 'rgba(255,235,59,.5)'; for (let x = 16; x < 128; x += 32) g.fillRect(x, 0, 3, 128); break;
+    case 'denim': g.fillStyle = '#1e5aa8'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#ffeb3b'; g.lineWidth = 3; g.strokeRect(28, 44, 30, 34); g.strokeRect(70, 44, 30, 34); g.beginPath(); g.moveTo(0, 96); g.lineTo(128, 96); g.stroke(); g.fillStyle = 'rgba(255,255,255,.18)'; for (let y = 8; y < 128; y += 24) g.fillRect(0, y, 128, 2); break;
+    case 'galaxy': g.fillStyle = '#1a1033'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#7b1fa2'; g.beginPath(); g.arc(40, 50, 26, 0, Math.PI * 2); g.arc(90, 90, 20, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; for (const [x, y, r] of [[20, 24, 2], [60, 30, 3], [100, 40, 2], [30, 90, 2], [80, 60, 3], [110, 100, 2], [50, 110, 2]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } break;
+
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   return (shirtCache[id] = t);
@@ -620,6 +633,9 @@ export function animateCharacter(ch, state, t, dt) {
   else if (state === 'cheer') { la = ra = -Math.PI + 0.35; bob = Math.abs(Math.sin(t * 10)) * 0.3; }
   else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.1; hp = 0.1 + s * 0.06; la = ra = -0.7; }
   else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; }
+  else if (state === 'crouch') { ll = rl = -1.1; tp = 0.4; la = ra = 0.3; }
+  else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.1; }
+  else if (state === 'shrug') { la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; }
   // idle: perfectly still, like classic Roblox
   const k = Math.min(1, dt * 15);
   L.larm.rotation.x += (la - L.larm.rotation.x) * k;

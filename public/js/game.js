@@ -2,14 +2,16 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=d0d9f712';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=u50';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
-import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
+const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
+const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };
+import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music26';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=d30d849a';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=u50';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -23,8 +25,10 @@ const EMOTES = [
   { id: 'laugh', icon: '😂', name: 'Laugh' },
   { id: 'dab', icon: '😎', name: 'Dab' },
   { id: 'sit', icon: '🪑', name: 'Sit' },
+  { id: 'salute', icon: '🫡', name: 'Salute' },
+  { id: 'shrug', icon: '🤷', name: 'Shrug' },
 ];
-const EMOTE_TIMES = { wave: 2.5, spin: 2.2, bow: 2.5, cheer: 3, laugh: 3, dab: 2.5, dance: 9999, sit: 9999 };
+const EMOTE_TIMES = { wave: 2.5, spin: 2.2, bow: 2.5, cheer: 3, laugh: 3, dab: 2.5, dance: 9999, sit: 9999, salute: 2.5, shrug: 2 };
 const GAME_TIPS = [
   'Press / to chat with other players!',
   'Type /e dance to show off your moves!',
@@ -34,6 +38,8 @@ const GAME_TIPS = [
   'Check the Marketplace for new avatar items!',
   'Add friends to see what games they\'re playing!',
   'Press Shift to toggle shift-lock camera!',
+  'Double-tap W to sprint, Q to dash, C to crouch!',
+  'Jump twice for a double jump!',
   'Complete achievements to earn exclusive badges!',
   'Right-drag to rotate the camera around you!',
 ];
@@ -102,6 +108,7 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
+    this.usedAirJump = false; this.dashT = 0; this.dashCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); } else this.sys('Test mode - press Stop to return to Studio.');
@@ -135,7 +142,7 @@ export class Game {
       <div class="touch-ui"><div class="joy-zone"><div class="joy"><div class="joy-knob"></div></div></div><button class="jump-btn" aria-label="Jump"><svg viewBox="0 0 24 24" width="42" height="42"><path fill="currentColor" d="M12 4l8 9h-5v7H9v-7H4z"/></svg></button></div>
       <div class="hud-bottom"><div class="funbux-hud" title="FunTix">${tix} <span class="tx-count">${this.o.funtix ?? ''}</span></div>${this.o.test ? '<button class="stop-btn">Stop</button>' : ''}<button class="veh-btn" title="Drive vehicle (V)">🚗</button></div>
       <div class="inv-bar" title="Your gear inventory (click or press 1-9)"></div>
-      <div class="kill-feed"></div>
+      <div class="kill-feed"></div><div class="fps-hud"></div>
       <div class="big-msg"></div>
       ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<div class="funpanel hidden">
         <h3>🛡️ FunPanel <button class="funpanel-close">×</button></h3>
@@ -328,9 +335,13 @@ export class Game {
         n._hitCd = Math.max(0, (n._hitCd || 0) - dt);
         if (dist < 4.5 && n._hitCd <= 0) {
           n._hitCd = 1;
-          this.health -= 20; this.updateHud(); sfx.oof();
-          this.vel.x = -dx / (dist || 1) * 60; this.vel.z = -dz / (dist || 1) * 60; this.vel.y = 45;
-          if (this.health <= 0) this.die(); else this.showBig('👹 Ouch! An enemy got you!', 1200);
+          if (this.inSafe) { /* safe zones block enemy damage */ }
+          else if (this.shield) { this.shield = false; this.showBig('🛡️ Shield saved you!', 1200); sfx.checkpoint(); }
+          else {
+            this.health -= 20; this.updateHud(); sfx.oof();
+            this.vel.x = -dx / (dist || 1) * 60; this.vel.z = -dz / (dist || 1) * 60; this.vel.y = 45;
+            if (this.health <= 0) this.die(); else this.showBig('👹 Ouch! An enemy got you!', 1200);
+          }
         }
         n.bubble.classList.add('hidden');
         continue;
@@ -350,6 +361,7 @@ export class Game {
     }
   }
   drivePhysics(dt) {
+    this.dashCd = Math.max(0, this.dashCd - dt); this.magnetT = Math.max(0, this.magnetT - dt); this.tpCd = Math.max(0, this.tpCd - dt);
     const k = this.keys;
     const spec = ITEM[this.vehicleId] || {};
     const maxSpeed = spec.speed || 32, turnRate = spec.turn || 2.4;
@@ -371,7 +383,7 @@ export class Game {
       this.moveAxis(0, mx * sdt, 2.2); this.moveAxis(2, mz * sdt, 2.2);
       this.moveAxis(1, this.vel.y * sdt);
     }
-    if (this.onGround) { this.coyote = 0.12; this.jumping = false; }
+    if (this.onGround) { this.coyote = 0.12; this.jumping = false; this.usedAirJump = false; }
     if (this.vehicleMesh) for (const w of this.vehicleMesh.userData.wheels || []) w.rotation.x += this.carSpeed * dt * 0.8;
     this.anim = 'idle';
     if (this.pos.y < -300) this.die();
@@ -842,7 +854,7 @@ export class Game {
   }
   updateLeaderboard() {
     const list = [this.me, ...this.players.values()];
-    this.lbList.innerHTML = list.map((p, i) => `<div class="lb-row ${i === 0 ? 'me' : ''}">${badgeIcon(p.badge)}${esc(p.name)}${vtag(p.name)}${i === 0 && this.kills ? ` <span class="lb-kills">💀${this.kills}</span>` : ''}</div>`).join('');
+    this.lbList.innerHTML = list.map((p, i) => `<div class="lb-row ${i === 0 ? 'me' : ''}">${chatTag(p)}${badgeIcon(p.badge)}${esc(p.name)}${vtag(p.name)}${i === 0 && this.kills ? ` <span class="lb-kills">💀${this.kills}</span>` : ''}</div>`).join('');
   }
   addChat(html) {
     const d = document.createElement('div'); d.className = 'chat-line'; d.innerHTML = html;
@@ -888,7 +900,9 @@ export class Game {
     if (!m.system) for (const fn of (this._scriptState?.chatFns || [])) { try { fn(m.name, m.text); } catch (e) { console.warn('onChat script error:', e); } }
     if (m.system) return this.sys(m.text);
     const color = nameColor(m.name);
-    this.addChat(`<b style="color:${color}">${badgeIcon(m.badge)}${esc(m.name)}${vtag(m.name)}:</b> ${esc(m.text)}`);
+    const time = (() => { try { return localStorage.getItem('ff_chat_time') === '1' ? `<span class="chat-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> ` : ''; } catch { return ''; } })();
+    if (m.text.startsWith('/me ')) { this.addChat(`${time}<i>* ${esc(m.name)} ${esc(m.text.slice(4))}</i>`); return; }
+    this.addChat(`${time}${chatTag(m)}<b style="color:${color}">${badgeIcon(m.badge)}${esc(m.name)}${vtag(m.name)}:</b> ${esc(m.text)}`);
     sfx.chat();
     const ch = m.id === this.myId || m.id === 0 ? this.char : this.players.get(m.id)?.char;
     if (ch) this.bubble(ch, m.text);
@@ -1322,6 +1336,9 @@ export class Game {
       if (down && !e.repeat && /^Digit[1-9]$/.test(e.code)) { if (this.rivals && +e.code.slice(5) <= 2) { this.rivalsSwitch(+e.code.slice(5)); return; } this.equipGearByIndex(+e.code.slice(5) - 1); return; }
       if (down && !e.repeat && e.code === 'KeyR' && this.rivals) { this.rivalsReload(); return; }
       this.keys[e.code] = down;
+      if (down && !e.repeat && e.code === 'KeyW') { const now = performance.now(); if (now - (this.lastW || 0) < 280) this.sprinting = true; this.lastW = now; }
+      if (!down && e.code === 'KeyW') this.sprinting = false;
+      if (down && !e.repeat && e.code === 'KeyQ' && !this.dead && this.dashCd <= 0) { this.dashT = 0.18; this.dashCd = 2; this.dashDir.set(Math.sin(this.facing), 0, Math.cos(this.facing)); sfx.jump(); }
       if (e.code === 'Space') {
         if (down) { if (!e.repeat) this.jumpBuf = 0.15; e.preventDefault(); }
         else this.cutJump();
@@ -1404,6 +1421,7 @@ export class Game {
         for (const s of m.p) { if (s[0] === this.myId) continue; const p = this.players.get(s[0]); if (p) p.target = s; }
       } else if (m.t === 'chat') this.onChat(m);
       else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
+      else if (m.t === 'pong') { this._ping = Math.max(0, Math.round(performance.now() - (m.id || performance.now()))); }
       else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
 
       else if (m.t === 'jam' && typeof m.track === 'string' && m.track.startsWith('blob:')) { if (this.stealablob) { try { this.stealablob.onBlobWire(m.id, m.track); } catch (e) { console.warn('stealablob wire error:', e); } } }
@@ -1520,8 +1538,12 @@ export class Game {
     const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
     const move = fwd.multiplyScalar(f).add(right.multiplyScalar(s));
     if (move.lengthSq() > 1) move.normalize();
-    const speed = (this.speedTimer > 0 ? WALK * 2 : WALK) * (this.speedBoost ? 2.5 : 1);
-    this.vel.x = move.x * speed; this.vel.z = move.z * speed;
+    const crouch = !!k.KeyC && !this.fly && !this.noclip && !this.vehicleId;
+    const speed = (this.speedTimer > 0 ? WALK * 2 : WALK) * (this.speedBoost ? 2.5 : 1) * (this.sprinting && f > 0 ? 1.45 : 1) * (this.inWater ? 0.55 : 1) * (crouch ? 0.6 : 1);
+    const tX = move.x * speed, tZ = move.z * speed;
+    if (this.onGround && this.ground?.p?.k === 'ice') { const bl = Math.min(1, dt * 2.2); this.vel.x += (tX - this.vel.x) * bl; this.vel.z += (tZ - this.vel.z) * bl; }
+    else { this.vel.x = tX; this.vel.z = tZ; }
+    if (this.dashT > 0) { this.dashT -= dt; this.vel.x = this.dashDir.x * 55; this.vel.z = this.dashDir.z * 55; }
     if (this.onGround) { this.coyote = 0.12; this.jumping = false; }
     else this.coyote = Math.max(0, (this.coyote || 0) - dt);
     this.jumpBuf = Math.max(0, (this.jumpBuf || 0) - dt);
@@ -1534,8 +1556,12 @@ export class Game {
     } else {
       if (this.jumpBuf > 0 && (this.onGround || this.coyote > 0)) {
         this.vel.y = JUMP; this.onGround = false; this.coyote = 0; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+      } else if (this.jumpBuf > 0 && !this.usedAirJump && !this.onGround) {
+        this.vel.y = JUMP * 0.92; this.usedAirJump = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
       }
-      this.vel.y = Math.max(this.vel.y - GRAVITY * dt, -160);
+      const grav = this.inLowg ? GRAVITY * 0.4 : this.inWater ? GRAVITY * 0.35 : GRAVITY;
+      this.vel.y = Math.max(this.vel.y - grav * dt, -160);
+      if (this.inWater) { if (k.Space) this.vel.y = 22; this.vel.y = Math.max(this.vel.y, -12); }
     }
     this.wasGround = this.onGround; this.onGround = false; this.ground = null;
     const steps = Math.max(1, Math.ceil(Math.max(Math.abs(this.vel.x), Math.abs(this.vel.y), Math.abs(this.vel.z)) * dt / 0.4));
@@ -1544,22 +1570,29 @@ export class Game {
       this.moveAxis(0, this.vel.x * sdt); this.moveAxis(2, this.vel.z * sdt);
       this.moveAxis(1, this.vel.y * sdt);
     }
+    const gp = this.ground?.p; if (gp?.k === 'conv' && gp.conv) { this.pos.x += gp.conv[0] * dt; this.pos.z += gp.conv[1] * dt; }
     if (move.lengthSq() > 0 && !this.shiftLock) this.facing = Math.atan2(move.x, move.z);
     if (this.shiftLock) this.facing = this.camYaw + Math.PI;
     if (move.lengthSq() > 0 && this.emote) this.emote = null;
-    this.anim = this.emote || (!this.onGround ? (this.vel.y > 0 ? 'jump' : 'fall') : move.lengthSq() > 0 ? 'walk' : 'idle');
+    this.anim = this.emote || (crouch ? 'crouch' : (!this.onGround ? (this.vel.y > 0 ? 'jump' : 'fall') : move.lengthSq() > 0 ? 'walk' : 'idle'));
     if (this.pos.y < -300) this.die();
     this.triggersCheck();
   }
   triggersCheck() {
     const P = this.pos;
+    this.inLowg = false; this.inWater = false; this.inSafe = false;
+    for (const b of this.triggers) {
+      const q = b.p;
+      const zone = P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2];
+      if (zone) { if (q.k === 'lowg') this.inLowg = true; if (q.k === 'water') this.inWater = true; if (q.k === 'safe') this.inSafe = true; }
+    }
     for (const b of this.triggers) {
       const p = b.p;
       const touching = P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2];
       if (!touching) continue;
-      if (p.k === 'kill') { this.die(); return; }
+      if (p.k === 'kill') { if (this.inSafe) continue; if (this.shield) { this.shield = false; this.vel.y = 50; this.showBig('🛡️ Shield saved you!', 1500); sfx.checkpoint(); continue; } this.die(); return; }
       if (p.k === 'bounce' && this.vel.y <= 0.1) { this.vel.y = 110; this.onGround = false; sfx.bounce(); }
-      if (p.k === 'jump' && this.vel.y <= 0.1) { this.vel.y = 180; this.onGround = false; sfx.bounce(); this.showBig('Boing! 🚀', 900); }
+      if (p.k === 'jump' && this.vel.y <= 0.1) { this.vel.y = Number(p.power) || 180; this.onGround = false; sfx.bounce(); this.showBig('Boing! 🚀', 900); }
       if (p.k === 'heal' && !this.collected.has('heal:' + p.id) && this.health < 100 && !this.dead) {
         this.collected.add('heal:' + p.id);
         this.health = Math.min(100, this.health + 30); this.updateHud(); sfx.checkpoint();
@@ -1570,9 +1603,18 @@ export class Game {
       if (p.k === 'speed') { if (this.speedTimer <= 0) this.showBig('Speed boost!', 1200); this.speedTimer = 5; }
       if (p.k === 'checkpoint') {
         const cp = new THREE.Vector3(p.p[0], p.p[1] + p.s[1] / 2, p.p[2]);
-        if (!this.checkpoint || !this.checkpoint.equals(cp)) { this.checkpoint = cp; sfx.checkpoint(); this.showBig('Checkpoint reached!', 1500); }
+        if (!this.checkpoint || !this.checkpoint.equals(cp)) { this.checkpoint = cp; sfx.checkpoint(); this.cpHit.add(p.id); this.showBig(this.cpTotal > 1 ? `Checkpoint ${this.cpHit.size}/${this.cpTotal}!` : 'Checkpoint reached!', 1500); }
       }
-      if (p.k === 'win' && !this.won) { this.won = true; sfx.win(); this.showBig(this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`, 4000); this.send({ t: 'win' }); confetti(this.c); }
+      if (p.k === 'magnet' && !this.collected.has('magnet:' + p.id)) { this.collected.add('magnet:' + p.id); this.magnetT = 20; this.showBig('🧲 Coin magnet! 20s', 1500); sfx.coin(); const hm = this.meshes.get(p.id); if (hm) hm.visible = false; setTimeout(() => { this.collected.delete('magnet:' + p.id); const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 15000); }
+      if (p.k === 'shield' && !this.shield) { this.shield = true; this.showBig('🛡️ Shield up!', 1500); sfx.checkpoint(); const hm = this.meshes.get(p.id); if (hm) hm.visible = false; setTimeout(() => { this.shield = false; const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 30000); }
+      if (p.k === 'tp' && this.tpCd <= 0) { const other = (this.world?.parts || []).find(q => q.k === 'tp' && q.id !== p.id && q.name === p.name); if (other) { this.tpCd = 1; this.pos.set(other.p[0], other.p[1] + 3, other.p[2]); this.vel.set(0, 0, 0); this.showBig('🌀 Teleported!', 1200); sfx.checkpoint(); } }
+      if (p.k === 'win' && !this.won) { this.won = true; sfx.win(); this.showBig(this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`, 4000); this.send({ t: 'win' }); if (!reduceMotion()) confetti(this.c);
+        const panel = document.createElement('div'); panel.className = 'win-panel';
+        panel.innerHTML = `<h2>🏆 YOU WIN!</h2><p>${this.o.test ? '' : `+${ECON.WIN_TIX} FunTix`}</p><button class="btn-primary win-again">Play again</button><button class="btn-secondary win-next">Next game</button>`;
+        this.c.appendChild(panel);
+        panel.querySelector('.win-again').onclick = () => { panel.remove(); this.won = false; this.checkpoint = null; this.collected.clear(); for (const [id, m] of this.meshes) { const pp = (this.world?.parts || []).find(x => x.id === id); if (pp?.k === 'coin') m.visible = true; } this.spawn(); };
+        panel.querySelector('.win-next').onclick = () => this.exit();
+      }
       if (p.k === 'coin' && !this.collected.has(p.id)) {
         this.collected.add(p.id); this.meshes.get(p.id).visible = false; sfx.coin();
         this.send({ t: 'coin', part: p.id });
@@ -1600,6 +1642,7 @@ export class Game {
         }
       }
     }
+    if (this.magnetT > 0) { for (const b of this.triggers) { const q = b.p; if (q.k !== 'coin' || this.collected.has(q.id)) continue; const dx = q.p[0] - P.x, dz = q.p[2] - P.z; if (dx * dx + dz * dz < 144) { this.collected.add(q.id); const mm = this.meshes.get(q.id); if (mm) mm.visible = false; sfx.coin(); this.send({ t: 'coin', part: q.id }); } } }
   }
 
   // ---------- loop ----------
@@ -1610,6 +1653,11 @@ export class Game {
     if (this.o.test && !this.loadHidden) { this.loadHidden = true; this.hideLoading(); }
     if (this.speedTimer > 0) this.speedTimer -= dt;
     if (this.emote && this.emoteT && (this.emoteT -= dt) <= 0) this.emote = null;
+    this._fpsN = (this._fpsN || 0) + 1; const nowMs = performance.now(); if (!this._fpsT) this._fpsT = nowMs;
+    if (nowMs - this._fpsT >= 500) { this._fps = Math.round(this._fpsN * 1000 / (nowMs - this._fpsT)); this._fpsN = 0; this._fpsT = nowMs; }
+    if (!this._pingT || nowMs - this._pingT > 5000) { this._pingT = nowMs; this._pingSent = nowMs; this.send({ t: 'ping', id: nowMs }); }
+    const fh = this.c.querySelector('.fps-hud');
+    if (fh) { let show = false; try { show = localStorage.getItem('ff_fps') === '1'; } catch {} fh.style.display = show ? '' : 'none'; if (show) fh.textContent = `${this._fps || 0} FPS${this._ping ? ` · ${this._ping}ms` : ''}`; }
     for (const fn of (this._scriptState?.tickFns || [])) { try { fn(dt, this.t); } catch (e) { console.warn('onTick error:', e); } }
     if (!this.dead) {
       this.updateDynamics();

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=ac3e6f2b';
-import { CATALOG } from './catalog.js?v=collab26';
+import { CATALOG } from './catalog.js?v=u50';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,9 +26,18 @@ const PRESETS = {
   sweeper: { name: 'Sweeper (moving KillBrick)', s: [4, 1, 2], c: '#ff2020', k: 'kill', m: 'neon', mv: { a: 'x', d: 10, s: 1.4 } },
   gem: { name: 'Gem', s: [1.5, 1.5, 1.5], c: '#00ffcc', k: 'coin', m: 'neon' },
   pillar: { name: 'Pillar', s: [2, 12, 2], c: '#a3a2a5', k: 'part', m: 'concrete' },
+  tp: { name: 'Portal A', s: [5, 0.5, 5], c: '#ff00ff', k: 'tp', m: 'neon' },
+  conv: { name: 'Conveyor', s: [8, 0.5, 8], c: '#ff9800', k: 'conv', m: 'metal', conv: [8, 0] },
+  lowg: { name: 'Low-G Zone', s: [10, 6, 10], c: '#b39ddb', k: 'lowg', m: 'glass' },
+  iceslide: { name: 'Ice Slide', s: [10, 0.5, 10], c: '#a0e8ff', k: 'ice', m: 'glass' },
+  water: { name: 'Water', s: [10, 1, 10], c: '#29b6f6', k: 'water', m: 'glass' },
+  magnet: { name: 'Magnet', s: [1.6, 1.6, 1.6], c: '#e91e63', k: 'magnet', m: 'neon' },
+  shield: { name: 'Shield', s: [1.6, 1.6, 1.6], c: '#00bcd4', k: 'shield', m: 'neon' },
+  safezone: { name: 'Safe Zone', s: [8, 4, 8], c: '#66bb6a', k: 'safe', m: 'glass' },
+  megajump: { name: 'Mega JumpPad', s: [4, 0.5, 4], c: '#ff5722', k: 'jump', m: 'neon', power: 260 },
 };
 const MATERIALS = ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 'sand', 'metal', 'baseplate', 'spawn'];
-const KINDS = ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal'];
+const KINDS = ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal', 'tp', 'conv', 'lowg', 'ice', 'water', 'magnet', 'shield', 'safe'];
 const toHex = c => '#' + new THREE.Color(c).getHexString();
 // ---------- Visual (no-code) script specs ----------
 const VS_TRIGGERS = [
@@ -98,6 +107,8 @@ export class Studio {
           <button class="rb-btn" data-a="del" title="Delete (Del)"><span class="rb-ico">&#x2716;</span>Delete</button>
           <button class="rb-btn" data-a="undo" title="Undo (Ctrl+Z)"><span class="rb-ico">&#x21B6;</span>Undo</button>
           <button class="rb-btn" data-a="redo" title="Redo (Ctrl+Y)"><span class="rb-ico">&#x21B7;</span>Redo</button>
+          <button class="rb-btn" data-a="stairs" title="Build an 8-step staircase from the selection">Stairs</button>
+          <button class="rb-btn" data-a="mirror" title="Mirror the selection across its center">Mirror</button>
         </div><div class="rb-label">Edit</div></div>
         <div class="rb-group"><div class="rb-row">
           <button class="rb-btn play" data-a="play" title="Play test (F5)"><span class="rb-ico">&#x25B6;</span>Play</button>
@@ -113,7 +124,7 @@ export class Studio {
       <div class="st-main">
         <div class="st-view"><canvas class="st-canvas"></canvas><div class="st-hint">Right-drag to look &middot; WASD/QE to fly &middot; Wheel to zoom &middot; F to focus &middot; Click to select &middot; Shift+click for multi-select</div></div>
         <div class="st-side">
-          <div class="st-panel"><div class="st-panel-h st-ex-h">Explorer<input class="ex-search" placeholder="Filter..."></div><div class="st-explorer"></div></div>
+          <div class="st-panel"><div class="st-panel-h st-ex-h">Explorer<span class="ex-count"></span><input class="ex-search" placeholder="Filter..."></div><div class="st-explorer"></div></div>
           <div class="st-panel"><div class="st-panel-h">Properties</div><div class="st-props"><div class="st-empty">Select a part to see its properties</div></div></div>
           ${this.o.aiAccess ? `<div class="st-panel"><div class="st-panel-h">AI Coder</div><div class="st-ai">
             <textarea class="ai-prompt" placeholder="Describe what to build... e.g. 'make an obby with lava and coins'"></textarea>
@@ -130,7 +141,7 @@ export class Studio {
       const t = e.target.closest('[data-tool]'); if (t) this.setTool(t.dataset.tool);
       const i = e.target.closest('[data-insert]'); if (i) this.insert(i.dataset.insert);
       const a = e.target.closest('[data-a]')?.dataset.a;
-      if (a === 'dup') this.duplicate(); if (a === 'del') this.remove(); if (a === 'undo') this.undo(); if (a === 'redo') this.redo();
+      if (a === 'dup') this.duplicate(); if (a === 'del') this.remove(); if (a === 'undo') this.undo(); if (a === 'redo') this.redo(); if (a === 'stairs') this.stairs(); if (a === 'mirror') this.mirror();
       if (a === 'play') this.play(); if (a === 'testobby') this.testObby(); if (a === 'save') this.save(); if (a === 'publish') this.publishDialog(); if (a === 'exit') this.exit();
     });
     q('.rb-color').oninput = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.c = e.target.value; this.refresh(p); } } };
@@ -357,6 +368,7 @@ export class Studio {
       const it = e.target.closest('.ex-item');
       if (it) this.select(this.world.parts.find(p => p.id === it.dataset.id), e.shiftKey);
     };
+    const ec = this.c.querySelector('.ex-count'); if (ec) ec.textContent = `${(this.world.parts || []).length} parts`;
   }
   explorerAction(act, btn) {
     if (act === 'new-folder') {
@@ -652,6 +664,21 @@ export class Studio {
     if (pr.blink) p.blink = { ...pr.blink };
     this.world.parts.push(p); this.addMesh(p); this.renderExplorer(); this.select(p); this.markDirty();
     if (this.tool === 'select') this.setTool('move');
+  }
+  stairs() {
+    const base = this.sel || { p: [0, 0, 0], s: [6, 1, 3], c: '#a3a2a5' };
+    this.pushUndo();
+    for (let i = 1; i <= 8; i++) {
+      const p = { id: this.newId(), name: 'Step', p: [base.p[0], base.p[1] + i * 1.2, base.p[2] - i * 3.5], s: [...base.s], c: base.c, k: 'part', m: 'plastic' };
+      this.world.parts.push(p); this.addMesh(p);
+    }
+    this.renderExplorer(); this.markDirty();
+  }
+  mirror() {
+    if (!this.multi.length) return; this.pushUndo();
+    const cx = this.multi.reduce((s, p) => s + p.p[0], 0) / this.multi.length;
+    for (const p of this.multi) { p.p[0] = 2 * cx - p.p[0]; this.refresh(p); }
+    this.markDirty();
   }
   duplicate() {
     if (!this.multi.length) return; this.pushUndo();

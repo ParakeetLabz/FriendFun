@@ -455,6 +455,86 @@ app.post('/api/addons/:id', auth, async (req, res) => {
   res.json({ ok: true, settings: s });
 });
 
+
+// ---------- Social (stored in the addons JSON column — no schema migration) ----------
+const getSocial = u => (u && u.addons && u.addons.social && typeof u.addons.social === 'object') ? u.addons.social : {};
+const socialOf = u => ({ following: Array.isArray(getSocial(u).following) ? getSocial(u).following : [], status: String(getSocial(u).status || '').slice(0, 80), wishlist: Array.isArray(getSocial(u).wishlist) ? getSocial(u).wishlist : [], showcase: getSocial(u).showcase || null, streakClaims: Array.isArray(getSocial(u).streakClaims) ? getSocial(u).streakClaims : [], reqNotes: (getSocial(u).reqNotes && typeof getSocial(u).reqNotes === 'object') ? getSocial(u).reqNotes : {} });
+async function saveSocial(name, patch) {
+  const { data: u } = await supabase.from('users').select('addons').eq('name', name).single();
+  const addons = { ...(u?.addons || {}), social: { ...socialOf(u || {}), ...patch } };
+  await supabase.from('users').update({ addons }).eq('name', name);
+  return addons.social;
+}
+app.get('/api/social/me', auth, (req, res) => res.json(socialOf(req.user)));
+app.get('/api/social/feed', auth, async (req, res) => {
+  const friends = req.user.friends || [];
+  const { data: gs } = await supabase.from('games').select('*').in('creator', friends.length ? friends : ['__none__']).order('created', { ascending: false }).limit(12);
+  const playing = [];
+  for (const f of friends) { const st = await statusOf(f); if (st.online && st.gameId) playing.push({ name: f, gameId: st.gameId, gameName: st.gameName }); }
+  res.json({ games: (gs || []).map(gameSummary), playing });
+});
+app.get('/api/social/:name', auth, async (req, res) => {
+  const { data: u } = await supabase.from('users').select('*').eq('name', key(req.params.name)).single();
+  if (!u) return res.status(404).json({ error: 'User not found' });
+  const soc = socialOf(u);
+  const { data: all } = await supabase.from('users').select('addons').limit(5000);
+  const followers = (all || []).filter(x => (socialOf(x).following || []).includes(u.name)).length;
+  let show = null;
+  if (soc.showcase) { const { data: g } = await supabase.from('games').select('*').eq('id', soc.showcase).single(); if (g) show = gameSummary(g); }
+  res.json({ status: soc.status, following: soc.following.length, followers, showcase: show, isFollowing: (socialOf(req.user).following || []).includes(u.name) });
+});
+app.post('/api/social/follow/:name', auth, async (req, res) => {
+  const { data: other } = await supabase.from('users').select('*').eq('name', key(req.params.name)).single();
+  if (!other || other.name === req.user.name) return res.status(400).json({ error: 'Invalid user' });
+  const soc = socialOf(req.user);
+  const following = soc.following.includes(other.name) ? soc.following.filter(x => x !== other.name) : [...soc.following, other.name];
+  await saveSocial(req.user.name, { following });
+  if (following.includes(other.name)) notify(other.name, 'follow', `${req.user.name} followed you`, '#/users/' + encodeURIComponent(req.user.name));
+  res.json({ following: following.includes(other.name), count: following.length });
+});
+app.post('/api/social/status', auth, async (req, res) => {
+  const status = filter(String(req.body?.status || '')).slice(0, 80);
+  await saveSocial(req.user.name, { status });
+  res.json({ status });
+});
+app.post('/api/social/wishlist/:item', auth, async (req, res) => {
+  const item = CATALOG.find(i => i.id === req.params.item);
+  if (!item) return res.status(404).json({ error: 'No such item' });
+  const soc = socialOf(req.user);
+  const wishlist = soc.wishlist.includes(item.id) ? soc.wishlist.filter(x => x !== item.id) : [...soc.wishlist, item.id];
+  await saveSocial(req.user.name, { wishlist });
+  res.json({ wishlisted: wishlist.includes(item.id) });
+});
+app.post('/api/social/showcase', auth, async (req, res) => {
+  const id = req.body?.gameId || null;
+  if (id) { const { data: g } = await supabase.from('games').select('creator').eq('id', id).single(); if (!g || g.creator !== req.user.name) return res.status(400).json({ error: 'Only your own games can be showcased' }); }
+  await saveSocial(req.user.name, { showcase: id });
+  res.json({ showcase: id });
+});
+app.post('/api/social/streak-claim', auth, async (req, res) => {
+  const m = Number(req.body?.milestone);
+  const AMT = { 7: 50, 14: 150, 30: 400 };
+  if (!AMT[m]) return res.status(400).json({ error: 'Milestone must be 7, 14 or 30' });
+  const { data: u } = await supabase.from('users').select('*').eq('name', req.user.name).single();
+  const soc = socialOf(u);
+  if ((Number(u.tixStreak) || 0) < m) return res.status(400).json({ error: `Reach a ${m}-day streak first` });
+  if (soc.streakClaims.includes(m)) return res.status(400).json({ error: 'Already claimed' });
+  const addons = { ...(u.addons || {}), social: { ...soc, streakClaims: [...soc.streakClaims, m] } };
+  await supabase.from('users').update({ funtix: (Number(u.funtix) || 0) + AMT[m], addons }).eq('name', req.user.name);
+  res.json({ claimed: m, amount: AMT[m] });
+});
+app.post('/api/social/gift', auth, async (req, res) => {
+  const amt = Math.floor(Number(req.body?.amount) || 0);
+  if (amt < 1 || amt > 1000) return res.status(400).json({ error: 'Gift 1–1000 FunTix' });
+  if ((Number(req.user.funtix) || 0) < amt) return res.status(400).json({ error: 'Not enough FunTix' });
+  const { data: other } = await supabase.from('users').select('*').eq('name', key(req.body?.to || '')).single();
+  if (!other || other.name === req.user.name) return res.status(400).json({ error: 'Invalid recipient' });
+  await supabase.from('users').update({ funtix: (Number(req.user.funtix) || 0) - amt }).eq('name', req.user.name);
+  await supabase.from('users').update({ funtix: (Number(other.funtix) || 0) + amt }).eq('name', other.name);
+  notify(other.name, 'gift', `${req.user.name} gifted you ${amt} FunTix! 🎁`, '#/friends');
+  res.json({ ok: true, sent: amt });
+});
+
 // FunWorx: returns only user-enabled shared identity data.
 app.get('/api/addons/funworx/me', auth, async (req, res) => {
   const u = req.user;
@@ -1296,9 +1376,12 @@ app.put('/api/groups/:id', auth, async (req, res) => {
 app.get('/api/friends', auth, async (req, res) => {
   const { data: friends } = await supabase.from('users').select('*').in('name', req.user.friends || []);
   const { data: requests } = await supabase.from('users').select('*').in('name', req.user.requests || []);
+  const reqNotes = {};
+  for (const r of (requests || [])) { const n = socialOf(r).reqNotes?.[req.user.name]; if (n) reqNotes[r.name] = n; }
   res.json({
     friends: await Promise.all((friends || []).map(publicUser)),
     requests: await Promise.all((requests || []).map(publicUser)),
+    reqNotes,
   });
 });
 
@@ -1317,6 +1400,8 @@ app.post('/api/friends/:name', auth, async (req, res) => {
   }
   const updatedOther = { requests: [...(other.requests || []), mk] };
   await supabase.from('users').update(updatedOther).eq('name', ok);
+  const note = filter(String(req.body?.note || '')).slice(0, 120);
+  if (note) { const soc = socialOf(me); await saveSocial(me.name, { reqNotes: { ...soc.reqNotes, [ok]: note } }); }
   notify(ok, 'friend', `${me.name} sent you a friend request`, '#/friends');
   res.json({ status: 'requested' });
 });
@@ -1450,12 +1535,14 @@ function sanitizeWorld(w) {
     id: String(p.id || 'p' + i).slice(0, 20), name: String(p.name || 'Part').slice(0, 40),
     p: [0, 1, 2].map(j => num(p.p?.[j])), s: [0, 1, 2].map(j => Math.max(0.05, Math.min(2048, num(p.s?.[j]) || 1))),
     c: /^(#[0-9a-fA-F]{6}|hsl\(\d+,\d+%\,\d+%\))$/.test(p.c) ? p.c : '#a3a2a5',
-    k: ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal'].includes(p.k) ? p.k : 'part',
+    k: ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal', 'tp', 'conv', 'lowg', 'ice', 'water', 'magnet', 'shield', 'safe'].includes(p.k) ? p.k : 'part',
     m: ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 'sand', 'baseplate', 'spawn', 'metal'].includes(p.m) ? p.m : 'plastic',
     ...(p.k === 'npc' ? { dialog: String(p.dialog || '').slice(0, 200), wander: p.wander !== false, enemy: p.enemy === true } : {}),
     ...(p.cc === false ? { cc: false } : {}), ...(p.tr ? { tr: Math.max(0, Math.min(1, num(p.tr))) } : {}),
     ...(sanitizeScript(p.script) ? { script: sanitizeScript(p.script) } : {}),
     ...(p.folder ? { folder: String(p.folder).slice(0, 20) } : {}),
+    ...(p.conv ? { conv: [Math.max(-30, Math.min(30, num(p.conv[0]))), Math.max(-30, Math.min(30, num(p.conv[1])))] } : {}),
+    ...(p.power ? { power: Math.max(40, Math.min(300, num(p.power))) } : {}),
     ...(p.mv && ['x', 'y', 'z'].includes(p.mv.a) && Math.abs(num(p.mv.d)) >= 1 ? { mv: { a: p.mv.a, d: Math.max(-120, Math.min(120, num(p.mv.d))), s: Math.max(0.2, Math.min(4, num(p.mv.s) || 1)), ...(num(p.mv.ph) ? { ph: num(p.mv.ph) } : {}) } } : {}),
     ...(p.blink ? { blink: { on: Math.max(0.3, Math.min(30, num(p.blink.on) || 2)), off: Math.max(0.3, Math.min(30, num(p.blink.off) || 1.5)), ...(num(p.blink.ph) ? { ph: num(p.blink.ph) } : {}) } } : {}),
   }));
@@ -1690,9 +1777,9 @@ wss.on('connection', (ws) => {
       });
 
       touch(u.name, g.id);
-      send(ws, { t: 'welcome', id: player.id, players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, avatar: p.avatar, s: p.s, club: isClub(p.user), badge: badgeOf(p.user) })), ...money(u), club: isClub(u), badge: badgeOf(u) });
+      send(ws, { t: 'welcome', id: player.id, players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, avatar: p.avatar, s: p.s, club: isClub(p.user), badge: badgeOf(p.user), role: roleOf(p.user) })), ...money(u), club: isClub(u), badge: badgeOf(u) });
       room.players.set(player.id, player);
-      broadcast(room, { t: 'joined', id: player.id, name: player.name, avatar: player.avatar, club: isClub(u), badge: badgeOf(u) }, ws);
+      broadcast(room, { t: 'joined', id: player.id, name: player.name, avatar: player.avatar, club: isClub(u), badge: badgeOf(u), role: roleOf(u) }, ws);
       broadcast(room, { t: 'chat', system: true, text: `${player.name} has joined the game.` });
       return;
     }
@@ -1703,8 +1790,9 @@ wss.on('connection', (ws) => {
       const mi = muteState(player.user);
       if (mi) return send(ws, { t: 'error', error: `You are muted${mi.reason ? ': ' + mi.reason : ''}` });
       const text = filter(m.text.trim());
-      broadcast(room, { t: 'chat', id: player.id, name: player.name, text, club: isClub(player.user), badge: badgeOf(player.user) });
+      broadcast(room, { t: 'chat', id: player.id, name: player.name, text, club: isClub(player.user), badge: badgeOf(player.user), role: roleOf(player.user) });
     }
+    else if (m.t === 'ping') send(ws, { t: 'pong', id: m.id });
     else if (m.t === 'coin' && typeof m.part === 'string') {
       const now = Date.now();
       if (!room.coins.has(m.part) || player.coins.has(m.part) || now - player.lastCoin < 150) return;

@@ -518,7 +518,87 @@ export function bvPlaza() {
   for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; P(Math.cos(a) * 16, 2.2, Math.sin(a) * 16, 1.2, 1.2, 1.2, '#2ee06f', { name: 'Cubit', k: 'coin' }); }
   return w;
 }
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza };
+
+export function skyIslands() {
+  const w = startWorld('#7ec8ff');
+  w.parts.push(part([0, -60, 0], [2000, 1, 2000], '#ff3b1f', { name: 'Cloud Sea', k: 'kill', m: 'neon' }));
+  const islands = [[0, 0, 0, 26], [0, 10, -34, 20], [26, 22, -60, 18], [-24, 34, -88, 20], [0, 48, -122, 22], [0, 64, -160, 26]];
+  islands.forEach(([x, y, z, s], i) => {
+    w.parts.push(part([x, y, z], [s, 2, s], i % 2 ? '#8bc34a' : '#7cb342', { name: 'Island ' + (i + 1), m: 'grass' }));
+    w.parts.push(part([x, y + 1.5, z], [s - 4, 1, s - 4], '#a5d6a7', { name: 'Island Top ' + (i + 1) }));
+    if (i > 0) w.parts.push(part([x + 3, y + 3, z + 3], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
+  });
+  w.parts.push(part([0, 1.25, 0], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  // bridge island 1 -> 2, moving platform 2 -> 3, blink bridge 3 -> 4
+  w.parts.push(part([0, 5, -17], [6, 1, 14], '#8d6e63', { name: 'Bridge', m: 'wood' }));
+  w.parts.push(part([13, 16, -47], [6, 1, 6], '#26c6da', { name: 'Sky Ferry', mv: { a: 'x', d: 26, s: 1 } }));
+  for (let i = 0; i < 4; i++) w.parts.push(part([-24 + i * 0, 28, -74 - i * 4], [5, 1, 5], '#ab47bc', { name: 'Blink Step', blink: { on: 2, off: 1.2, ph: i * 0.7 } }));
+  // portal shortcut: island 3 <-> island 5 (same name pairs them)
+  w.parts.push(part([26, 23.5, -60], [5, 0.5, 5], '#ff00ff', { name: 'Sky Portal', k: 'tp', m: 'neon' }));
+  w.parts.push(part([0, 49.5, -122], [5, 0.5, 5], '#ff00ff', { name: 'Sky Portal', k: 'tp', m: 'neon' }));
+  w.parts.push(part([0, 35.5, -88], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([0, 49.5, -122], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([0, 65.5, -160], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  w.parts.push(part([0, 67, -160], [2, 5, 2], '#ffd400', { name: 'Sky Guide', k: 'npc', dialog: 'Welcome to the Sky Islands! Mind the gaps!' }));
+  return w;
+}
+
+export function raceTrack() {
+  const w = startWorld('#9fd6ff');
+  w.parts.push(part([0, -0.5, 0], [300, 1, 300], '#4caf50', { name: 'Grass', m: 'grass' }));
+  const road = (x, z, sx, sz) => w.parts.push(part([x, 0.25, z], [sx, 0.5, sz], '#37474f', { name: 'Road', m: 'concrete' }));
+  road(0, -40, 120, 12); road(0, 40, 120, 12); road(-60, 0, 12, 80); road(60, 0, 12, 80);
+  w.parts.push(part([-40, 0.75, -40], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  // boost straights
+  for (const [x, z] of [[-20, -40], [20, -40], [-20, 40], [20, 40]]) w.parts.push(part([x, 0.75, z], [4, 0.5, 4], '#ff9800', { name: 'Boost', k: 'speed', m: 'neon' }));
+  // ice corner (slide!) + checkpoints at corners
+  w.parts.push(part([-60, 0.75, -40], [12, 0.5, 12], '#a0e8ff', { name: 'Ice Corner', k: 'ice', m: 'glass' }));
+  for (const [x, z, n] of [[-60, -40, 1], [60, -40, 2], [60, 40, 3], [-60, 40, 4]]) w.parts.push(part([x, 0.75, z], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint ' + n, k: 'checkpoint', m: 'neon' }));
+  for (let i = 0; i < 10; i++) w.parts.push(part([-50 + i * 11, 1.5, -40], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
+  w.parts.push(part([0, 0.75, -40], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  w.parts.push(part([0, 2, -30], [2, 5, 2], '#ffd400', { name: 'Race Marshal', k: 'npc', dialog: 'Hit the boosts, slide the ice corner, and don\'t cut the grass!' }));
+  return w;
+}
+
+export function volcanoEscape() {
+  const w = startWorld('#ff7043');
+  w.parts.push(part([0, -0.5, 0], [400, 1, 400], '#ff4500', { name: 'Lava Sea', k: 'kill', m: 'neon' }));
+  w.parts.push(part([0, 1.25, 0], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  let y = 0, z = -10;
+  for (let i = 0; i < 8; i++) { z -= 8; y += 3; w.parts.push(part([0, y, z], [8, 1, 8], '#5d4037', { name: 'Rock Step', m: 'concrete' })); }
+  // moving platforms over the lava lake
+  w.parts.push(part([0, y + 2, z - 14], [6, 1, 6], '#26c6da', { name: 'Lava Ferry', mv: { a: 'x', d: 18, s: 1.1 } }));
+  w.parts.push(part([0, y + 2, z - 30], [6, 1, 6], '#26c6da', { name: 'Lava Ferry 2', mv: { a: 'z', d: 12, s: 1 } }));
+  // safe rest platform + shield before the final jump
+  w.parts.push(part([0, y + 4, z - 46], [10, 1, 10], '#66bb6a', { name: 'Safe Ledge', k: 'safe', m: 'glass' }));
+  w.parts.push(part([4, y + 6, z - 46], [1.6, 1.6, 1.6], '#00bcd4', { name: 'Shield', k: 'shield', m: 'neon' }));
+  w.parts.push(part([0, y + 6, z - 58], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint', k: 'checkpoint', m: 'neon' }));
+  for (let i = 0; i < 3; i++) w.parts.push(part([-6 + i * 6, y + 8, z - 66 - i * 4], [5, 1, 5], '#ab47bc', { name: 'Blink Ember', blink: { on: 2.2, off: 1, ph: i * 0.8 } }));
+  w.parts.push(part([0, y + 10, z - 84], [12, 1, 12], '#ffd700', { name: 'Crater', m: 'neon' }));
+  w.parts.push(part([0, y + 11, z - 84], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  for (let i = 0; i < 8; i++) w.parts.push(part([-8 + i * 2.5, y + 2.5, z - 20], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
+  return w;
+}
+
+export function snowPeak() {
+  const w = startWorld('#b3e5fc');
+  w.parts.push(part([0, -0.5, 0], [300, 1, 300], '#e1f5fe', { name: 'Snowfield' }));
+  w.parts.push(part([0, 1.25, 0], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  let y = 0, z = -10;
+  for (let i = 0; i < 6; i++) { z -= 9; y += 3; w.parts.push(part([0, y, z], [9, 1, 9], '#eceff1', { name: 'Snow Step' })); }
+  // ice slide down then low-g aurora zone
+  w.parts.push(part([10, y + 1, z - 10], [14, 0.5, 8], '#a0e8ff', { name: 'Ice Slide', k: 'ice', m: 'glass' }));
+  w.parts.push(part([0, y + 4, z - 30], [12, 8, 12], '#b39ddb', { name: 'Aurora Zone', k: 'lowg', m: 'glass' }));
+  w.parts.push(part([0, y + 8, z - 44], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint', k: 'checkpoint', m: 'neon' }));
+  for (let i = 0; i < 5; i++) w.parts.push(part([-4 + i * 2, y + 9, z - 52 - i * 3], [4, 1, 4], '#eceff1', { name: 'Summit Step' }));
+  w.parts.push(part([0, y + 12, z - 70], [10, 1, 10], '#ffd700', { name: 'Summit', m: 'neon' }));
+  w.parts.push(part([0, y + 13, z - 70], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  w.parts.push(part([6, y + 14, z - 70], [2, 5, 2], '#ffd400', { name: 'Yeti', k: 'npc', dialog: 'Brrr! You made it to the top!' }));
+  for (let i = 0; i < 8; i++) w.parts.push(part([-10 + i * 3, y + 2.5, z - 16], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
+  return w;
+}
+
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');
