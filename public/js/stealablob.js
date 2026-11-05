@@ -21,7 +21,7 @@ export function sabSlotPos(baseIdx, slotIdx) {
   return { x: b.x + (col - 1) * 4, z: b.z + (row - 0.5) * 4 };
 }
 
-const RARITY_W = { common: 60, rare: 25, epic: 10, legendary: 4, mythic: 1 };
+const RARITY_W = { common: 60, rare: 25, epic: 10, legendary: 4, mythic: 1, secret: 0 };
 export const SAB_BLOBS = [
   { name: 'Bloop', rarity: 'common', price: 50, income: 2, color: '#5ec8f2', hat: null },
   { name: 'Gooey', rarity: 'common', price: 75, income: 3, color: '#7ed957', hat: null },
@@ -35,8 +35,14 @@ export const SAB_BLOBS = [
   { name: 'Shadow Blob', rarity: 'legendary', price: 5000, income: 150, color: '#5a4a8a', hat: null },
   { name: 'Galaxy Blob', rarity: 'mythic', price: 25000, income: 900, color: '#7b2ff7', hat: 'sparkle' },
   { name: 'Void Blob', rarity: 'mythic', price: 75000, income: 2500, color: '#17141f', hat: 'crown' },
+  { name: 'Scout Blob', rarity: 'secret', price: 100000, income: 1500, color: '#0a0a12', hat: 'scout', noSteal: true },
 ];
-const RARITY_COLOR = { common: 0x9aa5b1, rare: 0x4a90e2, epic: 0x9b59e6, legendary: 0xf5b301, mythic: 0xff5e8a };
+const RARITY_COLOR = { common: 0x9aa5b1, rare: 0x4a90e2, epic: 0x9b59e6, legendary: 0xf5b301, mythic: 0xff5e8a, secret: 0x9d4edd };
+// One-of-one blob for @scout: a black void blob. Reserved id 90001 is far beyond
+// the conveyor's sequential ids, so spawnBlob() is deterministic for it on every
+// client and the grant below stays in sync across the room.
+const SCOUT_BLOB_ID = 90001;
+const SCOUT_BLOB_NAME = 'Scout Blob';
 
 function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) h = ((h * 31) + s.charCodeAt(i)) >>> 0; return h; }
 function mulberry(seed) {
@@ -168,6 +174,15 @@ function buildBlobMesh(b) {
     s.position.y = 2.65; g.add(s); refs.spinHat = s;
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture('#3ee6c4'), transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.scale.setScalar(2.0); glow.position.y = 2.65; g.add(glow);
+  } else if (b.hat === 'scout') {
+    // campaign hat: wide flat brim + domed crown, void-purple band
+    const green = new THREE.MeshStandardMaterial({ color: 0x4a6741, roughness: 0.55 });
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.1, 20), green);
+    brim.position.y = 2.42; g.add(brim);
+    const crown = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), green);
+    crown.scale.y = 0.9; crown.position.y = 2.44; g.add(crown);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.07, 8, 20), new THREE.MeshStandardMaterial({ color: 0x9d4edd, roughness: 0.5, emissive: 0x9d4edd, emissiveIntensity: 0.4 }));
+    band.rotation.x = Math.PI / 2; band.position.y = 2.5; g.add(band);
   }
   // rarity ring + soft ground glow (pulses in tick)
   const rc = RARITY_COLOR[b.rarity];
@@ -177,7 +192,7 @@ function buildBlobMesh(b) {
     new THREE.MeshBasicMaterial({ map: makeGlowTexture('#' + rc.toString(16).padStart(6, '0')), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
   glowDisc.rotation.x = -Math.PI / 2; glowDisc.position.y = 0.06; g.add(glowDisc); refs.glowDisc = glowDisc;
   // orbiting sparkles for epic and up
-  if (b.rarity === 'epic' || b.rarity === 'legendary' || b.rarity === 'mythic') {
+  if (b.rarity === 'epic' || b.rarity === 'legendary' || b.rarity === 'mythic' || b.rarity === 'secret') {
     const sg = new THREE.Group();
     for (let i = 0; i < 4; i++) {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: STAR_TEX(), color: 0xffffff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -186,6 +201,11 @@ function buildBlobMesh(b) {
       sp.scale.setScalar(0.35); sg.add(sp);
     }
     g.add(sg); refs.sparkles = sg;
+  }
+  // void aura for secret-rarity blobs (the Scout Blob's black-void glow)
+  if (b.rarity === 'secret') {
+    const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeGlowTexture('#9d4edd'), transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false }));
+    aura.scale.setScalar(4.2); aura.position.y = 1.35; g.add(aura); refs.aura = aura;
   }
   // floating name + price/income label
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
@@ -410,7 +430,7 @@ export function startStealABlob(game) {
       const owned = [...blobs.values()]
         .filter(b => b.owner === game.myId && (b.state === 'owned' || b.state === 'returning'))
         .map(b => ({ id: b.id, base: b.base, slot: b.slot }));
-      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', name: saveName(), coins: Math.floor(coins), rebirths, owned }));
+      localStorage.setItem(saveKey(), JSON.stringify({ v: 1, gameId: game.o.gameId || 'stealablob', name: saveName(), coins: Math.floor(coins), rebirths, scoutGranted, owned }));
     } catch (e) { /* storage unavailable (private mode): progress just won't persist */ }
   }
   let restoredSave = false;
@@ -422,6 +442,7 @@ export function startStealABlob(game) {
     if (!s || s.v !== 1 || s.gameId !== (game.o.gameId || 'stealablob') || s.name !== saveName()) return;
     if (Number.isFinite(s.coins) && s.coins >= 0) coins = Math.floor(s.coins);
     if (Number.isFinite(s.rebirths) && s.rebirths >= 0) rebirths = Math.min(100, Math.floor(s.rebirths));
+    if (s.scoutGranted) scoutGranted = true;
     const entries = Array.isArray(s.owned) ? s.owned : [];
     let placed = 0, mySavedBase = -1;
     for (const e of entries) {
@@ -449,10 +470,36 @@ export function startStealABlob(game) {
     refreshHud();
     if (placed > 0 || coins !== startCoins()) game.sys(`💾 Progress restored: ${placed} blob${placed === 1 ? '' : 's'}, ${Math.floor(coins)} coins`);
   }
+  // One-time gift: when @scout joins Steal a Blob, a black void Scout Blob is
+  // placed in their base. Granted once per save (scoutGranted flag) so it can't
+  // be farmed by selling + rejoining; it's unstealable (noSteal) so the
+  // one-of-one can't be taken. Selling / rebirth still remove it, by choice.
+  let scoutGranted = false;
+  let scoutGrantChecked = false;
+  function grantScoutBlob() {
+    if (String(saveName()).toLowerCase() !== 'scout') return;
+    if (scoutGranted) return;
+    if ([...blobs.values()].some(b => b.name === SCOUT_BLOB_NAME && b.owner === game.myId)) { scoutGranted = true; saveProgress(); return; }
+    const base = myBase();
+    const slot = freeSlot(base);
+    if (slot < 0) return; // base full: try again next join (flag stays unset)
+    spawnBlob(SCOUT_BLOB_ID);
+    const b = blobs.get(SCOUT_BLOB_ID);
+    if (!b) return;
+    b.state = 'owned'; b.owner = game.myId; b.base = base; b.slot = slot;
+    const p = sabSlotPos(base, slot);
+    b.x = p.x; b.z = p.z; b.surfY = 0.72;
+    drawLabel(b);
+    burst(b.x, 1.5, b.z, 0x9d4edd);
+    sendBlob('buy', b.id);
+    scoutGranted = true;
+    saveProgress(); refreshHud();
+    game.sys('🖤 A special Scout Blob — a black void blob made just for @scout — joined your base! It can never be stolen.');
+  }
   function spawnBlob(idx) {
     if (blobs.has(idx)) return; // never double-spawn (restore pre-creates ids)
     const rnd = mulberry(seed + idx * 7919);
-    const t = pickBlob(rnd);
+    const t = idx === SCOUT_BLOB_ID ? SAB_BLOBS.find(b => b.name === SCOUT_BLOB_NAME) : pickBlob(rnd);
     const b = { id: idx, ...t, x: (rnd() - 0.5) * 8, z: -55, state: 'walking', owner: null, base: -1, slot: -1, mesh: null, surfY: 0.3 };
     b.mesh = buildBlobMesh(b);
     b.mesh.traverse(o => o.userData.sabBlob = idx);
@@ -494,14 +541,28 @@ export function startStealABlob(game) {
   function onBlob(m) {
     const from = m.id, a = m.a, bid = m.b;
     if (a === 'buy') {
-      const b = blobs.get(bid);
-      if (!b || b.state !== 'walking') return;
-      const base = baseFor(from);
-      const slot = freeSlot(base);
-      if (slot < 0) return;
-      b.state = 'returning'; b.owner = from; b.base = base; b.slot = slot;
-      burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
-      game.sys(`🫧 ${playerName(from)} bought ${b.name}!`);
+      let b = blobs.get(bid);
+      if (!b) { spawnBlob(bid); b = blobs.get(bid); }
+      if (!b) return;
+      if (bid === SCOUT_BLOB_ID) {
+        // the Scout grant: placed straight into the owner's base, never walked the belt
+        if (b.state === 'owned' && b.owner === from) return;
+        const base = baseFor(from);
+        const slot = freeSlot(base);
+        if (slot < 0) return;
+        b.state = 'owned'; b.owner = from; b.base = base; b.slot = slot;
+        const p = sabSlotPos(base, slot);
+        b.x = p.x; b.z = p.z; b.surfY = 0.72;
+        drawLabel(b);
+      } else {
+        if (b.state !== 'walking') return;
+        const base = baseFor(from);
+        const slot = freeSlot(base);
+        if (slot < 0) return;
+        b.state = 'returning'; b.owner = from; b.base = base; b.slot = slot;
+        burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
+        game.sys(`🫧 ${playerName(from)} bought ${b.name}!`);
+      }
     } else if (a === 'steal') {
       const b = blobs.get(bid);
       if (!b || b.state !== 'owned') return;
@@ -509,6 +570,7 @@ export function startStealABlob(game) {
     } else if (a === 'grab') {
       const b = blobs.get(bid);
       if (!b || b.state !== 'owned') return;
+      if (b.noSteal) return; // the Scout Blob can never be carried off
       b.state = 'following'; b.thief = from; b.owner = null;
       steals.delete(from);
       burst(b.x, 1.5, b.z, 0xff5e8a); drawLabel(b);
@@ -595,6 +657,7 @@ export function startStealABlob(game) {
   }
   function doSteal(b) {
     if (b.state !== 'owned' || b.owner === game.myId) return;
+    if (b.noSteal) { game.sys(`🖤 ${b.name} can't be stolen — it belongs to @scout!`); return; }
     if (game.pos.distanceTo(new THREE.Vector3(b.x, game.pos.y, b.z)) > 8) { game.sys('Too far from that blob!'); return; }
     mySteal = { blobId: b.id, endsAt: Date.now() + (hasPass('pass_faststeal') ? 1500 : 3000) };
     steals.set(game.myId, mySteal);
@@ -664,6 +727,7 @@ export function startStealABlob(game) {
     // restore saved progress as soon as your player id is known (before the
     // beacon, so the beacon marks your restored base)
     if (!restoredSave && game.myId != null) restoreSave();
+    if (game.myId != null && !scoutGrantChecked) { scoutGrantChecked = true; grantScoutBlob(); }
     // claim + mark your base as soon as your player id is known
     if (!baseMarker && game.myId != null) makeBaseMarker();
     if (baseMarker) baseMarker.ringMat.opacity = 0.6 + Math.sin(t / 500) * 0.3;
@@ -753,6 +817,7 @@ export function startStealABlob(game) {
         const gs = 1 + Math.sin(t / 500 + b.id) * 0.08;
         refs.glowDisc.scale.set(gs, gs, 1);
         if (refs.sparkles) refs.sparkles.rotation.y = t / 1000;
+        if (refs.aura) refs.aura.material.opacity = 0.4 + Math.sin(t / 500 + b.id) * 0.15;
         if (refs.halo) { refs.halo.rotation.y = t / 1000 * 0.8; refs.halo.position.y = 2.75 + Math.sin(t / 800) * 0.08; }
         if (refs.spinHat) { refs.spinHat.rotation.y = t / 1000 * 2; refs.spinHat.position.y = 2.65 + Math.sin(t / 700) * 0.1; }
         // rainbow blob cycles hue
