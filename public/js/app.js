@@ -304,6 +304,7 @@ function settingsPage() {
     </section>
     <section class="admin-section"><h3>More</h3>
       <a class="set-row set-link" href="#/funai"><span>✨ FunAI — game maker AI</span><span class="muted">›</span></a>
+      <a class="set-row set-link" href="#/skinmaker"><span>🎨 AI Skin Maker — FunAI outfits</span><span class="muted">›</span></a>
       <a class="set-row set-link" href="#/addons"><span>🧩 Add-ons</span><span class="muted">›</span></a>
       <a class="set-row set-link" href="#/updates"><span>📰 Updates</span>${hasNewUpdates() ? '<span class="badge">NEW</span>' : '<span class="muted">›</span>'}</a>
     </section>`, () => {
@@ -375,7 +376,7 @@ function shell(active, content) {
   </header>
   <aside class="sidebar">
     <a class="sb-user" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, "headshot")}<span class="sb-user-txt"><b>${esc(me.name)}</b><span>@${esc(me.name)}</span></span></a>
-    ${[['home', 'Lobby', icons.home], ['dashboard', 'Dashboard', icons.discover], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['funai', '✨ FunAI', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
+    ${[['home', 'Lobby', icons.home], ['dashboard', 'Dashboard', icons.discover], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['skinmaker', '🎨 AI Skin Maker', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['funai', '✨ FunAI', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
       .map(([h, l, i, badge]) => h.startsWith('http') ? `<a href="${h}" target="_blank" rel="noopener"><span class="sb-ico">${i}</span>${l}<span class="badge">↗</span></a>` : `<a href="#/${h}" class="${active === h.split('/')[0] ? 'active' : ''}"><span class="sb-ico">${i}</span>${l}${badge ? `<span class="badge">${badge}</span>` : ''}</a>`).join('')}
     <button class="sidebar-logout"><span class="sb-ico">&#9094;</span>Log Out</button>
     <div class="sidebar-footer">Made by <a href="https://parakeetlabz.vercel.app" target="_blank" rel="noopener">Parakeet Labz</a></div>
@@ -825,7 +826,7 @@ async function avatarPage(tab = 'body') {
   const av = structuredClone(me.avatar); av.head ??= 'head_classic';
   let part = 'all';
   mount('avatar', `
-    <h1>Avatar Editor</h1><button class="btn-secondary av-random">🎲 Randomize outfit</button>
+    <h1>Avatar Editor</h1><button class="btn-secondary av-random">🎲 Randomize outfit</button> <a class="btn-secondary" href="#/skinmaker">🎨 AI Skin Maker</a>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
@@ -1611,6 +1612,7 @@ async function ugcGlbModal(u) {
 const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN, ensureAvatar3d, get me() { return me; }, get BADGE_DEFS() { return BADGE_DEFS; } };
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
+const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMoney, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
@@ -1759,7 +1761,8 @@ async function route() {
       case 'funtix': case 'funbux': return funtixPage();
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
-      case 'funai': { const m = await import('./funai.js?v=9b6a7010'); return m.funaiPage(funaiDeps); }
+      case 'funai': { const m = await import('./funai.js?v=02bebcf8'); return m.funaiPage(funaiDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=ea648086'); return m.skinmakerPage(skinmakerDeps); }
       default: return await homePage();
     }
   } catch (e) {

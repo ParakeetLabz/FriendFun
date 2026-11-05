@@ -1,4 +1,5 @@
 // ✨ FunAI — game maker AI for Funtopia (server).
+import { ITEM, CATALOG, DEFAULT_AVATAR } from './public/js/catalog.js';
 // Wired into server.js via createFunAI({ app, auth }).
 // POST /api/funai/generate turns a player's idea into a FUNTOPIA STUDIO
 // WORLD: { title, description, world: { sky, parts } } in exactly the
@@ -99,6 +100,56 @@ function cleanParts(raw) {
   return parts;
 }
 
+// --- AI Skin Maker ---
+// The AI designs a character outfit ("skin"): head + face + hat + shirt +
+// body colors, picked ONLY from the buyable catalog below (no event-only
+// limited items, no FriendClub-only items — the maker can buy the rest).
+const SKIN_SLOTS = ['head', 'face', 'hat', 'shirt'];
+const SKIN_DEFAULTS = { head: 'head_classic', face: 'face_smile', hat: 'hat_none', shirt: 'shirt_none' };
+const SKIN_COLOR_KEYS = ['head', 'torso', 'larm', 'rarm', 'lleg', 'rleg'];
+const hex6 = v => (/^#[0-9a-fA-F]{6}$/.test(v || '') ? v : null);
+function skinCatalog() {
+  const out = {};
+  for (const t of SKIN_SLOTS) out[t] = CATALOG.filter(i => i.type === t && !i.limited && !i.club).map(i => ({ id: i.id, name: i.name, price: i.free ? 0 : (i.price || 0) }));
+  return out;
+}
+// Validate a skin spec (AI output or a remix "prev"): unknown ids fall back
+// to the defaults and are reported in `swaps` so the client can say so.
+function cleanSkinSpec(j) {
+  if (!j || typeof j !== 'object') return null;
+  const swaps = [];
+  const pick = slot => {
+    const id = String(j[slot] || '');
+    if (id === slot + '_none') return id;
+    const it = ITEM[id];
+    if (it && it.type === slot && !it.limited && !it.club) return id;
+    if (id) swaps.push(slot);
+    return SKIN_DEFAULTS[slot];
+  };
+  const colors = {};
+  for (const k of SKIN_COLOR_KEYS) colors[k] = hex6(j.colors?.[k]) || DEFAULT_AVATAR.colors[k];
+  return {
+    name: String(j.name || 'AI Look').slice(0, 40) || 'AI Look',
+    description: String(j.description || 'Made with ✨ FunAI').slice(0, 200),
+    avatar: { head: pick('head'), face: pick('face'), hat: pick('hat'), shirt: pick('shirt'), colors },
+    swaps,
+  };
+}
+function extractSkin(text) {
+  let j = null;
+  try { j = JSON.parse(stripToJson(text)); } catch { return null; }
+  return cleanSkinSpec(j);
+}
+const SKIN_SYSTEM = [
+  'You are FunAI, an AI skin designer inside Funtopia. You design a character outfit ("skin") for a player blocky R6 avatar.',
+  'Reply with ONLY a JSON object, no markdown, no commentary:',
+  '{"name":"short look name","description":"one fun sentence","head":"head_classic","face":"face_smile","hat":"hat_none","shirt":"shirt_none","colors":{"head":"#f5cd30","torso":"#0d69ac","larm":"#f5cd30","rarm":"#f5cd30","lleg":"#a4bd47","rleg":"#a4bd47"}}',
+  '- head/face/hat/shirt MUST be ids from the catalog lists in the request — never invent an id. "hat_none" means no hat, "shirt_none" means no shirt.',
+  '- colors: six #rrggbb hex colors for the body parts (head skin, torso, left arm, right arm, left leg, right leg). Match them to the theme.',
+  '- Match the player description: be bold and specific, pick the most thematic pieces — not the defaults. A vampire gets fangs and a dark cape, a robot gets metal and glowing eyes.',
+  '- name is a short punchy look name (max 5 words). description is one fun sentence about the look.',
+].join('\n');
+
 function stripToJson(text) {
   let t = String(text || '').trim();
   t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -145,6 +196,8 @@ function buildWorld(title, description, sky, rawParts) {
   };
 }
 
+const worldNudge = attempt => 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Parts MUST be compact arrays like ["Platform",0,2,-10,6,1,6,"#ff595e","part","plastic"]. ' + (attempt >= 2 ? 'Use at most 30 parts and the simplest layout that works. ' : 'Use 30 to 60 parts. ') + 'Make sure the JSON is complete and closes with ]}.';
+
 function extractWorld(text) {
   const raw = String(text || '');
   try {
@@ -160,7 +213,7 @@ function extractWorld(text) {
   return null;
 }
 
-async function callAI(key, messages) {
+async function callAI(key, messages, extract, failMsg, nudgeForAttempt) {
   // gpt-oss-120b designs the best worlds; fall back to the faster 20b.
   // Each model gets a second attempt with a corrective nudge — the
   // reasoning models sometimes return empty or non-JSON content, and
@@ -175,7 +228,7 @@ async function callAI(key, messages) {
   for (const model of ['openai/gpt-oss-120b', 'openai/gpt-oss-20b']) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Parts MUST be compact arrays like ["Platform",0,2,-10,6,1,6,"#ff595e","part","plastic"]. ' + (attempt >= 2 ? 'Use at most 30 parts and the simplest layout that works. ' : 'Use 30 to 60 parts. ') + 'Make sure the JSON is complete and closes with ]}.' }];
+        const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: nudgeForAttempt(attempt) }];
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 90000);
         const r = await fetch(ZSTUDIO_URL, {
@@ -187,9 +240,9 @@ async function callAI(key, messages) {
         const data = await r.json().catch(() => null);
         if (!r.ok) { lastErr = new Error(data?.error?.message || ('AI request failed (' + r.status + ')')); continue; }
         const content = data?.choices?.[0]?.message?.content || '';
-        const game = extractWorld(content);
-        if (game) return game;
-        lastErr = new Error('The AI did not return a usable world. Try again!');
+        const result = extract(content);
+        if (result) return result;
+        lastErr = new Error(failMsg);
         lastErr.raw = String(content).slice(0, 1500);
       } catch (e) { lastErr = e; }
     }
@@ -202,11 +255,11 @@ export function createFunAI(D) {
   // Simple per-user rate limit so one player can't burn the key:
   // max 12 generations per rolling hour.
   const hits = new Map();
-  const limited = name => {
+  const limited = (key, max) => {
     const now = Date.now();
-    const arr = (hits.get(name) || []).filter(t => now - t < 3600000);
-    if (arr.length >= 12) { hits.set(name, arr); return true; }
-    arr.push(now); hits.set(name, arr); return false;
+    const arr = (hits.get(key) || []).filter(t => now - t < 3600000);
+    if (arr.length >= max) { hits.set(key, arr); return true; }
+    arr.push(now); hits.set(key, arr); return false;
   };
 
   app.get('/api/funai/status', auth, (req, res) => {
@@ -216,7 +269,7 @@ export function createFunAI(D) {
   app.post('/api/funai/generate', auth, async (req, res) => {
     const key = process.env.FUNAI_API_KEY || '';
     if (!key) return res.status(503).json({ error: 'FunAI is not switched on yet — Zayd needs to add FUNAI_API_KEY in Render.' });
-    if (limited(req.user.name.toLowerCase())) return res.status(429).json({ error: 'FunAI needs a breather — you hit 12 games this hour. Try again later!' });
+    if (limited(req.user.name.toLowerCase(), 12)) return res.status(429).json({ error: 'FunAI needs a breather — you hit 12 games this hour. Try again later!' });
     const prompt = String(req.body?.prompt || '').trim().slice(0, 600);
     if (prompt.length < 3) return res.status(400).json({ error: 'Tell FunAI what game to make (a few words at least).' });
     const style = String(req.body?.style || '').trim().slice(0, 40);
@@ -228,12 +281,38 @@ export function createFunAI(D) {
       messages.push({ role: 'user', content: 'Design this game: ' + prompt + (style ? '\nStyle: ' + style : '') });
     }
     try {
-      const game = await callAI(key, messages);
+      const game = await callAI(key, messages, extractWorld, 'The AI did not return a usable world. Try again!', worldNudge);
       res.json(game);
     } catch (e) {
       const body = { error: 'FunAI failed: ' + (e.name === 'AbortError' ? 'the AI took too long — try a simpler idea!' : e.message) };
       // Owner/test accounts get the raw AI reply snippet so a bad
       // generation can actually be diagnosed instead of guessed at.
+      if (e.raw && ['fun', 'funaitest31'].includes(req.user.name.toLowerCase())) body.debug = e.raw;
+      res.status(502).json(body);
+    }
+  });
+
+  // POST /api/funai/skin — describe a look, FunAI designs the outfit.
+  // Returns { name, description, avatar: { head, face, hat, shirt, colors }, swaps }.
+  // Picks are validated server-side (unknown ids fall back, see cleanSkinSpec);
+  // ownership is enforced later by PUT /api/me/avatar when the look is worn,
+  // and the client buys any missing pieces first via POST /api/buy/:item.
+  app.post('/api/funai/skin', auth, async (req, res) => {
+    const key = process.env.FUNAI_API_KEY || '';
+    if (!key) return res.status(503).json({ error: 'FunAI is not switched on yet — Zayd needs to add FUNAI_API_KEY in Render.' });
+    if (limited(req.user.name.toLowerCase() + ':skin', 20)) return res.status(429).json({ error: 'FunAI needs a breather — you hit 20 skins this hour. Try again later!' });
+    const prompt = String(req.body?.prompt || '').trim().slice(0, 600);
+    if (prompt.length < 3) return res.status(400).json({ error: 'Tell FunAI what look to make (a few words at least).' });
+    const prev = cleanSkinSpec(req.body?.prev);
+    const cat = skinCatalog();
+    const listFor = t => cat[t].map(i => `${i.id} (${i.name}${i.price ? ', ' + i.price + ' FunTix' : ', free'})`).join(', ');
+    const messages = [{ role: 'system', content: SKIN_SYSTEM }];
+    messages.push({ role: 'user', content: (prev ? 'Here is the current look (JSON):\n' + JSON.stringify(prev.avatar) + '\n\nChange it like this and return the FULL updated look in the same JSON format: ' : 'Design this look: ') + prompt + '\n\nCatalog — pick each piece ONLY from these lists:\nHeads: ' + listFor('head') + '\nFaces: ' + listFor('face') + '\nHats: ' + listFor('hat') + '\nShirts: ' + listFor('shirt') });
+    try {
+      const skin = await callAI(key, messages, extractSkin, 'The AI did not return a usable look. Try again!', () => 'IMPORTANT: your previous reply could not be used. Reply with ONLY the JSON object — no reasoning, no markdown, no commentary. Pick ids ONLY from the catalog lists. Make sure the JSON is complete and closes with }.');
+      res.json(skin);
+    } catch (e) {
+      const body = { error: 'FunAI failed: ' + (e.name === 'AbortError' ? 'the AI took too long — try a simpler idea!' : e.message) };
       if (e.raw && ['fun', 'funaitest31'].includes(req.user.name.toLowerCase())) body.debug = e.raw;
       res.status(502).json(body);
     }

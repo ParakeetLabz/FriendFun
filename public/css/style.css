@@ -859,6 +859,15 @@ body.scary .sidebar { background: #0d0104; }
 .funai-codewrap{margin-top:12px}
 .funai-code{max-height:320px;overflow:auto;background:#0d1117;color:#c9d1d9;padding:12px;border-radius:10px;font-size:12px;white-space:pre-wrap;word-break:break-word}
 .funai-shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.skin-preview{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.skin-big{width:220px;height:220px;border-radius:14px;background:#111;object-fit:cover}
+.skin-thumb{width:100%;height:140px;object-fit:cover;border-radius:10px;background:#111}
+.skin-slots{flex:1;min-width:240px;display:flex;flex-direction:column;gap:8px}
+.skin-slot{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--border,#e0e0e0);border-radius:10px;padding:8px 12px}
+.skin-owned{color:#2e7d32;font-weight:700}
+.skin-swatches{display:flex;gap:6px}
+.skin-sw{width:18px;height:18px;border-radius:50%;border:2px solid rgba(0,0,0,.2);display:inline-block}
+.skin-card{display:flex;flex-direction:column;gap:6px}
 .funai-card{background:var(--card,#fff);border:1px solid var(--border,#e0e0e0);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
 .funai-card b{font-size:15px}
 @media (max-width:640px){.funai-frame{height:440px}}

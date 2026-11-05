@@ -49,7 +49,8 @@ export async function funaiPage(D) {
     <section class="funai-shelf-wrap">
       <h2>📚 My FunAI shelf</h2>
       <div class="funai-shelf"></div>
-    </section>`, () => {
+    </section>
+    <p class="muted">Want a new look to match? <a href="#/skinmaker">🎨 Try the AI Skin Maker →</a></p>`, () => {
     const q = s => document.querySelector(s);
     const input = q('.funai-input'), status = q('.funai-status'), stage = q('.funai-stage');
     let current = null; // { title, description, world }
