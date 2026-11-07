@@ -598,7 +598,223 @@ export function snowPeak() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak };
+
+// ---- Popular Roblox-style games (original FunTopia versions) ----
+// Jailbreak-style cops & robbers: bank, jail, police HQ, houses, streets.
+export function heistCity() {
+  const w = startWorld('#8fc8ff');
+  w.parts.push(part([0, -0.5, 0], [220, 1, 220], '#5b8c5a', { name: 'Ground', m: 'grass' }));
+  w.parts.push(part([0, 0.05, 0], [220, 0.1, 14], '#3a3a3a', { name: 'RoadNS' }));
+  w.parts.push(part([0, 0.05, 0], [14, 0.1, 220], '#3a3a3a', { name: 'RoadEW' }));
+  for (let i = -100; i <= 100; i += 12) {
+    w.parts.push(part([i, 0.12, 0], [4, 0.05, 0.6], '#ffd400', { name: 'Dash' }));
+    w.parts.push(part([0, 0.12, i], [0.6, 0.05, 4], '#ffd400', { name: 'Dash' }));
+  }
+  // Bank (NE) with a vault full of gold
+  w.parts.push(part([45, -0.25, -45], [26, 0.5, 18], '#b0bec5', { name: 'BankFloor', m: 'concrete' }));
+  w.parts.push(part([45, 3, -54], [26, 6, 1], '#37474f', { name: 'BankWallN', m: 'brick' }));
+  w.parts.push(part([32, 3, -45], [1, 6, 18], '#37474f', { name: 'BankWallW', m: 'brick' }));
+  w.parts.push(part([58, 3, -45], [1, 6, 18], '#37474f', { name: 'BankWallE', m: 'brick' }));
+  w.parts.push(part([36, 3, -36], [8, 6, 1], '#37474f', { name: 'BankWallS1', m: 'brick' }));
+  w.parts.push(part([54, 3, -36], [8, 6, 1], '#37474f', { name: 'BankWallS2', m: 'brick' }));
+  w.parts.push(part([45, 6.5, -45], [28, 1, 20], '#263238', { name: 'BankRoof' }));
+  w.parts.push(part([45, 7.5, -35.5], [10, 1.5, 0.5], '#ffd400', { name: 'BankSign', m: 'neon' }));
+  w.parts.push(part([45, 1.5, -50], [10, 3, 1], '#78909c', { name: 'VaultWall', m: 'metal' }));
+  for (let i = 0; i < 6; i++) w.parts.push(part([41 + (i % 3) * 4, 1, -52 + Math.floor(i / 3) * 3], [1.2, 1.2, 1.2], '#ffd400', { name: 'VaultGold', k: 'coin', m: 'neon' }));
+  // Jail (NW) with barred cells
+  w.parts.push(part([-45, -0.25, -45], [22, 0.5, 16], '#90a4ae', { name: 'JailFloor', m: 'concrete' }));
+  w.parts.push(part([-45, 3, -53], [22, 6, 1], '#546e7a', { name: 'JailWallN', m: 'brick' }));
+  w.parts.push(part([-56, 3, -45], [1, 6, 16], '#546e7a', { name: 'JailWallW', m: 'brick' }));
+  w.parts.push(part([-34, 3, -45], [1, 6, 16], '#546e7a', { name: 'JailWallE', m: 'brick' }));
+  w.parts.push(part([-45, 3, -37], [22, 6, 1], '#546e7a', { name: 'JailWallS', m: 'brick' }));
+  w.parts.push(part([-45, 6.5, -45], [24, 1, 18], '#37474f', { name: 'JailRoof' }));
+  for (let c = -1; c <= 1; c++) {
+    const bx = -45 + c * 7;
+    for (let b = 0; b < 4; b++) w.parts.push(part([bx - 2 + b * 1.4, 2, -43], [0.3, 4, 0.3], '#212121', { name: 'CellBars', m: 'metal' }));
+    w.parts.push(part([bx, 0.75, -43], [5, 1.5, 2], '#795548', { name: 'CellBed', m: 'wood' }));
+  }
+  // Police HQ (SW) with helipad
+  w.parts.push(part([-45, -0.25, 45], [22, 0.5, 16], '#90caf9', { name: 'HQFloor', m: 'concrete' }));
+  w.parts.push(part([-45, 3, 37], [22, 6, 1], '#1565c0', { name: 'HQWallN', m: 'brick' }));
+  w.parts.push(part([-56, 3, 45], [1, 6, 16], '#1565c0', { name: 'HQWallW', m: 'brick' }));
+  w.parts.push(part([-34, 3, 45], [1, 6, 16], '#1565c0', { name: 'HQWallE', m: 'brick' }));
+  w.parts.push(part([-45, 3, 53], [22, 6, 1], '#1565c0', { name: 'HQWallS', m: 'brick' }));
+  w.parts.push(part([-45, 6.5, 45], [24, 1, 18], '#0d47a1', { name: 'HQRoof' }));
+  w.parts.push(part([-45, 7.2, 45], [8, 0.3, 8], '#ffffff', { name: 'Helipad', m: 'concrete' }));
+  // Houses
+  for (const [hx, hz, hc] of [[45, 45, '#ef9a9a'], [70, -10, '#a5d6a7'], [-70, 20, '#90caf9'], [-70, -70, '#fff59d']]) {
+    w.parts.push(part([hx, 2, hz], [10, 4, 8], hc, { name: 'House', m: 'brick' }));
+    w.parts.push(part([hx, 4.5, hz], [11, 1, 9], '#795548', { name: 'HouseRoof', m: 'wood' }));
+    w.parts.push(part([hx, 1, hz + 4.2], [2, 2, 0.3], '#4e342e', { name: 'HouseDoor', m: 'wood' }));
+    w.parts.push(part([hx - 3, 2.5, hz + 4.1], [2, 2, 0.2], '#b3e5fc', { name: 'HouseWindow', m: 'glass' }));
+    w.parts.push(part([hx + 3, 2.5, hz + 4.1], [2, 2, 0.2], '#b3e5fc', { name: 'HouseWindow', m: 'glass' }));
+  }
+  // Street coins + trees
+  const r = rng(11);
+  for (let i = 0; i < 10; i++) w.parts.push(part([(r() - 0.5) * 160, 1, (r() - 0.5) * 160], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  for (const [tx, tz] of [[-20, 12], [20, -12], [60, 12], [-60, -12], [12, 60], [-12, -60]]) {
+    w.parts.push(part([tx, 1.5, tz], [1, 3, 1], '#5d4037', { name: 'TreeTrunk', m: 'wood' }));
+    w.parts.push(part([tx, 4.5, tz], [3.5, 3.5, 3.5], '#2e7d32', { name: 'TreeTop', m: 'grass' }));
+  }
+  w.parts.push(part([-45, 0.25, 30], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  return w;
+}
+
+// Murder Mystery-style: a mansion, five suspects to question, hidden evidence.
+export function whodunit() {
+  const w = startWorld('#1a1a2e');
+  w.light = { tod: 0, ambient: 0.7, fog: 0.4 };
+  w.parts.push(part([0, -0.5, 0], [60, 1, 60], '#5d4037', { name: 'Floor', m: 'wood' }));
+  w.parts.push(part([0, 3, -30], [60, 6, 1], '#4e342e', { name: 'WallN', m: 'brick' }));
+  w.parts.push(part([0, 3, 30], [60, 6, 1], '#4e342e', { name: 'WallS', m: 'brick' }));
+  w.parts.push(part([-30, 3, 0], [1, 6, 60], '#4e342e', { name: 'WallW', m: 'brick' }));
+  w.parts.push(part([30, 3, 0], [1, 6, 60], '#4e342e', { name: 'WallE', m: 'brick' }));
+  w.parts.push(part([-15, 3, -15], [1, 6, 22], '#4e342e', { name: 'Divider1', m: 'brick' }));
+  w.parts.push(part([15, 3, 15], [1, 6, 22], '#4e342e', { name: 'Divider2', m: 'brick' }));
+  w.parts.push(part([-15, 3, 15], [22, 6, 1], '#4e342e', { name: 'Divider3', m: 'brick' }));
+  w.parts.push(part([15, 3, -15], [22, 6, 1], '#4e342e', { name: 'Divider4', m: 'brick' }));
+  w.parts.push(part([0, 1, 0], [10, 0.5, 4], '#6d4c41', { name: 'DiningTable', m: 'wood' }));
+  for (const [cx, cz] of [[-4, 3], [0, 3], [4, 3], [-4, -3], [0, -3], [4, -3]]) w.parts.push(part([cx, 0.5, cz], [1.5, 1, 1.5], '#4e342e', { name: 'Chair', m: 'wood' }));
+  for (const [cx, cz] of [[-8, 0], [8, 0], [-20, -20], [20, 20]]) w.parts.push(part([cx, 2, cz], [0.6, 1.2, 0.6], '#ffca28', { name: 'Candle', m: 'neon' }));
+  const suspects = [
+    [-20, -20, '#e53935', 'The Butler', 'I was polishing silver all night. Ask anyone.'],
+    [20, -20, '#1e88e5', 'The Chef', 'I never left the kitchen. The knives are all here... mostly.'],
+    [-20, 20, '#43a047', 'The Gardener', 'I was outside with the roses. In the rain. All night.'],
+    [20, 20, '#8e24aa', 'The Heiress', 'I heard a scream from the library. I hid in my room.'],
+    [0, -22, '#fb8c00', 'The Detective', 'One of us did it. Find the evidence!'],
+  ];
+  for (const [x, z, c, name, dlg] of suspects) w.parts.push(part([x, 2, z], [2, 4, 2], c, { name, k: 'npc', dialog: dlg }));
+  for (const [x, z] of [[-25, -25], [25, -25], [-25, 25], [25, 25], [0, 22], [-8, -8]]) w.parts.push(part([x, 1, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Evidence', k: 'coin', m: 'neon' }));
+  w.parts.push(part([0, 0.25, 26], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  return w;
+}
+
+// Doors-style: a long dark hotel corridor, 20 doors, flickering lights, something down the hall.
+export function hauntedHotel() {
+  const w = startWorld('#0a0a14');
+  w.light = { tod: 0, ambient: 0.45, fog: 0.75 };
+  w.parts.push(part([0, -0.5, -60], [12, 1, 130], '#3e2723', { name: 'HallFloor', m: 'wood' }));
+  w.parts.push(part([-6.5, 2.5, -60], [1, 5, 130], '#4e342e', { name: 'WallW', m: 'brick' }));
+  w.parts.push(part([6.5, 2.5, -60], [1, 5, 130], '#4e342e', { name: 'WallE', m: 'brick' }));
+  w.parts.push(part([0, 2.5, 6], [14, 5, 1], '#4e342e', { name: 'WallS', m: 'brick' }));
+  w.parts.push(part([0, 5.2, -60], [14, 0.5, 130], '#212121', { name: 'Ceiling' }));
+  for (let d = 1; d <= 20; d++) {
+    const z = 0 - d * 6;
+    w.parts.push(part([-6, 2, z], [0.3, 4, 2.5], '#5d4037', { name: 'Door ' + d, m: 'wood' }));
+    w.parts.push(part([6, 2, z], [0.3, 4, 2.5], '#5d4037', { name: 'Door ' + d, m: 'wood' }));
+    if (d % 4 === 0) w.parts.push(part([0, 4.8, z], [2, 0.4, 0.6], '#ffca28', { name: 'Lamp', m: 'neon', blink: { on: 1.2, off: 0.6, ph: d } }));
+  }
+  // Side rooms: one hides coins, one hides the entity, one hides a hazard
+  w.parts.push(part([-14, -0.5, -30], [16, 1, 14], '#4e342e', { name: 'RoomFloor', m: 'wood' }));
+  w.parts.push(part([-14, 2.5, -37], [16, 5, 1], '#4e342e', { name: 'RoomWall', m: 'brick' }));
+  w.parts.push(part([-22, 2.5, -30], [1, 5, 14], '#4e342e', { name: 'RoomWall', m: 'brick' }));
+  for (const [x, z] of [[-12, -28], [-16, -32], [-12, -34]]) w.parts.push(part([x, 1, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  w.parts.push(part([14, -0.5, -66], [16, 1, 14], '#4e342e', { name: 'RoomFloor', m: 'wood' }));
+  w.parts.push(part([14, 2.5, -73], [16, 5, 1], '#4e342e', { name: 'RoomWall', m: 'brick' }));
+  w.parts.push(part([22, 2.5, -66], [1, 5, 14], '#4e342e', { name: 'RoomWall', m: 'brick' }));
+  w.parts.push(part([14, 1.5, -66], [2, 3, 2], '#000000', { name: 'Entity', mv: { a: 'z', d: 8, s: 1.2 } }));
+  w.parts.push(part([14, 1, -60], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  w.parts.push(part([14, -0.5, -102], [16, 1, 14], '#4e342e', { name: 'RoomFloor', m: 'wood' }));
+  w.parts.push(part([14, 2.5, -109], [16, 5, 1], '#4e342e', { name: 'RoomWall', m: 'brick' }));
+  w.parts.push(part([22, 2.5, -102], [1, 5, 14], '#4e342e', { name: 'RoomWall', m: 'brick' }));
+  for (const [x, z] of [[12, -100], [16, -104], [14, -98]]) w.parts.push(part([x, 0.75, z], [3, 0.5, 1.5], '#ff2020', { name: 'Hazard', k: 'kill', m: 'neon' }));
+  for (const [x, z] of [[0, -20], [0, -50], [0, -80], [0, -110]]) w.parts.push(part([x, 1, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  w.parts.push(part([0, 0.25, -122], [8, 0.5, 8], '#ffffff', { name: 'ExitDoor', k: 'win', m: 'neon' }));
+  w.parts.push(part([0, 0.25, 2], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  return w;
+}
+
+// BedWars-style: two team islands, bridges, a middle island, blasters for everyone.
+export function bedBattle() {
+  const w = startWorld('#8fc8ff');
+  w.shooter = true;
+  w.parts.push(part([0, -20, 0], [2000, 1, 2000], '#ff3b1f', { name: 'Void', k: 'kill', m: 'neon' }));
+  for (const sx of [-1, 1]) {
+    const ix = sx * 45, c = sx < 0 ? '#1565c0' : '#c62828';
+    w.parts.push(part([ix, -0.5, 0], [30, 1, 30], c, { name: sx < 0 ? 'BlueIsland' : 'RedIsland', m: 'concrete' }));
+    w.parts.push(part([ix, 0.5, -8], [10, 1, 6], sx < 0 ? '#42a5f5' : '#ef5350', { name: sx < 0 ? 'BlueBed' : 'RedBed' }));
+    w.parts.push(part([ix, 0.25, 8], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+    w.parts.push(part([ix - sx * 8, 0.75, 6], [4, 0.5, 4], '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
+    w.parts.push(part([ix - sx * 20, 0, 0], [12, 1, 5], '#8d6e63', { name: 'Bridge', m: 'wood' }));
+  }
+  w.parts.push(part([0, -0.5, 0], [20, 1, 20], '#ffd54f', { name: 'MidIsland', m: 'sand' }));
+  for (const [x, z] of [[-5, -5], [5, 5], [0, 0], [-5, 5], [5, -5]]) w.parts.push(part([x, 1, z], [1.2, 1.2, 1.2], '#00e5ff', { name: 'Diamond', k: 'coin', m: 'neon' }));
+  w.parts.push(part([-25, 0.75, -6], [4, 0.5, 4], '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
+  w.parts.push(part([25, 0.75, -6], [4, 0.5, 4], '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
+  return w;
+}
+
+// 99 Nights-style: campfire, forest, cabin, things in the dark.
+export function forestCamp() {
+  const w = startWorld('#0b1026');
+  w.light = { tod: 0, ambient: 0.7, fog: 0.5 };
+  w.parts.push(part([0, -0.5, 0], [180, 1, 180], '#2e7d32', { name: 'Ground', m: 'grass' }));
+  const r = rng(99);
+  for (let i = 0; i < 36; i++) {
+    const tx = (r() - 0.5) * 160, tz = (r() - 0.5) * 160;
+    if (Math.abs(tx) < 15 && Math.abs(tz) < 15) continue;
+    w.parts.push(part([tx, 1.5, tz], [1, 3, 1], '#4e342e', { name: 'TreeTrunk', m: 'wood' }));
+    w.parts.push(part([tx, 4.5, tz], [3.5, 3.5, 3.5], '#1b5e20', { name: 'TreeTop', m: 'grass' }));
+  }
+  // Campfire: stone ring + fire + logs
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * Math.PI * 2;
+    w.parts.push(part([Math.cos(a) * 3, 0.25, Math.sin(a) * 3], [1, 0.5, 1], '#9e9e9e', { name: 'FireStone', m: 'concrete' }));
+  }
+  w.parts.push(part([0, 1.5, 0], [1.5, 3, 1.5], '#ff6d00', { name: 'Campfire', m: 'neon' }));
+  w.parts.push(part([-1.5, 0.5, 0], [3, 1, 1], '#5d4037', { name: 'Log', m: 'wood' }));
+  w.parts.push(part([1.5, 0.5, 0], [3, 1, 1], '#5d4037', { name: 'Log', m: 'wood' }));
+  // Cabin
+  w.parts.push(part([30, 2, -20], [12, 4, 10], '#8d6e63', { name: 'Cabin', m: 'wood' }));
+  w.parts.push(part([30, 4.5, -20], [13, 1, 11], '#5d4037', { name: 'CabinRoof', m: 'wood' }));
+  w.parts.push(part([30, 1, -14.8], [2, 2, 0.3], '#3e2723', { name: 'CabinDoor', m: 'wood' }));
+  // Shadows in the trees
+  for (const [x, z] of [[-50, 30], [50, -40], [0, 60]]) w.parts.push(part([x, 2, z], [2, 4, 2], '#212121', { name: 'Shadow', k: 'npc', enemy: true, dialog: 'Grrr...' }));
+  // Supplies
+  for (let i = 0; i < 10; i++) w.parts.push(part([(r() - 0.5) * 140, 1, (r() - 0.5) * 140], [1.2, 1.2, 1.2], '#ffd400', { name: 'Supply', k: 'coin', m: 'neon' }));
+  w.parts.push(part([0, 0.25, 6], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  return w;
+}
+
+// Pet Simulator-style: egg pedestals, coin trails, a hatch conveyor.
+export function petHatchery() {
+  const w = startWorld('#aee2ff');
+  w.parts.push(part([0, -0.5, 0], [120, 1, 120], '#7cb342', { name: 'Ground', m: 'grass' }));
+  w.parts.push(part([0, -0.25, 0], [40, 0.5, 40], '#b0bec5', { name: 'Plaza', m: 'concrete' }));
+  // Hatch arch at the south entrance
+  w.parts.push(part([-5, 2, 42], [1, 4, 1], '#ffffff', { name: 'ArchPillar' }));
+  w.parts.push(part([5, 2, 42], [1, 4, 1], '#ffffff', { name: 'ArchPillar' }));
+  w.parts.push(part([0, 4.5, 42], [12, 1, 1], '#ff80ab', { name: 'ArchTop', m: 'neon' }));
+  // Conveyor into the plaza
+  w.parts.push(part([0, 0.1, 30], [6, 0.2, 20], '#78909c', { name: 'HatchBelt', k: 'conv', conv: [0, -8], m: 'metal' }));
+  // Egg pedestals
+  const eggs = [[-15, -10, '#f48fb1', 'Pink Egg'], [0, -15, '#90caf9', 'Blue Egg'], [15, -10, '#fff59d', 'Gold Egg']];
+  for (const [x, z, c, name] of eggs) {
+    w.parts.push(part([x, 1, z], [4, 2, 4], '#ffffff', { name: 'Pedestal', m: 'concrete' }));
+    w.parts.push(part([x, 4, z], [3, 4, 3], c, { name, m: 'neon' }));
+  }
+  // Coin trails from the entrance to each egg
+  for (const [x, z] of eggs) {
+    for (let i = 1; i <= 3; i++) {
+      const t = i / 4;
+      w.parts.push(part([x * t, 1, 42 + (z - 42) * t], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+    }
+  }
+  // Plaza coins + fence + trees
+  for (const [x, z] of [[-8, 8], [8, 8], [0, -5], [-12, -2], [12, -2]]) w.parts.push(part([x, 1, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  for (let i = -54; i <= 54; i += 12) {
+    w.parts.push(part([i, 1, -54], [0.5, 2, 0.5], '#8d6e63', { name: 'Fence' }));
+    w.parts.push(part([i, 1, 54], [0.5, 2, 0.5], '#8d6e63', { name: 'Fence' }));
+  }
+  for (const [tx, tz] of [[-40, -40], [40, -40], [-40, 40], [40, 40]]) {
+    w.parts.push(part([tx, 1.5, tz], [1, 3, 1], '#5d4037', { name: 'TreeTrunk', m: 'wood' }));
+    w.parts.push(part([tx, 4.5, tz], [3.5, 3.5, 3.5], '#2e7d32', { name: 'TreeTop', m: 'grass' }));
+  }
+  w.parts.push(part([0, 0.25, 48], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  return w;
+}
+
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');

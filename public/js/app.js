@@ -65,7 +65,7 @@ function buildCharacter(avatar) {
   return _avatar3d.buildCharacter(avatar);
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=70ddbfe2';
-import { templates } from './worlds.js?v=u50';
+import { templates } from './worlds.js?v=ac7464c5';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
@@ -1424,7 +1424,7 @@ async function importFunFile(file) {
 
 async function createPage() {
   const mine = await api('GET', '/api/mygames');
-  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.'], ['blockverse', '🌌 Blockverse Portal Run', 'The Funtopia × Blockverse collab course — moving platforms, blink bridges, sweepers!'], ['bvPlaza', '🟩 Blockverse Plaza', 'Collab hangout plaza with the great portal, duel ring and parkour.'], ['stealablob', '🫧 Steal a Blob', 'Buy blobs on the conveyor, steal from rivals, slap thieves!'], ['skyIslands', '🏝️ Sky Islands', 'Hop floating islands, ride the sky ferry and portal shortcuts!'], ['raceTrack', '🏁 Race Track', 'Boost straights, an ice-slide corner and checkpoints.'], ['volcanoEscape', '🌋 Volcano Escape', 'Climb the volcano over lava — safe ledges and a shield included.'], ['snowPeak', '🏔️ Snow Peak', 'Ice slides and a low-gravity aurora zone to the summit.']];
+  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['heistCity', '🚔 Heist City', 'Cops and robbers! Rob the bank, break out of jail, rule the streets.'], ['whodunit', '🔍 Whodunit Mansion', 'A murder mystery mansion. Question the suspects, find the evidence.'], ['hauntedHotel', '🚪 Haunted Hotel', '20 doors. Something is down the hall. Find the exit.'], ['bedBattle', '🛏️ Bed Battle', 'Team islands, bridges and blasters. Protect your bed!'], ['forestCamp', '🔥 Forest Camp', 'Survive the nights. Keep the campfire burning.'], ['petHatchery', '🥚 Pet Hatchery', 'Hatch eggs, collect coins, grow your pet crew.']];
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button><button data-goto="#/funai">✨ FunAI</button></div>
@@ -1449,7 +1449,7 @@ function tplThumb(k) { return tplCache[k] ||= worldThumbnail(templates[k]()); }
 
 async function studioPage(id, tpl) {
   let g;
-  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', obby: 'Obby', hangout: 'Town', tower: 'Tower', coinRush: 'Islands', shooterArena: 'Shooter Arena', soccerField: 'Soccer', mysteryMansion: 'Mystery', garden: 'Garden', gauntlet: 'Gauntlet', blockverse: 'Blockverse Portal Run', bvPlaza: 'Blockverse Plaza', stealablob: 'Steal a Blob', skyIslands: 'Sky Islands', raceTrack: 'Race Track', volcanoEscape: 'Volcano Escape', snowPeak: 'Snow Peak' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
+  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', heistCity: 'Heist City', whodunit: 'Whodunit Mansion', hauntedHotel: 'Haunted Hotel', bedBattle: 'Bed Battle', forestCamp: 'Forest Camp', petHatchery: 'Pet Hatchery' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
   else { g = await api('GET', '/api/games/' + id); if (g.creator.toLowerCase() !== me.name.toLowerCase()) { toast('You can only edit your own games', true); location.hash = '#/games/' + id; return; } }
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
