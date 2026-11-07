@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=u50';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=760b33a4';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
@@ -11,7 +11,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music26';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=u50';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=70ddbfe2';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -1165,9 +1165,10 @@ export class Game {
     if (this.gearMesh) { this.gearMesh.parent?.remove(this.gearMesh); this.gearMesh = null; }
     const g = buildGear(this.me.avatar?.gear);
     if (g) {
-      const rarm = this.char.userData.limbs?.rarm;
-      g.position.set(0, -2, 0.5);
-      (rarm || this.char).add(g);
+      const limbs = this.char.userData.limbs || {};
+      const hand = limbs.rhand || limbs.rarm;
+      g.position.set(0, limbs.rhand ? -0.3 : -2, 0.5);
+      (hand || this.char).add(g);
       this.gearMesh = g;
     }
   }
@@ -1466,7 +1467,7 @@ export class Game {
     const pet = buildPet(p.avatar?.pet);
     if (pet) { pet.position.copy(char.position); this.scene.add(pet); }
     const gear = buildGear(p.avatar?.gear);
-    if (gear) { const rarm = char.userData.limbs?.rarm; gear.position.set(0, -2, 0.5); (rarm || char).add(gear); }
+    if (gear) { const limbs = char.userData.limbs || {}; const hand = limbs.rhand || limbs.rarm; gear.position.set(0, limbs.rhand ? -0.3 : -2, 0.5); (hand || char).add(gear); }
     const pl = { id: p.id, name: p.name, avatar: p.avatar, club: p.club, badge: p.badge, char, pet: pet || null, target: p.s ? [p.id, ...p.s] : null, emote: null };
     if (pl.target) char.position.set(pl.target[1], pl.target[2], pl.target[3]);
     this.players.set(p.id, pl);

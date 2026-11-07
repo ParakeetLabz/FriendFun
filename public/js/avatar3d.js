@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=u50';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=70ddbfe2';
 import { renderToDataURL } from './three-util.js?v=ac3e6f2b';
 import { isVerified } from './verified.js?v=6fb5be32';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -161,10 +161,14 @@ function attachExtras(root, avatar, opts = {}) {
   const gearIt = ITEM[avatar.gear];
   const gearGlb = opts.gear === false ? null : (gearIt && gearIt.model_url);
   const gearBoxes = opts.gear === false ? null : (GEAR_MODELS[avatar.gear] && GEAR_MODELS[avatar.gear].boxes);
+  // Held gear hangs from the hand: on the R15 rig that is limbs.rhand
+  // (end of the forearm); on the R6 rig it is the end of the one-piece arm.
+  const handAnchor = root.userData.limbs?.rhand || root.userData.limbs?.rarm;
+  const gearY = root.userData.limbs?.rhand ? -0.3 : -2;
   if (gearGlb) {
     const gear = new THREE.Group();
-    gear.position.set(0, -2, 0.5);
-    (root.userData.limbs?.rarm || root).add(gear);
+    gear.position.set(0, gearY, 0.5);
+    (handAnchor || root).add(gear);
     loadUgcGlb(gearGlb, 1.1, gearIt.model_transform).then(g => { if (gear.parent) gear.add(g); }).catch(() => {});
     root.userData.gear = gear;
   } else if (gearBoxes) {
@@ -176,9 +180,8 @@ function attachExtras(root, avatar, opts = {}) {
       gear.add(m);
     }
     gear.scale.setScalar(0.5);
-    const rarmG = root.userData.limbs?.rarm;
-    gear.position.set(0, -2, 0.5);
-    (rarmG || root).add(gear);
+    gear.position.set(0, gearY, 0.5);
+    (handAnchor || root).add(gear);
     root.userData.gear = gear;
   }
 }
@@ -433,14 +436,16 @@ const HEADS = {
 // Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
 const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody: '#66bb6a' };
 
-// ---------- R6 player rig ----------
-// Classic R6 shape language: exactly SIX rigid parts — Head, Torso,
-// Left Arm, Right Arm, Left Leg, Right Leg. Single-piece blocky limbs that
-// pivot at the shoulder/hip, torso 2x2x1, head sitting straight on the
-// torso (no neck, no waist, no elbows/knees, no separate hands/shoes).
-// smooth=true only softens the finish (tiny edge bevel + glossier material,
-// the classic parts have a slight bevel too) — the shapes stay R6.
-function buildR6(avatar, opts = {}, smooth = false) {
+// ---------- Player rig ----------
+// Two rigs, one builder. R6 (rig 'r6'): classic shape language, exactly
+// SIX rigid parts — Head, Torso, Left Arm, Right Arm, Left Leg, Right Leg.
+// Single-piece blocky limbs that pivot at the shoulder/hip, torso 2x2x1,
+// head sitting straight on the torso (no neck, no waist, no elbows/knees,
+// no separate hands/shoes). R15 (rig 'r15'): modern Roblox-style — the
+// same blocky language and total height, but arms and legs are two
+// segments with elbow/knee pivots plus a hand/foot at the end.
+// smooth=true only softens the finish (tiny edge bevel + glossier material).
+function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const C = { ...avatar.colors };
   const suitColor = BODY_SUITS[avatar.head];
   if (suitColor) for (const k of Object.keys(C)) C[k] = suitColor;
@@ -551,10 +556,62 @@ function buildR6(avatar, opts = {}, smooth = false) {
   const hatIt = ITEM[avatar.hat];
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
   else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
-  // R6 limbs: ONE rigid block per limb, pivot at the top.
+  // Limbs. R6: ONE rigid block per limb, pivot at the top.
   const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.userData.w = w; const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
-  let larm, rarm, lleg, rleg;
-  if (isBugs) {
+  // R15: a two-segment limb — upper + lower with an elbow/knee pivot,
+  // plus a hand/foot at the end. Returns { upper, lower, end } pivots.
+  // Same blocky language and same total height (hips at y=2, shoulders
+  // at y=4, feet at y=0); the end piece is a hand (arms) or a foot
+  // (legs: longer in z, pushed forward).
+  const limb2 = (x, y, color, wUp, hUp, wLow, hLow, endW, endH, endD, endZ = 0, endColor = null) => {
+    const upper = new THREE.Group(); upper.position.set(x, y, 0); upper.userData.w = wUp;
+    const um = part(wUp, hUp, wUp, color); um.position.y = -hUp / 2; upper.add(um); root.add(upper);
+    const lower = new THREE.Group(); lower.position.set(0, -hUp, 0); lower.userData.w = wLow;
+    const lm = part(wLow, hLow, wLow, color); lm.position.y = -hLow / 2; lower.add(lm); upper.add(lower);
+    const end = new THREE.Group(); end.position.set(0, -hLow, 0);
+    const em = part(endW, endH, endD, endColor || color); em.position.set(0, -endH / 2, endZ); end.add(em); lower.add(end);
+    return { upper, lower, end };
+  };
+  let larm, rarm, lleg, rleg, larmLow, rarmLow, lhand, rhand, llegLow, rlegLow, lfoot, rfoot;
+  if (rig === 'r15') {
+    if (isBugs) {
+      const aL = limb2(-1.35, 4, C.larm, 0.8, 0.85, 0.72, 0.8, 0.7, 0.3, 0.75);
+      const aR = limb2(1.35, 4, C.rarm, 0.8, 0.85, 0.72, 0.8, 0.7, 0.3, 0.75);
+      larm = aL.upper; larmLow = aL.lower; lhand = aL.end;
+      rarm = aR.upper; rarmLow = aR.lower; rhand = aR.end;
+      const gL = limb2(-0.45, 2, C.lleg, 0.9, 0.85, 0.82, 0.7, 0.95, 0.45, 1.7, 0.45, '#9e9e9e');
+      const gR = limb2(0.45, 2, C.rleg, 0.9, 0.85, 0.82, 0.7, 0.95, 0.45, 1.7, 0.45, '#9e9e9e');
+      lleg = gL.upper; llegLow = gL.lower; lfoot = gL.end;
+      rleg = gR.upper; rlegLow = gR.lower; rfoot = gR.end;
+      const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
+      tail.position.set(0, 2.3, -0.62); tail.castShadow = true; root.add(tail);
+      const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
+      belly.position.set(0, 2.9, 0.5); root.add(belly);
+    } else if (isDaffy) {
+      const aL = limb2(-1.35, 4, C.larm, 0.75, 0.85, 0.68, 0.8, 0.66, 0.3, 0.7);
+      const aR = limb2(1.35, 4, C.rarm, 0.75, 0.85, 0.68, 0.8, 0.66, 0.3, 0.7);
+      larm = aL.upper; larmLow = aL.lower; lhand = aL.end;
+      rarm = aR.upper; rarmLow = aR.lower; rhand = aR.end;
+      const gL = limb2(-0.4, 2, '#ff9800', 0.55, 0.9, 0.5, 0.82, 1.15, 0.28, 1.5, 0.5, '#ff9800');
+      const gR = limb2(0.4, 2, '#ff9800', 0.55, 0.9, 0.5, 0.82, 1.15, 0.28, 1.5, 0.5, '#ff9800');
+      lleg = gL.upper; llegLow = gL.lower; lfoot = gL.end;
+      rleg = gR.upper; rlegLow = gR.lower; rfoot = gR.end;
+      for (let i = -1; i <= 1; i++) {
+        const f = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), mat('#212121'));
+        f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
+      }
+    } else {
+      const armC = suit ? '#263238' : null;
+      const aL = limb2(-1.45, 4, armC || C.larm, 0.9, 0.9, 0.8, 0.85, 0.75, 0.3, 0.8, 0, C.larm);
+      const aR = limb2(1.45, 4, armC || C.rarm, 0.9, 0.9, 0.8, 0.85, 0.75, 0.3, 0.8, 0, C.rarm);
+      larm = aL.upper; larmLow = aL.lower; lhand = aL.end;
+      rarm = aR.upper; rarmLow = aR.lower; rhand = aR.end;
+      const gL = limb2(-0.5, 2, C.lleg, 0.95, 0.9, 0.85, 0.85, 0.85, 0.25, 1.25, 0.2);
+      const gR = limb2(0.5, 2, C.rleg, 0.95, 0.9, 0.85, 0.85, 0.85, 0.25, 1.25, 0.2);
+      lleg = gL.upper; llegLow = gL.lower; lfoot = gL.end;
+      rleg = gR.upper; rlegLow = gR.lower; rfoot = gR.end;
+    }
+  } else if (isBugs) {
     larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
     lleg = limb(-0.45, 2, C.lleg, 0.9); rleg = limb(0.45, 2, C.rleg, 0.9);
     for (const leg of [lleg, rleg]) {
@@ -581,18 +638,36 @@ function buildR6(avatar, opts = {}, smooth = false) {
     lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
   if (shirtOn && GL.arch !== 'vest') {
-    // sleeves riding the arm pivots, so they swing with every animation
-    for (const arm of [larm, rarm]) {
-      const w = (arm.userData.w || 1) + 0.16;
-      const sleeve = clothPart(w, 1.1, w, shirtMat);
-      sleeve.position.y = -0.55; arm.add(sleeve);
-      if (GL.cuffs) {
-        const cuff = clothPart(w + 0.08, 0.3, w + 0.08, trimMat);
-        cuff.position.y = -1.0; arm.add(cuff);
+    // sleeves riding the arm pivots, so they swing with every animation.
+    // R15 arms are two segments, so each gets its own sleeve, plus a cuff
+    // at the forearm end.
+    const pairs = rig === 'r15' ? [[larm, larmLow], [rarm, rarmLow]] : [[larm], [rarm]];
+    for (const [upper, lower] of pairs) {
+      const w = (upper.userData.w || 1) + 0.16;
+      if (rig === 'r15') {
+        const sleeve = clothPart(w, 0.95, w, shirtMat);
+        sleeve.position.y = -0.45; upper.add(sleeve);
+        const wLow = (lower.userData.w || 0.8) + 0.14;
+        const sleeveLow = clothPart(wLow, 0.85, wLow, shirtMat);
+        sleeveLow.position.y = -0.42; lower.add(sleeveLow);
+        if (GL.cuffs) {
+          const cuff = clothPart(wLow + 0.08, 0.28, wLow + 0.08, trimMat);
+          cuff.position.y = -0.82; lower.add(cuff);
+        }
+      } else {
+        const sleeve = clothPart(w, 1.1, w, shirtMat);
+        sleeve.position.y = -0.55; upper.add(sleeve);
+        if (GL.cuffs) {
+          const cuff = clothPart(w + 0.08, 0.3, w + 0.08, trimMat);
+          cuff.position.y = -1.0; upper.add(cuff);
+        }
       }
     }
   }
-  root.userData.limbs = { larm, rarm, lleg, rleg, head: headPivot, torso };
+  root.userData.rig = rig;
+  root.userData.limbs = rig === 'r15'
+    ? { larm, rarm, larmLow, rarmLow, lhand, rhand, lleg, rleg, llegLow, rlegLow, lfoot, rfoot, head: headPivot, torso }
+    : { larm, rarm, lleg, rleg, head: headPivot, torso };
   if (smooth) { root.userData.headPivot = headPivot; root.userData.smooth = true; }
   attachExtras(root, avatar, opts);
   // inner wrapper so the spin emote can rotate the body without fighting player facing
@@ -603,39 +678,52 @@ function buildR6(avatar, opts = {}, smooth = false) {
   return root;
 }
 
-// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
-export function buildCharacter(avatar, opts = {}) { return buildR6(avatar, opts, false); }
+// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs carries the
+// upper pivots (larm, rarm, lleg, rleg, head, torso) plus, on the R15 rig,
+// the lower pivots and hands/feet (larmLow, rarmLow, lhand, rhand, ...).
+// Modern Roblox-style rig: articulated R15-style limbs (elbows, knees,
+// hands, feet) in the same blocky language. The R6 builder is kept as
+// the fallback (buildCharacterR6 below).
+export function buildCharacter(avatar, opts = {}) { return buildRig(avatar, opts, false, avatar?.rig === 'r6' ? 'r6' : 'r15'); }
 
-// Advanced graphics: same R6 shapes, smoother finish (slight bevel + gloss).
-export function buildCharacterSmooth(avatar, opts = {}) { return buildR6(avatar, opts, true); }
+// Advanced graphics: same R15 shapes, smoother finish (slight bevel + gloss).
+export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r6' ? 'r6' : 'r15'); }
+
+// The old one-piece R6 rig, kept as a fallback.
+export function buildCharacterR6(avatar, opts = {}) { return buildRig(avatar, opts, false, 'r6'); }
 
 export function animateCharacter(ch, state, t, dt) {
   const L = ch.userData.limbs; if (!L) return;
-  // R6 animation: limbs are rigid — they swing as single parts, no joint bends.
+  // Animation: upper limbs swing as single parts; on the R15 rig the
+  // elbows/knees bend too (laf/raf/llf/rlf). R6 rigs ignore the joints.
   // Classic Roblox style: idle is statue-still, walk swings big, jump = arms straight up, fall = arms out
   // rotation.x > 0 swings a limb backwards (character faces +z); arms up ~ -PI
   if (L.torso.userData.baseY === undefined) L.torso.userData.baseY = L.torso.position.y;
   let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0, tp = 0, hp = 0;
+  // R15 joint angles: laf/raf = elbow bend, llf/rlf = knee bend.
+  let laf = 0.15, raf = 0.15, llf = 0.08, rlf = 0.08;
   const spin = ch.userData.spin;
   if (state === 'walk') {
     const s = Math.sin(t * 10);
     la = s * 1.05; ra = -s * 1.05; ll = -s * 1.05; rl = s * 1.05;
     laz = 0.14; raz = -0.14;
+    laf = 0.15 + Math.max(0, -s) * 0.4; raf = 0.15 + Math.max(0, s) * 0.4;
+    llf = Math.max(0, s) * 0.9; rlf = Math.max(0, -s) * 0.9;
     bob = Math.abs(Math.cos(t * 10)) * 0.14;
   }
-  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; }
-  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; }
-  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); }
-  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; }
-  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.6; }
-  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.6; ra = 0.6; laz = 0.5; raz = -0.5; }
-  else if (state === 'bow') { tp = 0.75; hp = 0.45; la = ra = 0.5; }
-  else if (state === 'cheer') { la = ra = -Math.PI + 0.35; bob = Math.abs(Math.sin(t * 10)) * 0.3; }
-  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.1; hp = 0.1 + s * 0.06; la = ra = -0.7; }
-  else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; }
-  else if (state === 'crouch') { ll = rl = -1.1; tp = 0.4; la = ra = 0.3; }
-  else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.1; }
-  else if (state === 'shrug') { la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; }
+  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; laf = raf = 0.5; llf = rlf = 0.6; }
+  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; laf = raf = 0.6; llf = rlf = 0.5; }
+  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); raf = -1.0 + Math.sin(t * 12) * 0.35; }
+  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; laf = raf = 0.5; llf = rlf = 0.3 + Math.abs(s) * 0.3; }
+  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.6; llf = rlf = Math.PI / 2; laf = raf = 0.4; }
+  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.6; ra = 0.6; laz = 0.5; raz = -0.5; laf = raf = 0.3; llf = rlf = 0.2; }
+  else if (state === 'bow') { tp = 0.75; hp = 0.45; la = ra = 0.5; laf = raf = 0.3; }
+  else if (state === 'cheer') { la = ra = -Math.PI + 0.35; bob = Math.abs(Math.sin(t * 10)) * 0.3; laf = raf = 0.4; llf = rlf = 0.3; }
+  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.1; hp = 0.1 + s * 0.06; la = ra = -0.7; laf = raf = 0.5; }
+  else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; laf = -1.6; raf = 0.2; llf = rlf = 0.2; }
+  else if (state === 'crouch') { ll = rl = -1.1; tp = 0.4; la = ra = 0.3; llf = rlf = 1.1; laf = raf = 0.4; }
+  else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.1; raf = -2.1; }
+  else if (state === 'shrug') { la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; laf = raf = 0.7; }
   // idle: perfectly still, like classic Roblox
   const k = Math.min(1, dt * 15);
   L.larm.rotation.x += (la - L.larm.rotation.x) * k;
@@ -644,6 +732,12 @@ export function animateCharacter(ch, state, t, dt) {
   L.rleg.rotation.x += (rl - L.rleg.rotation.x) * k;
   L.larm.rotation.z += (laz - L.larm.rotation.z) * k;
   L.rarm.rotation.z += (raz - L.rarm.rotation.z) * k;
+  if (L.larmLow) {
+    L.larmLow.rotation.x += (laf - L.larmLow.rotation.x) * k;
+    L.rarmLow.rotation.x += (raf - L.rarmLow.rotation.x) * k;
+    L.llegLow.rotation.x += (llf - L.llegLow.rotation.x) * k;
+    L.rlegLow.rotation.x += (rlf - L.rlegLow.rotation.x) * k;
+  }
   L.torso.position.y += ((L.torso.userData.baseY + bob) - L.torso.position.y) * k;
   L.torso.rotation.x += (tp - L.torso.rotation.x) * k;
   if (L.head) L.head.rotation.x += (hp - L.head.rotation.x) * k;

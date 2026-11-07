@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=ac3e6f2b';
-import { CATALOG } from './catalog.js?v=u50';
+import { CATALOG } from './catalog.js?v=70ddbfe2';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -88,7 +88,7 @@ export class Studio {
     <div class="studio">
       <div class="st-top">
         <div class="st-title"><span class="ff-mini">FF</span> Funtopia Studio <span class="st-gname">${esc(this.name)}</span><span class="st-dirty"></span></div>
-        <div class="st-top-actions"><button class="st-act" data-a="save">Save</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
+        <div class="st-top-actions"><button class="st-act" data-a="save">Save</button><button class="st-act" data-a="fun" title="Download this game as a .fun file">⬇ .fun</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
       </div>
       <div class="st-ribbon">
         <div class="rb-group"><div class="rb-row">
@@ -142,7 +142,7 @@ export class Studio {
       const i = e.target.closest('[data-insert]'); if (i) this.insert(i.dataset.insert);
       const a = e.target.closest('[data-a]')?.dataset.a;
       if (a === 'dup') this.duplicate(); if (a === 'del') this.remove(); if (a === 'undo') this.undo(); if (a === 'redo') this.redo(); if (a === 'stairs') this.stairs(); if (a === 'mirror') this.mirror();
-      if (a === 'play') this.play(); if (a === 'testobby') this.testObby(); if (a === 'save') this.save(); if (a === 'publish') this.publishDialog(); if (a === 'exit') this.exit();
+      if (a === 'play') this.play(); if (a === 'testobby') this.testObby(); if (a === 'save') this.save(); if (a === 'fun') this.downloadFun(); if (a === 'publish') this.publishDialog(); if (a === 'exit') this.exit();
     });
     q('.rb-color').oninput = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.c = e.target.value; this.refresh(p); } } };
     q('.rb-mat').onchange = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.m = e.target.value; this.refresh(p); } } };
@@ -820,6 +820,18 @@ export class Studio {
       return true;
     } catch (e) { this.o.toast(e.message, true); return false; }
   }
+  // Download this game as a .fun file: JSON with the game's Name,
+  // description and world (parts + scripts). Load it back from Create.
+  downloadFun() {
+    const data = { format: 'fun', version: 1, name: this.name, description: this.description || '', world: this.world };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (this.name || 'game').replace(/[^a-z0-9 _-]+/gi, '').trim().replace(/\s+/g, '-') + '.fun';
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    this.o.toast('Downloaded ' + a.download);
+  }
+
   publishDialog() {
     const d = document.createElement('div'); d.className = 'modal-bg';
     d.innerHTML = `<div class="modal"><h2>Publish to Funtopia</h2>

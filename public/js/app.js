@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=u50').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=760b33a4').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -64,7 +64,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=u50';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=70ddbfe2';
 import { templates } from './worlds.js?v=u50';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
@@ -811,7 +811,7 @@ async function playPage(id, server) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=u50');
+  const { Game } = await import('./game.js?v=f02b1ba8');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -823,14 +823,14 @@ async function playPage(id, server) {
 const SKIN = ['#f5cd30', '#ffcc99', '#e8b98a', '#c68e5b', '#8d5524', '#5c3a1e', '#ffffff', '#a3a2a5', '#1b2a35', '#0d69ac', '#6e99ca', '#2f8cff', '#a4bd47', '#4b974b', '#287f47', '#c4281c', '#ff66cc', '#8a4bd8', '#da8541', '#ffd400', '#000000', '#7c5c46'];
 async function avatarPage(tab = 'body') {
   try { await ensureAvatar3d(); } catch {}
-  const av = structuredClone(me.avatar); av.head ??= 'head_classic';
+  const av = structuredClone(me.avatar); av.head ??= 'head_classic'; av.rig ??= 'r15';
   let part = 'all';
   mount('avatar', `
     <h1>Avatar Editor</h1><button class="btn-secondary av-random">🎲 Randomize outfit</button> <a class="btn-secondary" href="#/skinmaker">🎨 AI Skin Maker</a>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
-        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'vehicle'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles' }[t]}</button>`).join('')}</div>
+        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'vehicle', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles', rig: 'Rig' }[t]}</button>`).join('')}</div>
         <div class="av-body"></div>
       </div>
     </div>`, () => {
@@ -865,6 +865,11 @@ async function avatarPage(tab = 'body') {
         const apply = c => { (part === 'all' ? Object.keys(av.colors) : [part]).forEach(k => (av.colors[k] = c)); rebuild(); render(); save(); };
         body.querySelectorAll('[data-c]').forEach(b => b.onclick = () => apply(b.dataset.c));
         body.querySelector('input[type=color]').onchange = e => apply(e.target.value);
+      } else if (tab === 'rig') {
+        // R6 = classic one-piece limbs, R15 = modern Roblox-style articulated limbs
+        const rigs = [['r6', 'R6 Classic', 'The classic look — one-piece arms and legs.'], ['r15', 'R15 Modern', 'Modern Roblox style — elbows, knees, hands and feet.']];
+        body.innerHTML = `<div class="item-grid">${rigs.map(([k, n, d]) => `<button class="item ${av.rig === k ? 'worn' : ''}" data-rig="${k}"><img src="${avatarImage({ ...av, rig: k }, 'full')}"><span>${n}</span><span class="muted small">${d}</span></button>`).join('')}</div>`;
+        body.querySelectorAll('[data-rig]').forEach(b => b.onclick = () => { av.rig = b.dataset.rig; rebuild(); render(); save(); });
       } else {
         const owned = CATALOG.filter(i => i.type === tab && (me.inventory.includes(i.id) || i.id === tab + '_none'))
           .concat(UGC_LIST.filter(u => u.type === tab && me.inventory.includes(u.id)));
@@ -1399,6 +1404,24 @@ async function profilePage(name) {
   });
 }
 
+// Load a game from a .fun file: JSON with the game's Name, description and
+// world (parts + scripts). Creates it as a new private experience and opens
+// it in Studio. The server sanitizes the world on POST /api/games.
+async function importFunFile(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('That .fun file is too big (max 5 MB)', true); return; }
+  let data;
+  try { data = JSON.parse(await file.text()); } catch { toast('That file is not a valid .fun file', true); return; }
+  const base = file.name.replace(/\.(fun|json)$/i, '');
+  const name = String(data?.name || base || 'Untitled Game').slice(0, 50);
+  const world = data?.world;
+  if (!world || typeof world !== 'object' || !Array.isArray(world.parts)) { toast('This .fun file has no game world in it', true); return; }
+  toast('Loading ' + name + '…');
+  const g = await api('POST', '/api/games', { name, description: String(data.description || '').slice(0, 1000), world, publish: false });
+  if (g?.id) { toast('Loaded ' + name + ' — opened in Studio'); location.hash = '#/studio/' + g.id; }
+  else toast('Could not load that .fun file', true);
+}
+
 async function createPage() {
   const mine = await api('GET', '/api/mygames');
   const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['obby', 'Obby', 'A 16-stage obstacle course to remix.'], ['hangout', 'Town', 'A small town with houses and trees.'], ['tower', 'Tower Climb', 'A spiral climbing challenge.'], ['coinRush', 'Islands', 'Floating islands full of coins.'], ['shooterArena', 'Shooter Arena', 'A PvP battle arena. Everyone gets a free blaster!'], ['soccerField', '⚽ Soccer', 'Kick the ball into the goal! First to score wins.'], ['mysteryMansion', '🔍 Mystery', 'Find all 5 clues hidden in the mansion!'], ['garden', '🌻 Garden', 'Plant seeds, grow crops, harvest for FunTix!'], ['gauntlet', '👹 Horror Gauntlet', 'A 5-zone nightmare course with moving platforms, blink bridges and sweepers.'], ['blockverse', '🌌 Blockverse Portal Run', 'The Funtopia × Blockverse collab course — moving platforms, blink bridges, sweepers!'], ['bvPlaza', '🟩 Blockverse Plaza', 'Collab hangout plaza with the great portal, duel ring and parkour.'], ['stealablob', '🫧 Steal a Blob', 'Buy blobs on the conveyor, steal from rivals, slap thieves!'], ['skyIslands', '🏝️ Sky Islands', 'Hop floating islands, ride the sky ferry and portal shortcuts!'], ['raceTrack', '🏁 Race Track', 'Boost straights, an ice-slide corner and checkpoints.'], ['volcanoEscape', '🌋 Volcano Escape', 'Climb the volcano over lava — safe ledges and a shield included.'], ['snowPeak', '🏔️ Snow Peak', 'Ice slides and a low-gravity aurora zone to the summit.']];
@@ -1408,12 +1431,17 @@ async function createPage() {
     <a href="#/funai" style="display:block;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(124,58,237,.35)"><span style="font-weight:900;font-size:18px">✨ Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
+    <section><div class="sec-h"><h2>Load a .fun file</h2></div>
+      <p class="muted">Got a <b>.fun</b> game file? It holds the game's scripts and a JSON with its name — load it and it opens as a new experience you can edit in Studio.</p>
+      <div class="row"><button class="btn-secondary" id="funImportBtn">📂 Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
     <section><div class="sec-h"><h2>My Experiences (${mine.length})</h2></div>
       <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
         <a class="btn-secondary" href="#/studio/${g.id}">Edit</a><a class="btn-secondary" href="#/games/${g.id}">View</a><button class="btn-danger" data-del="${g.id}">Delete</button></div>`).join('') || '<p class="muted">You haven\'t made anything yet. Pick a template above to open Funtopia Studio!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => location.hash = b.dataset.goto);
     setTimeout(() => app.querySelectorAll('img[data-tpl]').forEach(img => { img.src = tplThumb(img.dataset.tpl); }), 30);
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => confirmModal('Delete Experience', 'This cannot be undone. Delete it?', 'Delete', async () => { await api('DELETE', '/api/games/' + b.dataset.del); createPage(); }));
+    app.querySelector('#funImportBtn').onclick = () => app.querySelector('#funImport').click();
+    app.querySelector('#funImport').onchange = e => importFunFile(e.target.files[0]);
   });
 }
 const tplCache = {};
@@ -1426,13 +1454,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=u50');
+  const { Studio } = await import('./studio.js?v=d836a835');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=u50');
+      const { Game: GameClass } = await import('./game.js?v=f02b1ba8');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
