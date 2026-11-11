@@ -183,15 +183,17 @@ export async function ownerPage(D, q = '') {
       <div class="site-state muted small"></div>
     </section>
     <section class="admin-section owner-tools"><h3>🎉 100 Players Party <span class="muted small">milestone event</span></h3>
-      <p class="muted">${party.active ? '<b style="color:#ff2d95">🎉 THE PARTY IS LIVE!</b>' : `We're at <b>${partyCount} / ${partyGoal} players</b> — start the party when we hit 100!`}</p>
+      <p class="muted">${party.active ? '<b style="color:#ff2d95">🎉 THE PARTY IS LIVE!</b>' : party.alreadyHappened ? '<b>🎉 The party already happened — it was one-time only, and the Neon Party Hat will never come back.</b>' : `We're at <b>${partyCount} / ${partyGoal} players</b> — start the party when we hit 100!`}</p>
       <div class="party100-bar"><div class="party100-bar-fill" style="width:${partyPct}%"></div></div>
       <p class="muted small">${partyPct}% to ${partyGoal} players</p>
       <div class="owner-grid">
         ${party.active
           ? `<span class="admin-inline"><a class="btn-primary" href="#/play/g_party100">▶ Open the Party</a><button class="btn-danger party-stop">End the Party</button></span>`
-          : `<span class="admin-inline"><button class="btn-primary party-start">🎉 Start the Party</button></span>`}
+          : party.alreadyHappened
+            ? `<span class="muted small">The party can never be started again.</span>`
+            : `<span class="admin-inline"><button class="btn-primary party-start">🎉 Start the Party</button></span>`}
       </div>
-      <p class="muted small">Starting the party creates the 🎉 100 Players Party plaza (disco floor, DJ, cake) and gives every player the free Neon Party Hat 🎉 while it lasts. Ending it removes the party game.</p>
+      <p class="muted small">Starting the party creates the 🎉 100 Players Party plaza (disco floor, DJ, cake) and gives every player the free Neon Party Hat 🎉 while it lasts. One-time only: once the party ends, it can never be started again — and neither can the Neon Party Hat.</p>
     </section>
     <section class="admin-section owner-tools"><h3>👑 FriendClub <span class="muted small">danger zone</span></h3>
       <button class="btn-danger club-reset-all">Remove FriendClub from everyone except @fun</button>
@@ -269,7 +271,7 @@ export async function ownerPage(D, q = '') {
     };
     const partyStop = app.querySelector('.party-stop');
     if (partyStop) partyStop.onclick = async () => {
-      if (!confirm('End the party? The party plaza will be removed.')) return;
+      if (!confirm('End the party? This is ONE-TIME ONLY — the party and the Neon Party Hat can never come back.')) return;
       try { await api('POST', '/api/admin/party/stop', {}); toast('Party ended'); ownerPage(D, q); }
       catch (e) { toast(e.message, true); }
     };

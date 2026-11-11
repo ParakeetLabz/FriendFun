@@ -10,8 +10,11 @@ export const PARTY_GAMES = [
 
 export async function seedPartyGames(supabase, sanitizeWorld) {
   try {
-    const { data: ex } = await supabase.from('games').select('id').eq('event', 'party100');
-    const haveIds = new Set((ex || []).map(g => g.id));
+    const { data: ex } = await supabase.from('games').select('id,unpublished').eq('event', 'party100');
+    const rows = ex || [];
+    // One-time only: an ended party leaves an unpublished marker row behind — it can never come back.
+    if (rows.some(g => g.unpublished)) return { created: 0, alreadyHappened: true };
+    const haveIds = new Set(rows.map(g => g.id));
     const wantIds = PARTY_GAMES.map(g => g.id);
     if (!process.env.PARTY_RESEED && wantIds.every(id => haveIds.has(id))) return { created: 0 };
     await supabase.from('games').delete().eq('event', 'party100');
@@ -29,10 +32,11 @@ export async function seedPartyGames(supabase, sanitizeWorld) {
 
 export async function endPartyGames(supabase) {
   try {
-    const { data: ex } = await supabase.from('games').select('id').eq('event', 'party100');
+    const { data: ex } = await supabase.from('games').select('id').eq('event', 'party100').eq('unpublished', false);
     const n = (ex || []).length;
-    if (!n) return { removed: 0 };
-    await supabase.from('games').delete().eq('event', 'party100');
-    return { removed: n };
-  } catch (e) { console.warn('party end err', e.message); return { removed: 0 }; }
+    if (!n) return { ended: 0 };
+    // Don't delete: mark unpublished so the row stays as the "already happened" marker (hidden from Discover).
+    await supabase.from('games').update({ unpublished: true }).eq('event', 'party100').eq('unpublished', false);
+    return { ended: n };
+  } catch (e) { console.warn('party end err', e.message); return { ended: 0 }; }
 }

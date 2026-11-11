@@ -2469,7 +2469,7 @@ let partyCache = { active: false, at: 0 };
 async function partyActive() {
   if (Date.now() - partyCache.at < 60000) return partyCache.active;
   try {
-    const { data } = await supabase.from('games').select('id').eq('event', 'party100').limit(1);
+    const { data } = await supabase.from('games').select('id').eq('event', 'party100').eq('unpublished', false).limit(1);
     partyCache = { active: !!(data && data.length), at: Date.now() };
   } catch { partyCache = { active: false, at: Date.now() }; }
   return partyCache.active;
@@ -2477,6 +2477,7 @@ async function partyActive() {
 app.post('/api/admin/party/start', auth, async (req, res) => {
   if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
   const r = await seedPartyGames(supabase, sanitizeWorld);
+  if (r.alreadyHappened) return res.status(403).json({ error: 'The 100 Players Party already happened — it can never come back.' });
   partyCache = { active: true, at: Date.now() };
   const { count } = await supabase.from('users').select('name', { count: 'exact', head: true });
   res.json({ ...r, count: count || 0, goal: PARTY_GOAL });
@@ -2488,9 +2489,10 @@ app.post('/api/admin/party/stop', auth, async (req, res) => {
   res.json(r);
 });
 app.get('/api/event/party', auth, async (req, res) => {
-  const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'party100').order('id');
+  const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'party100').eq('unpublished', false).order('id');
+  const { data: ended } = await supabase.from('games').select('id').eq('event', 'party100').eq('unpublished', true).limit(1);
   const { count } = await supabase.from('users').select('name', { count: 'exact', head: true });
-  res.json({ id: 'party100', name: '100 Players Party', goal: PARTY_GOAL, count: count || 0, active: !!(games && games.length), games: games || [] });
+  res.json({ id: 'party100', name: '100 Players Party', goal: PARTY_GOAL, count: count || 0, active: !!(games && games.length), alreadyHappened: !!(ended && ended.length), games: games || [] });
 });
 
 // PvP shooter arenas (seeded once, never deleted)
