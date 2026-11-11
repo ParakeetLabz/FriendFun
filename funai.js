@@ -5,10 +5,15 @@ import { ITEM, CATALOG, DEFAULT_AVATAR } from './public/js/catalog.js';
 // WORLD: { title, description, world: { sky, parts } } in exactly the
 // shape POST /api/games + sanitizeWorld expect, so the client can save
 // it as a real Funtopia experience and open it in Studio.
-// The AI call goes to Zayd's ZStudio API (studio.zaydshub.com/api/chat)
-// with the ZStudio key kept SERVER-SIDE in the FUNAI_API_KEY env var on
+// The AI call goes straight to Groq (api.groq.com/openai/v1/chat/completions)
+// with the Groq key kept SERVER-SIDE in the FUNAI_API_KEY env var on
 // Render — the key never ships to browsers or into this repo.
-const ZSTUDIO_URL = 'https://studio.zaydshub.com/api/chat';
+// (Nov 11, 2026: was ZStudio studio.zaydshub.com/api/chat, but ZStudio
+// validates keys against Vercel Blob, which is suspended — every key
+// failed with STORE_ERROR "Blob read failed". Groq's API is
+// OpenAI-compatible: same {model, messages} request and
+// choices[0].message.content reply, so nothing else had to change.)
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const SYSTEM = [
   'You are FunAI, a game maker AI inside Funtopia. You design a 3D block world for Funtopia Studio.',
@@ -231,7 +236,7 @@ async function callAI(key, messages, extract, failMsg, nudgeForAttempt) {
         const msgs = attempt === 0 ? messages : [...messages, { role: 'user', content: nudgeForAttempt(attempt) }];
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 90000);
-        const r = await fetch(ZSTUDIO_URL, {
+        const r = await fetch(GROQ_URL, {
           method: 'POST', signal: ctl.signal,
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
           body: JSON.stringify({ model, messages: msgs }),
