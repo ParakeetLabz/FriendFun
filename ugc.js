@@ -2,7 +2,7 @@
 import crypto from 'crypto';
 export const ugcState = { items: {}, tableOk: true, bucketOk: false };
 export function createUgc(D) {
-  const { app, auth, modOnly, supabase, supabaseAdmin, SUPABASE_URL, ITEM, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT, UGC_BUCKET, UGC_GLB_MAX, filter, key, list, ugcDef, validUgcTransform, ensureUgcBucket } = D;
+  const { app, auth, modOnly, supabase, supabaseAdmin, SUPABASE_URL, ITEM, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT, UGC_BUCKET, UGC_GLB_MAX, filter, key, list, ugcDef, validUgcTransform, ensureUgcBucket, loadUgcItems, logMod } = D;
   const ugcPublic = u => ({ id: u.id, type: u.type, name: u.name, price: u.price, color: u.color, template: u.template, model_url: u.model_url || null, model_transform: u.model_transform || null, creator: u.creator, sales: u.sales });
   // Upload a .glb model file (base64). Returns a public URL; the item is created separately.
   app.post('/api/ugc/model', auth, async (req, res) => {
@@ -64,7 +64,12 @@ export function createUgc(D) {
       res.json({ ok: true, item: { ...ugcPublic(ugcDef(data)), status: 'pending' } });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
-  app.get('/api/ugc/status', auth, (req, res) => res.json({ table: ugcState.tableOk, bucket: ugcState.bucketOk }));
+  app.get('/api/ugc/status', auth, async (req, res) => {
+    // Re-check on demand: the bucket/table may have appeared since boot (no restart needed).
+    if (!ugcState.tableOk) await loadUgcItems();
+    if (!ugcState.bucketOk) await ensureUgcBucket();
+    res.json({ table: ugcState.tableOk, bucket: ugcState.bucketOk });
+  });
   app.get('/api/ugc/mine', auth, async (req, res) => {
     if (!ugcState.tableOk) return res.json([]);
     const { data } = await supabase.from('ugc_items').select('*').eq('creator', req.user.name).order('created_at', { ascending: false });

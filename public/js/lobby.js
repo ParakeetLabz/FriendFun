@@ -2,7 +2,7 @@
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=760b33a4';
-import { scaryAvatar } from './catalog.js?v=70ddbfe2';
+import { scaryAvatar } from './catalog.js?v=fabe5f21';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

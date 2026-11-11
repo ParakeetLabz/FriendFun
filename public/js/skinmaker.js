@@ -4,7 +4,7 @@
 // with the same PUT /api/me/avatar the Avatar Editor uses — the server
 // still enforces ownership on save, so a look can never grant free items.
 // Your shelf lives in this browser, like the FunAI world shelf.
-import { ITEM } from './catalog.js?v=70ddbfe2';
+import { ITEM } from './catalog.js?v=fabe5f21';
 
 const SLOTS = [['head', 'Head'], ['face', 'Face'], ['hat', 'Hat'], ['shirt', 'Shirt']];
 const COLOR_LABELS = [['head', 'Head'], ['torso', 'Torso'], ['larm', 'Left arm'], ['rarm', 'Right arm'], ['lleg', 'Left leg'], ['rleg', 'Right leg']];

@@ -305,7 +305,7 @@ export const CATALOG = [
   { id: 'pass_faststeal', type: 'pass', name: 'Fast Steal', price: 250, emoji: '⚡', color: '#3ee6c4' },
   { id: 'pass_bigstart', type: 'pass', name: 'Big Start +500', price: 200, emoji: '🪙', color: '#ff9f43' },
   { id: 'hat_wizard_star', type: 'hat', name: 'Star Wizard Hat', price: 450, emoji: '🧙', color: '#311b92' },
-  { id: 'hat_party_neon', type: 'hat', name: 'Neon Party Hat', price: 200, emoji: '🎉', color: '#ff2d95' },
+  { id: 'hat_party_neon', type: 'hat', name: 'Neon Party Hat', price: 0, limited: true, emoji: '🎉', color: '#ff2d95' },
   { id: 'hat_cap_flame', type: 'hat', name: 'Flame Cap', price: 250, emoji: '🔥', color: '#e64a19' },
   { id: 'shirt_polo_pink', type: 'shirt', name: 'Pink Polo', price: 200, emoji: '👕', color: '#f48fb1' },
   { id: 'shirt_vest_gold', type: 'shirt', name: 'Gold Vest', price: 400, emoji: '✨', color: '#c9a227' },

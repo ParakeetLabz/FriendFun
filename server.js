@@ -58,6 +58,9 @@ function validUgcTransform(t) {
 }
 async function ensureUgcBucket() {
   try {
+    // If the bucket already exists (e.g. created in the Supabase dashboard), that's enough — no create permission needed.
+    const { data: existing } = await supabaseAdmin.storage.getBucket(UGC_BUCKET);
+    if (existing) { ugcState.bucketOk = true; return; }
     const { error } = await supabaseAdmin.storage.createBucket(UGC_BUCKET, { public: true });
     if (error && !/exists|duplicate/i.test(error.message)) throw error;
     ugcState.bucketOk = true;
@@ -1742,7 +1745,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 function send(ws, msg) { if (ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function broadcast(room, msg, except) { const s = JSON.stringify(msg); for (const p of room.players.values()) if (p.ws !== except && p.ws.readyState === 1) p.ws.send(s); }
 createNews({ app, auth, rooms, broadcast, isOwner });
-createUgc({ app, auth, modOnly, supabase, supabaseAdmin, SUPABASE_URL, ITEM, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT, UGC_BUCKET, UGC_GLB_MAX, filter, key, list, ugcDef, validUgcTransform, ensureUgcBucket });
+createUgc({ app, auth, modOnly, supabase, supabaseAdmin, SUPABASE_URL, ITEM, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT, UGC_BUCKET, UGC_GLB_MAX, filter, key, list, ugcDef, validUgcTransform, ensureUgcBucket, loadUgcItems, logMod });
 createHacker({ app, auth, rooms, broadcast, isOwner });
 createFunAI({ app, auth });
 

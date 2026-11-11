@@ -11,7 +11,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music26';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=70ddbfe2';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=fabe5f21';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
