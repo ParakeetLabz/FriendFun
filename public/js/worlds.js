@@ -814,7 +814,63 @@ export function petHatchery() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery };
+export function partyPlaza() {
+  const w = startWorld('#1a1033');
+  w.light = { tod: 21, ambient: 1, fog: 0.3 };
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  P(0, -0.5, 0, 220, 1, 220, '#241a3d', { name: 'PartyGround', m: 'concrete' });
+  P(0, 0.25, 0, 6, 0.5, 6, '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' });
+  // disco dance floor: 8x8 neon tiles, half of them blinking
+  const cols = ['#ff2d95', '#7c4dff', '#00e5ff', '#ffd400'];
+  for (let ix = 0; ix < 8; ix++) for (let iz = 0; iz < 8; iz++) {
+    const i = ix * 8 + iz;
+    const extra = { name: 'Disco' + i, m: 'neon' };
+    if ((ix + iz) % 2 === 0) extra.blink = { on: 1.1, off: 1.1, ph: (i % 8) * 0.28 };
+    P(-10.5 + ix * 3, 0.3, -10.5 + iz * 3, 2.8, 0.6, 2.8, cols[i % 4], extra);
+  }
+  // disco ball bobbing over the floor
+  P(0, 14, 0, 3, 3, 3, '#e0e0e0', { name: 'DiscoBall', m: 'metal', mv: { a: 'y', d: 2, s: 0.8 } });
+  P(0, 16.5, 0, 0.4, 2, 0.4, '#9e9e9e', { name: 'DiscoChain', m: 'metal' });
+  // stage (north) with neon backdrop + speakers + DJ
+  P(0, 1, -34, 40, 2, 16, '#3d2b63', { name: 'Stage' });
+  P(0, 8, -41, 40, 12, 1, '#ff2d95', { name: 'StageBackdrop', m: 'neon' });
+  P(0, 8, -40.4, 34, 9, 0.4, '#7c4dff', { name: 'StageGlow', m: 'glass', cc: false, tr: 0.5 });
+  for (const sx of [-18, 18]) {
+    P(sx, 4, -36, 4, 6, 4, '#111111', { name: 'Speaker' });
+    P(sx, 6.5, -36, 4, 1, 4, '#00e5ff', { name: 'SpeakerTrim', m: 'neon' });
+  }
+  P(-6, 4.5, -36, 2, 5, 2, '#5c6bc0', { name: 'DJ Funtopia', k: 'npc', dialog: 'We did it — 100 players strong! 🎉 Grab your free Neon Party Hat from your inventory and dance!' });
+  // cake table (east) + 3-tier cake
+  P(24, 1.5, 6, 10, 3, 5, '#5d4037', { name: 'CakeTable', m: 'wood' });
+  P(24, 4.5, 6, 5, 2, 4, '#ffffff', { name: 'CakeTier1' });
+  P(24, 6.5, 6, 3.5, 2, 3, '#ff8fb3', { name: 'CakeTier2' });
+  P(24, 8.5, 6, 2, 2, 2, '#ffd400', { name: 'CakeTier3' });
+  P(24, 10, 6, 0.4, 1, 0.4, '#ff2d95', { name: 'Candle', m: 'neon' });
+  // balloon clusters in the corners
+  for (const [bx, bz, bc] of [[-28, 18, '#ff2d95'], [28, 18, '#00e5ff'], [-28, -18, '#ffd400'], [28, -18, '#7c4dff']]) {
+    P(bx, 2, bz, 0.5, 4, 0.5, '#9e9e9e', { name: 'BalloonPole', m: 'metal' });
+    P(bx - 1, 5, bz, 1.6, 1.6, 1.6, bc, { name: 'Balloon', m: 'neon' });
+    P(bx + 1, 5.4, bz, 1.6, 1.6, 1.6, bc, { name: 'Balloon', m: 'neon' });
+    P(bx, 6.4, bz, 1.6, 1.6, 1.6, bc, { name: 'Balloon', m: 'neon' });
+  }
+  // coin ring around the dance floor
+  for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; P(Math.cos(a) * 20, 2.2, Math.sin(a) * 20, 1.2, 1.2, 1.2, '#ffd400', { name: 'PartyCoin', k: 'coin' }); }
+  // fun pads
+  P(-24, 0.35, -6, 4, 0.5, 4, '#00e5ff', { name: 'BouncePad', k: 'bounce', m: 'neon' });
+  P(24, 0.35, -6, 4, 0.5, 4, '#00e5ff', { name: 'BouncePad', k: 'bounce', m: 'neon' });
+  P(0, 0.35, 24, 4, 0.5, 4, '#ff9800', { name: 'SpeedPad', k: 'speed', m: 'neon' });
+  P(-14, 2, 24, 1.6, 1.6, 1.6, '#ff5b5b', { name: 'PartyHeal', k: 'heal', m: 'neon' });
+  // party trees with neon canopies
+  for (const [tx, tz, cc] of [[-40, 30, '#ff2d95'], [40, 30, '#7c4dff'], [-40, -30, '#00e5ff'], [40, -30, '#ffd400']]) {
+    P(tx, 3, tz, 1.6, 6, 1.6, '#5d4037', { name: 'Trunk', m: 'wood' });
+    P(tx, 8, tz, 6, 4, 6, cc, { name: 'Canopy', m: 'neon' });
+  }
+  // greeter near spawn
+  P(5, 3.5, 8, 2, 5, 2, '#5c6bc0', { name: 'Greeter', k: 'npc', dialog: 'Welcome to the 100 Players Party! The Neon Party Hat is FREE while the party lasts — check your inventory! 🎉' });
+  return w;
+}
+
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, partyPlaza };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');

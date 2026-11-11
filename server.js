@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import { templates, hwMansion, hwPumpkin, hwWitch, hwGhost, hwBase, shooterArena, shooterFort, shooterRooftop } from './public/js/worlds.js';
 import { HALLOWEEN_GAMES, seedHalloweenGames } from './halloween.js';
 import { BLOCKVERSE_GAMES, seedBlockverseGames } from './collab.js';
+import { PARTY_PRIZE, PARTY_GOAL, seedPartyGames, endPartyGames } from './party.js';
 import { ITEM, CATALOG, DEFAULT_AVATAR, ECON, BADGES, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT } from './public/js/catalog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -368,6 +369,14 @@ app.get('/api/me', auth, async (req, res) => {
     const missBv = BV_PRIZE.filter(id => !u.inventory.includes(id));
     if (missBv.length) {
       u.inventory = [...u.inventory, ...missBv];
+      await supabase.from('users').update({ inventory: u.inventory }).eq('name', u.name);
+    }
+  }
+  // 100 Players Party: free Neon Party Hat for everyone while the party lasts
+  if (await partyActive()) {
+    const missParty = PARTY_PRIZE.filter(id => !u.inventory.includes(id));
+    if (missParty.length) {
+      u.inventory = [...u.inventory, ...missParty];
       await supabase.from('users').update({ inventory: u.inventory }).eq('name', u.name);
     }
   }
@@ -2450,6 +2459,35 @@ app.get('/api/event/blockverse', auth, async (req, res) => {
   const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'blockverse').order('id');
   const e = BLOCKVERSE_EVENT;
   res.json({ id: e.id, name: e.name, starts: e.starts, ends: e.ends, active: blockverseActive(), games: games || [] });
+});
+
+// 100 Players Party (Nov 2026) — owner-triggered from the Owner Panel
+let partyCache = { active: false, at: 0 };
+async function partyActive() {
+  if (Date.now() - partyCache.at < 60000) return partyCache.active;
+  try {
+    const { data } = await supabase.from('games').select('id').eq('event', 'party100').limit(1);
+    partyCache = { active: !!(data && data.length), at: Date.now() };
+  } catch { partyCache = { active: false, at: Date.now() }; }
+  return partyCache.active;
+}
+app.post('/api/admin/party/start', auth, async (req, res) => {
+  if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
+  const r = await seedPartyGames(supabase, sanitizeWorld);
+  partyCache = { active: true, at: Date.now() };
+  const { count } = await supabase.from('users').select('name', { count: 'exact', head: true });
+  res.json({ ...r, count: count || 0, goal: PARTY_GOAL });
+});
+app.post('/api/admin/party/stop', auth, async (req, res) => {
+  if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
+  const r = await endPartyGames(supabase);
+  partyCache = { active: false, at: Date.now() };
+  res.json(r);
+});
+app.get('/api/event/party', auth, async (req, res) => {
+  const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'party100').order('id');
+  const { count } = await supabase.from('users').select('name', { count: 'exact', head: true });
+  res.json({ id: 'party100', name: '100 Players Party', goal: PARTY_GOAL, count: count || 0, active: !!(games && games.length), games: games || [] });
 });
 
 // PvP shooter arenas (seeded once, never deleted)

@@ -49,8 +49,9 @@ export async function lobbyPage(D) {
   const cd = halloweenCountdown();
   const app = document.getElementById('app');
   app.className = 'fullscreen';
-  let games = [], friends = [];
+  let games = [], friends = [], party = { active: false };
   try { [games, friends] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends').then(r => r.friends || [])]); } catch {}
+  try { party = await api('GET', '/api/event/party'); } catch {}
   const online = (friends || []).filter(f => f.online || f.gameId);
   const byPlaying = [...games].sort((a, b) => (b.playing || 0) - (a.playing || 0));
   const pick = mode => {
@@ -77,6 +78,7 @@ export async function lobbyPage(D) {
       </div>
     </header>
     ${cd ? `<a class="lb-countdown scare-${cd.level}" href="#/halloween"><span>${cd.emojis}</span><b>${cd.text}</b></a>` : ''}
+    ${party.active ? `<a class="lb-party-banner" href="#/play/g_party100"><span>🎉</span><b>100 Players Party is LIVE!</b> Free Neon Party Hat + disco plaza ›</a>` : ''}
     ${cd ? `<div class="lb-glitch"></div><div class="lb-haunt">${hauntHtml(cd.level)}</div>${cd.level >= 5 ? '<div class="lb-eyes">👀</div>' : ''}` : ''}
     <nav class="lb-rail">
       <a class="lb-item active" href="#/discover"><span>▶</span>PLAY</a>
@@ -116,6 +118,7 @@ export async function lobbyPage(D) {
       <a class="lb-tile" href="#/discover"><span>🏆</span><b>Charts</b><i>Top games right now</i></a>
       <a class="lb-tile" href="#/blockverse"><span>🟩</span><b>Blockverse Collab</b><i>Free gifts + badge</i></a>
       <a class="lb-tile" href="#/halloween"><span>🎃</span><b>Halloween</b><i>Spooky games & loot</i></a>
+      ${party.active ? `<a class="lb-tile" href="#/play/g_party100"><span>🎉</span><b>100 Players Party</b><i>Disco floor, DJ & free hat</i></a>` : ''}
       <a class="lb-tile" href="#/create"><span>👹</span><b>Horror Gauntlet</b><i>Remix the 250-part course</i></a>
     </footer>
     <div class="lb-overlay" id="lb-overlay">

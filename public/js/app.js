@@ -65,7 +65,7 @@ function buildCharacter(avatar) {
   return _avatar3d.buildCharacter(avatar);
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=70ddbfe2';
-import { templates } from './worlds.js?v=ac7464c5';
+import { templates } from './worlds.js?v=413fc3bb';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
@@ -637,18 +637,21 @@ function loginPage() {
 }
 
 async function homePage() {
-  const [games, fr] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends')]);
+  const [games, fr, party] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends'), api('GET', '/api/event/party').catch(() => ({ active: false, games: [] }))]);
   const byId = Object.fromEntries(games.map(g => [g.id, g]));
   const bvGames = games.filter(g => g.id === 'g_bvportal' || g.id === 'g_bvplaza');
+  const partyGames = games.filter(g => g.id === 'g_party100');
   const recent = me.recent.map(id => byId[id]).filter(Boolean);
   const favs = me.favorites.map(id => byId[id]).filter(Boolean);
   const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
   mount('dashboard', `    ${blockverseActive() ? `<div class="bv-hero home-bv"><div class="hw-hero-emoji">🟩</div><div class="hw-hero-text"><h1>Funtopia × Blockverse</h1><p class="muted">The portal is open! Two crossover worlds, <b>free gifts</b> in your inventory, and the <b>World Hopper badge</b>.</p><p><a class="btn-primary" href="#/play/g_bvportal">▶ Play Portal Run</a> <a class="btn-secondary" href="#/blockverse">Collab Hub</a> <a class="btn-secondary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p></div></div>` : ''}
+    ${party.active ? `<div class="party-hero"><div class="party-confetti"><span>🎉</span><span>✨</span><span>🎊</span><span>🎈</span><span>🥳</span><span>🎉</span></div><div class="hw-hero-emoji">🎉</div><div class="hw-hero-text"><h1>100 Players Party!</h1><p class="muted">Funtopia hit <b>100 players</b>! Dance on the disco floor, meet DJ Funtopia, and grab your <b>free Neon Party Hat</b> — it's already in your inventory!</p><p><a class="btn-primary" href="#/play/g_party100">▶ Join the Party</a></p></div></div>` : ''}
     ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
     <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
     <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
       <div class="friends-row">${friends.length ? friends.map(userTile).join('') : `<a class="add-friends" href="#/friends"><span>+</span>Add Friends</a>`}</div></section>
     ${blockverseActive() && bvGames.length ? `<section><div class="sec-h"><h2>🟩 Blockverse Collab Games</h2><a href="#/blockverse">Collab Hub &rsaquo;</a></div><div class="game-row">${bvGames.map(gameCard).join('')}</div></section>` : ''}
+    ${party.active && partyGames.length ? `<section><div class="sec-h"><h2>🎉 Party Games</h2></div><div class="game-row">${partyGames.map(gameCard).join('')}</div></section>` : ''}
     ${recent.length ? `<section><div class="sec-h"><h2>Continue</h2></div><div class="game-row">${recent.map(gameCard).join('')}</div></section>` : ''}
     <section><div class="sec-h"><h2>Recommended For You</h2><a href="#/discover">See All &rsaquo;</a></div><div class="game-row">${games.slice(0, 12).map(gameCard).join('')}</div></section>
     ${(() => { const cc = {}; games.forEach(g => { cc[g.creator] = (cc[g.creator] || 0) + (g.playing || 0); }); const top = Object.entries(cc).sort((x, y) => y[1] - x[1]).slice(0, 6); return top.length ? `<section><div class="sec-h"><h2>🔥 Trending Creators</h2></div><div class="creator-row">${top.map(([n, p]) => `<a class="creator-chip" href="#/users/${encodeURIComponent(n)}">@${esc(n)} · ${fmt(p)} playing</a>`).join('')}</div></section>` : ''; })()}
@@ -1644,11 +1647,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=00104c30');
+  const m = await import('./admin.js?v=fbcf3dd3');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=00104c30');
+  const m = await import('./admin.js?v=fbcf3dd3');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1760,7 +1763,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u50'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u51'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);

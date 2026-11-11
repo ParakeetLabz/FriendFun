@@ -162,6 +162,12 @@ export async function ownerPage(D, q = '') {
   let games = [], gamesError = '';
   try { games = await api('GET', '/api/admin/games'); }
   catch (e) { gamesError = e.message || 'Could not load games'; }
+  let playerCount = 0, party = { active: false, games: [], count: 0, goal: 100 };
+  try { const pc = await api('GET', '/api/player-count'); playerCount = pc.count || 0; } catch {}
+  try { party = await api('GET', '/api/event/party'); } catch {}
+  const partyCount = party.count || playerCount;
+  const partyGoal = party.goal || 100;
+  const partyPct = Math.min(100, Math.round(partyCount / partyGoal * 100));
   const status = u => u.owner ? 'Owner' : u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
   mount('owner', `<h1>👑 Owner Panel</h1>
     <p class="muted">Owner-only tools.</p>
@@ -175,6 +181,17 @@ export async function ownerPage(D, q = '') {
         <span class="admin-inline"><input type="number" class="rain-amt" value="50" min="1" max="1000" title="FunTix per online player"><button class="btn-primary funtix-rain">🌧️ FunTix Rain</button></span>
       </div>
       <div class="site-state muted small"></div>
+    </section>
+    <section class="admin-section owner-tools"><h3>🎉 100 Players Party <span class="muted small">milestone event</span></h3>
+      <p class="muted">${party.active ? '<b style="color:#ff2d95">🎉 THE PARTY IS LIVE!</b>' : `We're at <b>${partyCount} / ${partyGoal} players</b> — start the party when we hit 100!`}</p>
+      <div class="party100-bar"><div class="party100-bar-fill" style="width:${partyPct}%"></div></div>
+      <p class="muted small">${partyPct}% to ${partyGoal} players</p>
+      <div class="owner-grid">
+        ${party.active
+          ? `<span class="admin-inline"><a class="btn-primary" href="#/play/g_party100">▶ Open the Party</a><button class="btn-danger party-stop">End the Party</button></span>`
+          : `<span class="admin-inline"><button class="btn-primary party-start">🎉 Start the Party</button></span>`}
+      </div>
+      <p class="muted small">Starting the party creates the 🎉 100 Players Party plaza (disco floor, DJ, cake) and gives every player the free Neon Party Hat 🎉 while it lasts. Ending it removes the party game.</p>
     </section>
     <section class="admin-section owner-tools"><h3>👑 FriendClub <span class="muted small">danger zone</span></h3>
       <button class="btn-danger club-reset-all">Remove FriendClub from everyone except @fun</button>
@@ -244,6 +261,18 @@ export async function ownerPage(D, q = '') {
         </div>
       </div>`).join('') || '<p class="muted">No players found.</p>'}</div>`, () => {
     app.querySelector('form.admin-search').onsubmit = e => { e.preventDefault(); ownerPage(D, e.target.q.value.trim()); };
+    const partyStart = app.querySelector('.party-start');
+    if (partyStart) partyStart.onclick = async () => {
+      if (!confirm('Start the 100 Players Party? This creates the party plaza and gives everyone the free Neon Party Hat.')) return;
+      try { const r = await api('POST', '/api/admin/party/start', {}); toast(`🎉 Party started! ${r.count ?? partyCount} players and counting!`); ownerPage(D, q); }
+      catch (e) { toast(e.message, true); }
+    };
+    const partyStop = app.querySelector('.party-stop');
+    if (partyStop) partyStop.onclick = async () => {
+      if (!confirm('End the party? The party plaza will be removed.')) return;
+      try { await api('POST', '/api/admin/party/stop', {}); toast('Party ended'); ownerPage(D, q); }
+      catch (e) { toast(e.message, true); }
+    };
     const gcmd = async (id, command, extra = {}) => {
       try {
         const r = await api('POST', '/api/admin/games/' + encodeURIComponent(id) + '/command', { command, ...extra });

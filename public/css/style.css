@@ -896,3 +896,24 @@ body.scary .sidebar { background: #0d0104; }
 .btn-wish { background: none; border: none; font-size: 20px; cursor: pointer; color: #888; }
 .btn-wish.on { color: #ff4081; }
 .ex-count { margin-left: 8px; color: #888; font-size: 12px; }
+
+/* 100 Players Party */
+.party-hero { position: relative; overflow: hidden; background: linear-gradient(120deg, #ff2d95, #7c4dff 45%, #00b8d4); color: #fff; border-radius: 16px; padding: 20px 22px; display: flex; gap: 16px; align-items: center; margin-bottom: 18px; }
+.party-hero h1 { color: #fff; margin: 0 0 6px; }
+.party-hero .muted { color: rgba(255,255,255,.85); }
+.party-hero .btn-primary { background: #fff; color: #d81b7a; }
+.party-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.party-confetti span { position: absolute; top: -30px; font-size: 20px; animation: party-fall 5s linear infinite; }
+.party-confetti span:nth-child(1) { left: 8%; animation-delay: 0s; }
+.party-confetti span:nth-child(2) { left: 24%; animation-delay: 1.2s; }
+.party-confetti span:nth-child(3) { left: 41%; animation-delay: .6s; }
+.party-confetti span:nth-child(4) { left: 58%; animation-delay: 1.8s; }
+.party-confetti span:nth-child(5) { left: 74%; animation-delay: .3s; }
+.party-confetti span:nth-child(6) { left: 90%; animation-delay: 2.4s; }
+@keyframes party-fall { to { transform: translateY(260px) rotate(320deg); } }
+.party100-bar { height: 12px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; margin: 6px 0; }
+.party100-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #ff2d95, #7c4dff, #00e5ff); transition: width .4s; }
+.lb-party-banner { position: absolute; top: 66px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; background: linear-gradient(90deg, #ff2d95, #7c4dff); border: 1px solid rgba(255,255,255,.4); color: #fff; text-decoration: none; font-weight: 800; font-size: 14px; white-space: nowrap; animation: party-pulse 1.6s infinite; }
+.lb-party-banner span { font-size: 18px; }
+@keyframes party-pulse { 0%,100% { box-shadow: 0 0 12px rgba(255,45,149,.35); } 50% { box-shadow: 0 0 26px rgba(124,77,255,.6); } }
+@media (max-width: 640px) { .lb-party-banner { font-size: 12px; padding: 6px 12px; top: 60px; max-width: 92vw; white-space: normal; text-align: center; } }
