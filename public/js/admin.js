@@ -266,7 +266,7 @@ export async function ownerPage(D, q = '') {
     const partyStart = app.querySelector('.party-start');
     if (partyStart) partyStart.onclick = async () => {
       if (!confirm('Start the 100 Players Party? This creates the party plaza and gives everyone the free Neon Party Hat.')) return;
-      try { const r = await api('POST', '/api/admin/party/start', {}); toast(`🎉 Party started! ${r.count ?? partyCount} players and counting!`); ownerPage(D, q); }
+      try { const r = await api('POST', '/api/admin/party/start', {}); toast(`🎉 Party started! ${r.count ?? partyCount} players and counting!`); ownerPage(D, q); import('./partyfx.js?v=81c04ef7').then(fx => fx.playPartyTransition()).catch(() => {}); }
       catch (e) { toast(e.message, true); }
     };
     const partyStop = app.querySelector('.party-stop');

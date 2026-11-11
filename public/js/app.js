@@ -397,11 +397,33 @@ async function refreshPartyBar() {
   } catch {}
 }
 let onlineTimer = null;
+let partyTimer = null;
 async function refreshPlayerCount() {
   try {
     const r = await api('GET', '/api/player-count');
     document.querySelectorAll('.player-count').forEach(el => el.textContent = fmt(r.count));
   } catch {}
+}
+// Party watcher: when the 100 Players Party goes live while you're on the site,
+// play the glitch → black → DJ transition once per session, then partyfy everything.
+let partyWatchPrev = null;
+async function refreshPartyState() {
+  let p = null;
+  try { p = await api('GET', '/api/event/party'); } catch { return; }
+  const active = !!p?.active;
+  if (active && partyWatchPrev !== true) {
+    if (!sessionStorage.getItem('ff-party-transition-shown')) {
+      try { (await import('./partyfx.js?v=81c04ef7')).playPartyTransition(); }
+      catch { document.body.classList.add('party-live'); }
+    } else {
+      document.body.classList.add('party-live');
+    }
+  } else if (!active && partyWatchPrev === true) {
+    import('./partyfx.js?v=81c04ef7').then(fx => fx.setPartyLive(false)).catch(() => { document.body.classList.remove('party-live'); });
+  } else if (active) {
+    document.body.classList.add('party-live');
+  }
+  partyWatchPrev = active;
 }
 let siteStateCache = null, siteStateAt = 0;
 async function refreshSiteBanner() {
@@ -509,8 +531,11 @@ function mount(active, html, after) {
   refreshPartyBar();
   refreshSiteBanner();
   refreshPlayerCount();
+  refreshPartyState();
   clearInterval(onlineTimer);
   onlineTimer = setInterval(refreshPlayerCount, 60000);
+  clearInterval(partyTimer);
+  partyTimer = setInterval(refreshPartyState, 20000);
   const userBtn = app.querySelector('.tb-user');
   const menu = app.querySelector('.tb-menu');
   if (userBtn && menu) {
@@ -1647,11 +1672,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=ee142205');
+  const m = await import('./admin.js?v=64054beb');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=ee142205');
+  const m = await import('./admin.js?v=64054beb');
   return m.ownerPage(adminDeps, q);
 }
 

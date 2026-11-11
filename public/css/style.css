@@ -917,3 +917,55 @@ body.scary .sidebar { background: #0d0104; }
 .lb-party-banner span { font-size: 18px; }
 @keyframes party-pulse { 0%,100% { box-shadow: 0 0 12px rgba(255,45,149,.35); } 50% { box-shadow: 0 0 26px rgba(124,77,255,.6); } }
 @media (max-width: 640px) { .lb-party-banner { font-size: 12px; padding: 6px 12px; top: 60px; max-width: 92vw; white-space: normal; text-align: center; } }
+
+/* ---------- party transition + partyfy every game (Nov 2026) ---------- */
+.party-lights { position: fixed; top: 0; left: 0; right: 0; height: 16px; z-index: 900; display: flex; justify-content: space-around; pointer-events: none; padding-top: 3px; }
+.party-lights span { width: 9px; height: 9px; border-radius: 50%; background: #ff2d95; box-shadow: 0 0 8px #ff2d95; animation: party-light-blink 1s infinite; }
+.party-lights span:nth-child(3n) { background: #00e5ff; box-shadow: 0 0 8px #00e5ff; animation-delay: .33s; }
+.party-lights span:nth-child(3n+1) { background: #ffd400; box-shadow: 0 0 8px #ffd400; animation-delay: .66s; }
+@keyframes party-light-blink { 0%,100% { opacity: 1; } 50% { opacity: .2; } }
+/* every game partyfied while the party is live */
+body.party-live .game-card { position: relative; border: 2px solid transparent; background: linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(90deg, #ff2d95, #7c4dff, #00e5ff, #ffd400, #ff2d95) border-box; animation: party-tile-glow 1.8s infinite; }
+body.party-live .lb-tile { position: relative; border: 2px solid transparent; background: linear-gradient(rgba(10,10,20,.85), rgba(10,10,20,.85)) padding-box, linear-gradient(90deg, #ff2d95, #7c4dff, #00e5ff, #ffd400, #ff2d95) border-box; animation: party-tile-glow 1.8s infinite; }
+body.party-live .game-card::after, body.party-live .lb-tile::after { content: '🪩 PARTY'; position: absolute; top: 6px; right: 6px; font-size: 10px; font-weight: 800; color: #fff; background: linear-gradient(90deg, #ff2d95, #7c4dff); padding: 2px 7px; border-radius: 999px; z-index: 2; }
+@keyframes party-tile-glow { 0%,100% { box-shadow: 0 0 6px rgba(255,45,149,.4); } 50% { box-shadow: 0 0 18px rgba(0,229,255,.55); } }
+.party-dj-fab { position: fixed; right: 16px; bottom: 16px; z-index: 901; border: none; border-radius: 999px; padding: 10px 16px; font-weight: 800; cursor: pointer; background: linear-gradient(90deg, #ff2d95, #7c4dff); color: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+.party-dj-fab.on { box-shadow: 0 0 18px rgba(255,45,149,.8); }
+/* the transition overlay: glitch → black → DJ → reveal */
+.party-transition { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.party-transition.pt-glitch { background: rgba(10,10,14,.55); }
+.party-transition.pt-black { background: #000; }
+.party-transition.pt-dj { background: radial-gradient(circle at 50% 28%, rgba(124,77,255,.55), #000 72%); }
+.party-transition.pt-reveal { opacity: 0; transition: opacity .6s; }
+.pt-glitch-text { text-align: center; color: #fff; animation: pt-flicker .18s infinite; padding: 0 16px; }
+.pt-glitch-big { font-size: clamp(28px, 7vw, 64px); font-weight: 900; letter-spacing: 2px; text-shadow: 3px 0 #ff004c, -3px 0 #00e5ff; }
+.pt-glitch-sub { font-size: clamp(14px, 3vw, 22px); font-weight: 700; margin-top: 8px; }
+.pt-glitch-err { font-family: monospace; color: #ff5b5b; margin-top: 10px; }
+@keyframes pt-flicker { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+body.party-glitching #app { animation: pt-shake .12s infinite; }
+@keyframes pt-shake { 0% { transform: translate(0,0); } 25% { transform: translate(-6px,3px) skew(-1deg); filter: hue-rotate(40deg); } 50% { transform: translate(5px,-4px) skew(1deg); } 75% { transform: translate(-3px,-2px); filter: hue-rotate(-30deg); } 100% { transform: translate(0,0); } }
+.pt-cracks i { position: absolute; background: rgba(255,255,255,.75); box-shadow: 0 0 6px rgba(255,255,255,.6); }
+.pt-cracks i:nth-child(1) { left: 12%; top: -10%; width: 2px; height: 120%; transform: rotate(18deg); }
+.pt-cracks i:nth-child(2) { left: 48%; top: -10%; width: 2px; height: 120%; transform: rotate(-24deg); }
+.pt-cracks i:nth-child(3) { left: 82%; top: -10%; width: 2px; height: 120%; transform: rotate(10deg); }
+.pt-cracks i:nth-child(4) { left: 30%; top: 40%; width: 50%; height: 2px; transform: rotate(-8deg); }
+.party-transition.pt-black .pt-glitch-text, .party-transition.pt-black .pt-cracks,
+.party-transition.pt-dj .pt-glitch-text, .party-transition.pt-dj .pt-cracks { display: none; }
+.pt-dj-card { display: none; text-align: center; color: #fff; padding: 0 16px; }
+.party-transition.pt-dj .pt-dj-card { display: block; animation: pt-pop .45s cubic-bezier(.2,1.6,.4,1); }
+@keyframes pt-pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.pt-spot { position: absolute; top: -20%; left: 50%; width: 340px; height: 340px; transform: translateX(-50%); background: radial-gradient(circle, rgba(255,212,0,.35), transparent 70%); pointer-events: none; }
+.pt-dj-emoji { font-size: 84px; }
+.pt-dj-name { font-size: clamp(24px, 5vw, 40px); font-weight: 900; letter-spacing: 2px; margin-top: 4px; }
+.pt-eq { display: flex; gap: 5px; justify-content: center; align-items: flex-end; height: 38px; margin: 14px 0 6px; }
+.pt-eq i { width: 7px; border-radius: 3px; background: linear-gradient(#ff2d95, #00e5ff); animation: pt-eq .7s infinite ease-in-out; }
+.pt-eq i:nth-child(1) { animation-delay: 0s; } .pt-eq i:nth-child(2) { animation-delay: .15s; } .pt-eq i:nth-child(3) { animation-delay: .3s; } .pt-eq i:nth-child(4) { animation-delay: .1s; } .pt-eq i:nth-child(5) { animation-delay: .45s; }
+@keyframes pt-eq { 0%,100% { height: 8px; } 50% { height: 36px; } }
+.pt-dj-track { color: rgba(255,255,255,.85); font-weight: 700; }
+.pt-music-btn { margin-top: 16px; }
+.pt-skip { position: absolute; bottom: 22px; right: 22px; z-index: 2; }
+.party-burst { position: fixed; inset: 0; pointer-events: none; z-index: 9998; overflow: hidden; }
+.party-burst span { position: absolute; top: -30px; font-size: 20px; animation: party-fall 5s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  body.party-glitching #app, .pt-glitch-text, .party-lights span, body.party-live .game-card, body.party-live .lb-tile, .pt-eq i { animation: none !important; }
+}
