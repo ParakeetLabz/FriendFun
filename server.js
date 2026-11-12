@@ -1549,6 +1549,7 @@ function sanitizeWorld(w) {
     c: /^(#[0-9a-fA-F]{6}|hsl\(\d+,\d+%\,\d+%\))$/.test(p.c) ? p.c : '#a3a2a5',
     k: ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal', 'tp', 'conv', 'lowg', 'ice', 'water', 'magnet', 'shield', 'safe'].includes(p.k) ? p.k : 'part',
     m: ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 'sand', 'baseplate', 'spawn', 'metal'].includes(p.m) ? p.m : 'plastic',
+    ...(p.sh && ['cyl', 'sph', 'cone', 'ramp'].includes(p.sh) ? { sh: p.sh } : {}),
     ...(p.k === 'npc' ? { dialog: String(p.dialog || '').slice(0, 200), wander: p.wander !== false, enemy: p.enemy === true } : {}),
     ...(p.cc === false ? { cc: false } : {}), ...(p.tr ? { tr: Math.max(0, Math.min(1, num(p.tr))) } : {}),
     ...(sanitizeScript(p.script) ? { script: sanitizeScript(p.script) } : {}),

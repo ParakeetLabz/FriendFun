@@ -15,7 +15,7 @@ const badgeIcon2 = (id, size = 18) => {
   if (b.custom || b.icon) return `<span style="font-size:${size}px" title="${esc(b.name)}">${b.icon || '🏅'}</span>`;
   return badgeIcon(id, size);
 };
-import { worldThumbnail } from './three-util.js?v=ac3e6f2b';
+import { worldThumbnail } from './three-util.js?v=88ba247e';
 import * as THREE from 'three';
 // avatar3d loads lazily after login
 let _avatar3d = null;
@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=760b33a4').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=c4f4185b').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -65,7 +65,7 @@ function buildCharacter(avatar) {
   return _avatar3d.buildCharacter(avatar);
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=fabe5f21';
-import { templates } from './worlds.js?v=413fc3bb';
+import { templates } from './worlds.js?v=de7c6426';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
@@ -839,7 +839,7 @@ async function playPage(id, server) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=f02b1ba8');
+  const { Game } = await import('./game.js?v=91d42668');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1452,7 +1452,7 @@ async function importFunFile(file) {
 
 async function createPage() {
   const mine = await api('GET', '/api/mygames');
-  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['heistCity', '🚔 Heist City', 'Cops and robbers! Rob the bank, break out of jail, rule the streets.'], ['whodunit', '🔍 Whodunit Mansion', 'A murder mystery mansion. Question the suspects, find the evidence.'], ['hauntedHotel', '🚪 Haunted Hotel', '20 doors. Something is down the hall. Find the exit.'], ['bedBattle', '🛏️ Bed Battle', 'Team islands, bridges and blasters. Protect your bed!'], ['forestCamp', '🔥 Forest Camp', 'Survive the nights. Keep the campfire burning.'], ['petHatchery', '🥚 Pet Hatchery', 'Hatch eggs, collect coins, grow your pet crew.']];
+  const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['heistCity', '🚔 Heist City', 'Cops and robbers! Rob the bank, break out of jail, rule the streets.'], ['whodunit', '🔍 Whodunit Mansion', 'A murder mystery mansion. Question the suspects, find the evidence.'], ['hauntedHotel', '🚪 Haunted Hotel', '20 doors. Something is down the hall. Find the exit.'], ['bedBattle', '🛏️ Bed Battle', 'Team islands, bridges and blasters. Protect your bed!'], ['forestCamp', '🔥 Forest Camp', 'Survive the nights. Keep the campfire burning.'], ['petHatchery', '🥚 Pet Hatchery', 'Hatch eggs, collect coins, grow your pet crew.'], ['lostTemple', '🗿 Temple of the Lost Idol', 'Jungle adventure! Cross the lava river, ride the moving stones, claim the Golden Idol.'], ['skyPirates', '🏴‍☠️ Sky Pirate Isles', 'Sail the skies! Hop floating islands, bounce between them, find the treasure.'], ['dungeonQuest', '⚔️ Deep Dungeon Quest', 'A torch-lit dungeon crawl. Dodge the skeletons and spike traps, reach the exit portal.']];
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button><button data-goto="#/funai">✨ FunAI</button></div>
@@ -1477,18 +1477,18 @@ function tplThumb(k) { return tplCache[k] ||= worldThumbnail(templates[k]()); }
 
 async function studioPage(id, tpl) {
   let g;
-  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', heistCity: 'Heist City', whodunit: 'Whodunit Mansion', hauntedHotel: 'Haunted Hotel', bedBattle: 'Bed Battle', forestCamp: 'Forest Camp', petHatchery: 'Pet Hatchery' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
+  if (id === 'new') g = { id: null, name: 'My ' + ({ baseplate: 'Baseplate', heistCity: 'Heist City', whodunit: 'Whodunit Mansion', hauntedHotel: 'Haunted Hotel', bedBattle: 'Bed Battle', forestCamp: 'Forest Camp', petHatchery: 'Pet Hatchery', lostTemple: 'Temple of the Lost Idol', skyPirates: 'Sky Pirate Isles', dungeonQuest: 'Deep Dungeon Quest' }[tpl] || 'Game'), description: '', world: (templates[tpl] || templates.baseplate)() };
   else { g = await api('GET', '/api/games/' + id); if (g.creator.toLowerCase() !== me.name.toLowerCase()) { toast('You can only edit your own games', true); location.hash = '#/games/' + id; return; } }
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=d836a835');
+  const { Studio } = await import('./studio.js?v=ea4b5604');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=f02b1ba8');
+      const { Game: GameClass } = await import('./game.js?v=91d42668');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1788,7 +1788,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u51'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u52'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);

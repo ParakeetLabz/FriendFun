@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=ac3e6f2b';
+import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=760b33a4';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=c4f4185b';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
@@ -942,12 +942,31 @@ export class Game {
     this.solids = []; this.triggers = [];
     for (const p of this.world.parts) {
       if (p.k === 'npc') continue;
-      const box = { p, min: [p.p[0] - p.s[0] / 2, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2], max: [p.p[0] + p.s[0] / 2, p.p[1] + p.s[1] / 2, p.p[2] + p.s[2] / 2], _arrs: [] };
-      const addBox = arr => { arr.push(box); box._arrs.push(arr); };
-      (p._boxes ||= []).push(box);
-      if (p.k === 'coin' || p.k === 'heal') { box.min = box.min.map(v => v - 0.3); box.max = box.max.map(v => v + 0.3); addBox(this.triggers); continue; }
-      if (p.cc !== false) addBox(this.solids);
-      if (p.k !== 'part' && p.k !== 'spawn' || p.script?.onTouch) addBox(this.triggers);
+      const mkBox = (min, max, relMin, relMax) => {
+        const box = { p, min, max, _arrs: [] };
+        if (relMin) { box.relMin = relMin; box.relMax = relMax; }
+        (p._boxes ||= []).push(box);
+        return box;
+      };
+      const fullMin = [p.p[0] - p.s[0] / 2, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2];
+      const fullMax = [p.p[0] + p.s[0] / 2, p.p[1] + p.s[1] / 2, p.p[2] + p.s[2] / 2];
+      const fullBox = mkBox(fullMin, fullMax);
+      const addBox = (arr, box) => { arr.push(box); box._arrs.push(arr); };
+      if (p.k === 'coin' || p.k === 'heal') { fullBox.min = fullBox.min.map(v => v - 0.3); fullBox.max = fullBox.max.map(v => v + 0.3); addBox(this.triggers, fullBox); continue; }
+      if (p.cc !== false) {
+        if (p.sh === 'ramp') {
+          // 4 steps up the slope (low at -x, high at +x) so players can walk up it
+          for (let i = 0; i < 4; i++) {
+            const x0 = -p.s[0] / 2 + (i * p.s[0]) / 4, x1 = -p.s[0] / 2 + ((i + 1) * p.s[0]) / 4;
+            const y1 = -p.s[1] / 2 + ((i + 1) * p.s[1]) / 4;
+            addBox(this.solids, mkBox(
+              [p.p[0] + x0, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2],
+              [p.p[0] + x1, p.p[1] + y1, p.p[2] + p.s[2] / 2],
+              [x0, -p.s[1] / 2, -p.s[2] / 2], [x1, y1, p.s[2] / 2]));
+          }
+        } else addBox(this.solids, fullBox);
+      }
+      if (p.k !== 'part' && p.k !== 'spawn' || p.script?.onTouch) addBox(this.triggers, fullBox);
     }
     this.camMeshes = [...this.meshes.values()].filter(m => !['coin', 'heal', 'npc'].includes(m.userData.part.k) && m.userData.part.cc !== false && !(m.userData.part.tr > 0.5));
     this.npcs = [];
@@ -1113,8 +1132,10 @@ export class Game {
   }
   syncPartBoxes(p) {
     for (const b of (p._boxes || [])) {
-      b.min = [p.p[0] - p.s[0] / 2, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2];
-      b.max = [p.p[0] + p.s[0] / 2, p.p[1] + p.s[1] / 2, p.p[2] + p.s[2] / 2];
+      const mn = b.relMin || [-p.s[0] / 2, -p.s[1] / 2, -p.s[2] / 2];
+      const mx = b.relMax || [p.s[0] / 2, p.s[1] / 2, p.s[2] / 2];
+      b.min = [p.p[0] + mn[0], p.p[1] + mn[1], p.p[2] + mn[2]];
+      b.max = [p.p[0] + mx[0], p.p[1] + mx[1], p.p[2] + mx[2]];
     }
   }
   setPartActive(p, on) {

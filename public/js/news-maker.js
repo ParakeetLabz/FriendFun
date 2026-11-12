@@ -34,7 +34,7 @@ export async function newsMakerPage(D) {
         ? { skin: '#c0c0c0', shirt: '#1a1a2e', pants: '#0f0f1a', hat: 'hat_tophat' }
         : me.avatar;
       try {
-        const { THREE } = await import('./three-util.js?v=ac3e6f2b');
+        const { THREE } = await import('./three-util.js?v=88ba247e');
         const r = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
         r.setSize(300, 300);
         const sc = new THREE.Scene();

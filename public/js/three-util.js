@@ -59,13 +59,36 @@ export function boxGeometry(sx, sy, sz, m) {
 const coinGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.25, 24).rotateX(Math.PI / 2);
 const coinMat = new THREE.MeshStandardMaterial({ color: '#ffd400', emissive: '#a07800', metalness: 0.7, roughness: 0.3 });
 
+// Part shapes (Nov 2026): box is the default; cyl/sph/cone/ramp build
+// round and sloped pieces so worlds stop looking like plain rectangles.
+// Collision stays the part's box, except ramps which get stepped solids
+// in game.js. A ramp climbs toward +x (low edge at -x).
+export const SHAPES = ['box', 'cyl', 'sph', 'cone', 'ramp'];
+export function partGeometry(p) {
+  const [sx, sy, sz] = p.s;
+  switch (p.sh) {
+    case 'cyl': return new THREE.CylinderGeometry(Math.min(sx, sz) / 2, Math.min(sx, sz) / 2, sy, 24);
+    case 'sph': return new THREE.SphereGeometry(Math.min(sx, sy, sz) / 2, 24, 18);
+    case 'cone': return new THREE.ConeGeometry(Math.min(sx, sz) / 2, sy, 24);
+    case 'ramp': {
+      const shape = new THREE.Shape();
+      shape.moveTo(-sx / 2, -sy / 2); shape.lineTo(sx / 2, -sy / 2); shape.lineTo(sx / 2, sy / 2); shape.closePath();
+      const g = new THREE.ExtrudeGeometry(shape, { depth: sz, bevelEnabled: false });
+      g.translate(0, 0, -sz / 2);
+      return g;
+    }
+    default: return boxGeometry(sx, sy, sz, p.m);
+  }
+}
+
 export function makePartMesh(p) {
   let mesh;
   if (p.k === 'coin') {
     mesh = new THREE.Mesh(coinGeo, coinMat);
     mesh.userData.spin = true;
+    mesh.userData.sharedGeo = true; // coinGeo is shared — never dispose it
   } else {
-    mesh = new THREE.Mesh(boxGeometry(p.s[0], p.s[1], p.s[2], p.m), partMaterial(p.m, p.c, p.tr || 0));
+    mesh = new THREE.Mesh(partGeometry(p), partMaterial(p.m, p.c, p.tr || 0));
     mesh.castShadow = !p.tr; mesh.receiveShadow = true;
   }
   mesh.position.set(p.p[0], p.p[1], p.p[2]);

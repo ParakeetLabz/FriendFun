@@ -814,6 +814,114 @@ export function petHatchery() {
   return w;
 }
 
+// Jungle temple adventure: cross the lava river, ride the moving stones,
+// climb the temple stairs and claim the Golden Idol.
+export function lostTemple() {
+  const w = startWorld('#7ec850');
+  const r = rng(1234);
+  w.parts.push(part([0, -0.5, 0], [170, 1, 170], '#43a047', { name: 'Ground', m: 'grass' }));
+  // Jungle trees around the edges (keep the path clear)
+  for (let i = 0; i < 14; i++) {
+    const tx = (r() - 0.5) * 150, tz = (r() - 0.5) * 150;
+    if (Math.abs(tx) < 16 || Math.abs(tz - 0) < 60) continue;
+    w.parts.push(part([tx, 1.5, tz], [1, 3, 1], '#4e342e', { name: 'TreeTrunk', m: 'wood', sh: 'cyl' }));
+    w.parts.push(part([tx, 4.5, tz], [3.5, 3.5, 3.5], '#1b5e20', { name: 'TreeTop', m: 'grass', sh: 'sph' }));
+  }
+  w.parts.push(part([0, 0.25, 48], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  w.parts.push(part([5, 2, 44], [2, 4, 2], '#8d6e63', { name: 'Explorer', k: 'npc', dialog: 'The Golden Idol waits in the temple... mind the lava river!' }));
+  // Torches along the path
+  for (const z of [38, 26, 14, 2, -10]) {
+    w.parts.push(part([-10, 1, z], [0.6, 2, 0.6], '#5d4037', { name: 'TorchPost', m: 'wood', sh: 'cyl' }));
+    w.parts.push(part([-10, 2.5, z], [1, 1, 1], '#ff6d00', { name: 'TorchFlame', m: 'neon', sh: 'sph' }));
+  }
+  // Lava river across the path
+  for (const x of [-24, -8, 8, 24]) w.parts.push(part([x, 0.25, 20], [16, 0.5, 6], '#ff3b1f', { name: 'LavaRiver', k: 'kill', m: 'neon' }));
+  // Jump stones over the lava
+  for (const x of [-8, 0, 8]) w.parts.push(part([x, 1, 20], [4, 1, 4], '#bcaaa4', { name: 'JumpStone', m: 'concrete' }));
+  w.parts.push(part([0, 0.75, 10], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' }));
+  // Moving stones sliding side to side
+  w.parts.push(part([-6, 1, 0], [5, 1, 5], '#bcaaa4', { name: 'MovingStone', m: 'concrete', mv: { a: 'x', d: 10, s: 1 } }));
+  w.parts.push(part([6, 1, -6], [5, 1, 5], '#bcaaa4', { name: 'MovingStone', m: 'concrete', mv: { a: 'x', d: 10, s: 1, ph: 1.5 } }));
+  // Coins along the trail
+  for (const [x, z] of [[-4, 34], [4, 26], [0, 14], [-4, 4], [4, -4], [0, -14], [-6, -24], [6, -30]]) w.parts.push(part([x, 1.5, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  // Temple stairs + a ramp up the side
+  for (let i = 0; i < 4; i++) w.parts.push(part([0, 1 + i, -20 - i * 3], [16, 1, 3], '#9e9e9e', { name: 'TempleStep', m: 'concrete' }));
+  w.parts.push(part([-16, 2, -28], [12, 4, 6], '#9e9e9e', { name: 'TempleRamp', m: 'concrete', sh: 'ramp' }));
+  // Temple platform, pillars, idol
+  w.parts.push(part([0, 4, -40], [34, 1, 24], '#8d8d8d', { name: 'TempleFloor', m: 'concrete' }));
+  for (const [x, z] of [[-13, -30], [13, -30], [-13, -50], [13, -50]]) w.parts.push(part([x, 8, z], [2, 8, 2], '#bdbdbd', { name: 'TemplePillar', m: 'concrete', sh: 'cyl' }));
+  w.parts.push(part([0, 12.5, -40], [32, 1, 22], '#bdbdbd', { name: 'TempleRoof', m: 'concrete' }));
+  w.parts.push(part([0, 5.5, -46], [4, 2, 4], '#757575', { name: 'IdolPedestal', m: 'concrete', sh: 'cyl' }));
+  w.parts.push(part([0, 8, -46], [2, 3, 2], '#ffd700', { name: 'GoldenIdol', m: 'neon', sh: 'sph' }));
+  w.parts.push(part([0, 4.75, -36], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint2', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([0, 5, -42], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  return w;
+}
+
+// Sky pirate adventure: hop floating islands, bounce between them,
+// and reach the treasure island.
+export function skyPirates() {
+  const w = startWorld('#87ceeb');
+  w.parts.push(part([0, -40, 0], [2000, 1, 2000], '#1565c0', { name: 'Sea', k: 'kill', m: 'neon' }));
+  // Start island + airship
+  w.parts.push(part([0, -0.5, 0], [26, 1, 26], '#66bb6a', { name: 'StartIsland', m: 'grass' }));
+  w.parts.push(part([0, 0.25, 0], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  w.parts.push(part([8, 2, 6], [2, 4, 2], '#5d4037', { name: 'Captain', k: 'npc', dialog: 'Arrr! The treasure island is past the clouds. Bounce, matey!' }));
+  w.parts.push(part([14, 3, -6], [14, 3, 4], '#6d4c41', { name: 'AirshipHull', m: 'wood' }));
+  w.parts.push(part([14, 7, -6], [10, 4, 4], '#e53935', { name: 'AirshipBalloon', m: 'neon', sh: 'sph' }));
+  w.parts.push(part([14, 5, -6], [1, 2, 1], '#5d4037', { name: 'AirshipMast', m: 'wood', sh: 'cyl' }));
+  // Bridge planks to island 2
+  for (let i = 0; i < 5; i++) w.parts.push(part([-14 - i * 3, 1 + i * 0.8, -12 - i * 2.5], [3, 0.5, 3], '#8d6e63', { name: 'BridgePlank', m: 'wood' }));
+  // Island 2
+  w.parts.push(part([-32, 3.5, -26], [18, 1, 18], '#66bb6a', { name: 'Island2', m: 'grass' }));
+  w.parts.push(part([-32, 4.75, -26], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([-26, 4.5, -20], [5, 1, 5], '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
+  // Island 3 (high)
+  w.parts.push(part([25, 7.5, -42], [16, 1, 16], '#66bb6a', { name: 'Island3', m: 'grass' }));
+  w.parts.push(part([25, 8.75, -42], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint2', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([18, 8.5, -36], [5, 1, 5], '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
+  // Treasure island
+  w.parts.push(part([0, 11.5, -62], [20, 1, 20], '#ffd54f', { name: 'TreasureIsland', m: 'sand' }));
+  for (const [x, z] of [[-4, -58], [4, -58], [0, -66], [-6, -64], [6, -64]]) w.parts.push(part([x, 12.5, z], [1.5, 1.5, 1.5], '#ffd700', { name: 'GoldPile', m: 'neon', sh: 'sph' }));
+  w.parts.push(part([0, 12.5, -62], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  // Coins on the route
+  for (const [x, y, z] of [[-8, 2, -6], [-20, 4, -18], [-32, 6, -26], [0, 9, -34], [25, 10, -42], [12, 11, -52], [0, 14, -62]]) w.parts.push(part([x, y, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  // Clouds
+  for (const [x, y, z] of [[-50, 6, 10], [40, 10, -10], [-10, 14, -50], [45, 4, 20]]) w.parts.push(part([x, y, z], [10, 2, 6], '#ffffff', { name: 'Cloud', sh: 'sph' }));
+  return w;
+}
+
+// Dungeon crawl: torch-lit maze, skeleton guards, traps, and the exit portal.
+export function dungeonQuest() {
+  const w = startWorld('#0b1026');
+  w.light = { tod: 0, ambient: 0.6, fog: 0.6 };
+  w.parts.push(part([0, -0.5, 0], [150, 1, 150], '#616161', { name: 'DungeonFloor', m: 'concrete' }));
+  // Perimeter walls
+  for (const [x, z, sx, sz] of [[0, -72, 150, 2], [0, 72, 150, 2], [-72, 0, 2, 150], [72, 0, 2, 150]]) w.parts.push(part([x, 2, z], [sx, 4, sz], '#4e342e', { name: 'DungeonWall', m: 'brick' }));
+  // Maze walls (corridors)
+  for (const [x, z, sx, sz] of [[-40, 30, 40, 2], [40, 30, 40, 2], [-40, -10, 2, 40], [40, -10, 2, 40], [-20, -30, 40, 2], [20, -50, 2, 40], [0, 10, 60, 2]]) w.parts.push(part([x, 2, z], [sx, 4, sz], '#5d4037', { name: 'MazeWall', m: 'brick' }));
+  // Torches
+  for (const [x, z] of [[-20, 60], [20, 60], [-50, 0], [50, 0], [-20, -40], [20, -40], [0, -60]]) {
+    w.parts.push(part([x, 1, z], [0.6, 2, 0.6], '#3e2723', { name: 'TorchPost', m: 'wood', sh: 'cyl' }));
+    w.parts.push(part([x, 2.5, z], [1, 1, 1], '#ff6d00', { name: 'TorchFlame', m: 'neon', sh: 'sph' }));
+  }
+  w.parts.push(part([0, 0.25, 60], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  // Skeleton guards
+  for (const [x, z] of [[-30, 40], [30, 40], [-30, -20], [30, -20]]) w.parts.push(part([x, 2, z], [2, 4, 2], '#e0e0e0', { name: 'Skeleton', k: 'npc', enemy: true, dialog: 'Rattle rattle... turn back!' }));
+  // Spike traps
+  for (const [x, z] of [[-10, 20], [10, 20], [0, -20], [-50, -40], [50, -40]]) w.parts.push(part([x, 0.25, z], [6, 0.5, 2], '#ff2020', { name: 'SpikeTrap', k: 'kill', m: 'neon' }));
+  w.parts.push(part([0, 0.75, 0], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([-30, 0.75, -50], [5, 0.5, 5], '#2ec4ff', { name: 'Checkpoint2', k: 'checkpoint', m: 'neon' }));
+  w.parts.push(part([30, 0.75, -50], [6, 0.5, 6], '#69f0ae', { name: 'HealPad', k: 'heal', m: 'neon' }));
+  for (const [x, z] of [[-20, 45], [20, 45], [-55, 15], [55, 15], [0, -35], [-15, -55], [15, -55], [0, 30]]) w.parts.push(part([x, 1, z], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  // Exit portal
+  w.parts.push(part([-3, 3, -68], [1, 6, 1], '#00e5ff', { name: 'PortalFrame', m: 'neon' }));
+  w.parts.push(part([3, 3, -68], [1, 6, 1], '#00e5ff', { name: 'PortalFrame', m: 'neon' }));
+  w.parts.push(part([0, 6, -68], [7, 1, 1], '#00e5ff', { name: 'PortalTop', m: 'neon' }));
+  w.parts.push(part([0, 0.75, -62], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  return w;
+}
+
 export function partyPlaza() {
   const w = startWorld('#1a1033');
   w.light = { tod: 21, ambient: 1, fog: 0.3 };
@@ -870,7 +978,7 @@ export function partyPlaza() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, partyPlaza };
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');

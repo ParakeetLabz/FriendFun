@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=760b33a4';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=c4f4185b';
 import { scaryAvatar } from './catalog.js?v=fabe5f21';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

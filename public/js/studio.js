@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=ac3e6f2b';
+import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=88ba247e';
 import { CATALOG } from './catalog.js?v=fabe5f21';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
@@ -38,6 +38,7 @@ const PRESETS = {
 };
 const MATERIALS = ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 'sand', 'metal', 'baseplate', 'spawn'];
 const KINDS = ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal', 'tp', 'conv', 'lowg', 'ice', 'water', 'magnet', 'shield', 'safe'];
+const SHAPES = [['box', '▭ Box'], ['cyl', '🛢 Cylinder'], ['sph', '⚽ Sphere'], ['cone', '🔺 Cone'], ['ramp', '📐 Ramp']];
 const toHex = c => '#' + new THREE.Color(c).getHexString();
 // ---------- Visual (no-code) script specs ----------
 const VS_TRIGGERS = [
@@ -261,7 +262,7 @@ export class Studio {
   addMesh(p) { const m = makePartMesh(p); if (p.k === 'coin') m.userData.spin = false; this.scene.add(m); this.meshes.set(p.id, m); return m; }
   refresh(p) {
     const old = this.meshes.get(p.id); const wasAttached = this.tc.object === old;
-    if (old) { this.scene.remove(old); if (p.k !== 'coin' && old.geometry.type === 'BoxGeometry') old.geometry.dispose(); }
+    if (old) { this.scene.remove(old); if (!old.userData.sharedGeo) old.geometry.dispose(); }
     const m = this.addMesh(p); if (wasAttached) this.tc.attach(m);
     this.markDirty(); this.renderProps(); this.renderExplorerItem(p);
   }
@@ -548,6 +549,7 @@ export class Studio {
       <div class="pr-sec">${n} parts selected</div>
       <div class="pr-row"><span>Color</span><input type="color" data-mf="c" value="#a3a2a5"></div>
       <div class="pr-row"><span>Material</span><select data-mf="m">${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Shape</span><select data-mf="sh">${SHAPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
       <div class="pr-row"><span>Type</span><select data-mf="k">${KINDS.map(k => `<option>${k}</option>`).join('')}</select></div>
       <div class="pr-row"><span>CanCollide</span><input type="checkbox" data-mf="cc" checked></div>
       <div class="modal-actions" style="margin-top:10px">
@@ -560,6 +562,7 @@ export class Studio {
       const f = inp.dataset.mf;
       for (const p of this.multi) {
         if (f === 'cc') { if (inp.checked) delete p.cc; else p.cc = false; }
+        else if (f === 'sh') { if (inp.value === 'box') delete p.sh; else p.sh = inp.value; }
         else p[f] = inp.value;
         this.refresh(p);
       }
@@ -583,6 +586,7 @@ export class Studio {
       <div class="pr-sec">Appearance</div>
       <div class="pr-row"><span>Color</span><input type="color" data-f="c" value="${toHex(p.c)}"></div>
       <div class="pr-row"><span>Material</span><select data-f="m">${MATERIALS.map(m => `<option ${m === p.m ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Shape</span><select data-f="sh">${SHAPES.map(([v, l]) => `<option value="${v}" ${ (p.sh || 'box') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
       <div class="pr-row"><span>Transparency</span><input type="number" min="0" max="1" step="0.1" data-f="tr" value="${p.tr || 0}"></div>
       <div class="pr-sec">Behavior</div>
       <div class="pr-row"><span>Type</span><select data-f="k">${KINDS.map(k => `<option ${k === p.k ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
@@ -643,7 +647,7 @@ export class Studio {
         this.markDirty(); return;
       }
       if (inp.dataset.v3) { const v = parseFloat(inp.value); if (!isNaN(v)) p[inp.dataset.v3][+inp.dataset.i] = inp.dataset.v3 === 's' ? Math.max(0.05, v) : v; }
-      else { const f = inp.dataset.f; if (f === 'cc') { if (inp.checked) delete p.cc; else p.cc = false; } else if (f === 'wander') { p.wander = inp.checked; } else if (f === 'enemy') { if (inp.value === '1') p.enemy = true; else delete p.enemy; } else if (f === 'dialog') { p.dialog = String(inp.value).slice(0, 200); } else if (f === 'tr') { const t = Math.max(0, Math.min(1, parseFloat(inp.value) || 0)); if (t) p.tr = t; else delete p.tr; } else p[f] = inp.value; }
+      else { const f = inp.dataset.f; if (f === 'cc') { if (inp.checked) delete p.cc; else p.cc = false; } else if (f === 'sh') { if (inp.value === 'box') delete p.sh; else p.sh = inp.value; } else if (f === 'wander') { p.wander = inp.checked; } else if (f === 'enemy') { if (inp.value === '1') p.enemy = true; else delete p.enemy; } else if (f === 'dialog') { p.dialog = String(inp.value).slice(0, 200); } else if (f === 'tr') { const t = Math.max(0, Math.min(1, parseFloat(inp.value) || 0)); if (t) p.tr = t; else delete p.tr; } else p[f] = inp.value; }
       this.refresh(p);
     }));
   }
