@@ -8,11 +8,11 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 const faceCache = {}, shirtCache = {};
 function faceTexture(id) {
   if (faceCache[id]) return faceCache[id];
-  const c = document.createElement('canvas'); c.width = c.height = 128;
-  const g = c.getContext('2d');
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'); g.scale(2, 2); // draw in the old 128 space, render at 256 for crisper faces
   g.fillStyle = '#111'; g.strokeStyle = '#111'; g.lineWidth = 7; g.lineCap = 'round';
   const st = id.slice(5).split('_')[0];
-  const eyes = (h = 18) => { g.beginPath(); g.ellipse(44, 50, 7, h / 2, 0, 0, Math.PI * 2); g.ellipse(84, 50, 7, h / 2, 0, 0, Math.PI * 2); g.fill(); };
+  const eyes = (h = 18) => { g.beginPath(); g.ellipse(44, 50, 7, h / 2, 0, 0, Math.PI * 2); g.ellipse(84, 50, 7, h / 2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(46.5, 47, 2.2, 0, Math.PI * 2); g.arc(86.5, 47, 2.2, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; };
   const smile = (y = 66, r = 26) => { g.beginPath(); g.arc(64, y, r, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke(); };
   const closedHappy = () => { g.beginPath(); g.arc(44, 56, 10, 1.15 * Math.PI, 1.85 * Math.PI); g.arc(84, 56, 10, 1.15 * Math.PI, 1.85 * Math.PI); g.stroke(); };
   const heart = (x, y, s) => { g.beginPath(); g.moveTo(x, y + s); g.bezierCurveTo(x - s * 1.6, y, x - s * 0.7, y - s * 1.4, x, y - s * 0.5); g.bezierCurveTo(x + s * 0.7, y - s * 1.4, x + s * 1.6, y, x, y + s); g.fill(); };
@@ -452,8 +452,12 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const suit = avatar.shirt === 'shirt_suit' && !suitColor;
   const isBugs = avatar.head === 'head_bugs', isDaffy = avatar.head === 'head_daffy';
   const root = new THREE.Group();
+  // R6 gets a softer, glossier finish than the R15 smooth variant —
+  // same six rigid parts, just more modern to look at.
+  const bev = rig === 'r6' ? 0.08 : 0.045;
+  const gls = rig === 'r6' ? 0.45 : 0.5;
   const part = smooth
-    ? (w, h, d, color) => rbox(w, h, d, color, 0.045, 0.5)
+    ? (w, h, d, color) => rbox(w, h, d, color, bev, gls)
     : box;
   const torsoW = isBugs ? 1.8 : 2;
   const torso = part(torsoW, 2, 1, suit ? '#263238' : C.torso); torso.position.y = 3; root.add(torso);
@@ -462,7 +466,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const shirtColor = (shirtIt && shirtIt.color) || '#aaaaaa';
   // complex 3D garment in solid colors (no copied textures): torso + collar + placket + buttons + hem
   const clothPart = (w, h, d, material) => {
-    const r = Math.max(0.01, Math.min(0.045, Math.min(w, h, d) / 2 - 0.01));
+    const r = Math.max(0.01, Math.min(bev, Math.min(w, h, d) / 2 - 0.01));
     const g = smooth ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d);
     const m = new THREE.Mesh(g, material);
     m.castShadow = true; m.receiveShadow = true;
@@ -684,13 +688,16 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
 // Modern Roblox-style rig: articulated R15-style limbs (elbows, knees,
 // hands, feet) in the same blocky language. The R6 builder is kept as
 // the fallback (buildCharacterR6 below).
-export function buildCharacter(avatar, opts = {}) { return buildRig(avatar, opts, false, avatar?.rig === 'r6' ? 'r6' : 'r15'); }
+// R6 always gets the smooth finish now — same six rigid parts, softer
+// edges and a glossier plastic. R15 keeps its look (the advanced-graphics
+// toggle still smooths it via buildCharacterSmooth).
+export function buildCharacter(avatar, opts = {}) { const r6 = avatar?.rig === 'r6'; return buildRig(avatar, opts, r6, r6 ? 'r6' : 'r15'); }
 
 // Advanced graphics: same R15 shapes, smoother finish (slight bevel + gloss).
 export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r6' ? 'r6' : 'r15'); }
 
 // The old one-piece R6 rig, kept as a fallback.
-export function buildCharacterR6(avatar, opts = {}) { return buildRig(avatar, opts, false, 'r6'); }
+export function buildCharacterR6(avatar, opts = {}) { return buildRig(avatar, opts, true, 'r6'); }
 
 export function animateCharacter(ch, state, t, dt) {
   const L = ch.userData.limbs; if (!L) return;
@@ -724,7 +731,7 @@ export function animateCharacter(ch, state, t, dt) {
   else if (state === 'crouch') { ll = rl = -1.1; tp = 0.4; la = ra = 0.3; llf = rlf = 1.1; laf = raf = 0.4; }
   else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.1; raf = -2.1; }
   else if (state === 'shrug') { la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; laf = raf = 0.7; }
-  // idle: perfectly still, like classic Roblox
+  else { la = Math.sin(t * 2) * 0.05; ra = -Math.sin(t * 2) * 0.05; } // idle: a gentle sway so characters feel alive, not statue-still
   const k = Math.min(1, dt * 15);
   L.larm.rotation.x += (la - L.larm.rotation.x) * k;
   L.rarm.rotation.x += (ra - L.rarm.rotation.x) * k;
