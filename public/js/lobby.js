@@ -97,7 +97,7 @@ export async function lobbyPage(D) {
         <button data-m="hangout">🏡 Hangout</button>
       </div>
       <div class="lb-feat">
-        <div class="lb-feat-thumb">${feat ? `<span>${feat.id === 'g_bvportal' ? '🌌' : feat.id.startsWith('g_hw') ? '🎃' : '🎮'}</span>` : '<span>🎮</span>'}</div>
+        <div class="lb-feat-thumb">${feat ? `<span>${feat.icon ? esc(feat.icon) : feat.id === 'g_bvportal' ? '🌌' : feat.id.startsWith('g_hw') ? '🎃' : '🎮'}</span>` : '<span>🎮</span>'}</div>
         <h2 class="lb-feat-name">${feat ? esc(feat.name) : 'No games yet'}</h2>
         <div class="lb-feat-meta">${feat ? `By @${esc(feat.creator || 'Funtopia')} · 👥 ${fmt(feat.playing || 0)} playing · 👁 ${fmt(feat.visits || 0)}` : ''}</div>
       </div>

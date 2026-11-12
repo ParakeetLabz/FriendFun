@@ -978,7 +978,34 @@ export function partyPlaza() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza };
+export function voiceLounge() {
+  const w = startWorld('#2b1a4a');
+  w.light = { tod: 20, ambient: 1, fog: 0.2 };
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  P(0, -0.5, 0, 120, 1, 120, '#3d2b63', { name: 'LoungeFloor', m: 'concrete' });
+  P(0, 0.25, 0, 6, 0.5, 6, '#6b6b6b', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' });
+  // stage with mic stand
+  P(0, 0.5, -28, 30, 1, 14, '#7c4dff', { name: 'Stage', m: 'neon' });
+  P(0, 3, -30, 1, 4, 1, '#555', { name: 'MicStand', m: 'metal' });
+  P(0, 5.2, -30, 1.6, 1.6, 1.6, '#e0e0e0', { name: 'MicBall', m: 'metal', sh: 'sph' });
+  // round tables + couches in a ring
+  const cols = ['#ff6d9d', '#00e5ff', '#ffd400', '#7cff6b'];
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4, x = Math.cos(a) * 16, z = Math.sin(a) * 16;
+    P(x, 1, z, 1, 2, 1, '#8d6e63', { name: 'TableLeg' + i, m: 'wood' });
+    P(x, 2.2, z, 7, 0.6, 7, cols[i], { name: 'Table' + i, m: 'plastic', sh: 'cyl' });
+    P(x + 6, 1, z, 6, 2, 2.5, cols[i], { name: 'Couch' + i, m: 'plastic' });
+    P(x + 6, 2.4, z, 6, 1.4, 0.6, cols[i], { name: 'CouchBack' + i, m: 'plastic' });
+    P(x, 6.5, z, 2, 2, 2, '#fff7ae', { name: 'Lamp' + i, m: 'neon', sh: 'sph' });
+  }
+  // coin ring for fun while you talk
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2, x = Math.cos(a) * 10, z = Math.sin(a) * 10;
+    P(x, 1.5, z, 1.5, 1.5, 0.5, '#ffd400', { name: 'Coin' + i, k: 'coin', m: 'metal' });
+  }
+  return w;
+}
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, blockverse: bvPortal, bvPlaza, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');

@@ -111,7 +111,7 @@ export class Game {
     this.usedAirJump = false; this.dashT = 0; this.dashCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
-    if (!opts.test) { this.connect(); this.initVoice(); } else this.sys('Test mode - press Stop to return to Studio.');
+    if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle(); } else this.sys('Test mode - press Stop to return to Studio.');
     // Steal a Blob detection: sanitizeWorld() strips the stealablob flag from
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
     // which survive sanitizing. Covers the seeded game + Studio-made blob games.

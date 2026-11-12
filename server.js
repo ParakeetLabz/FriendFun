@@ -6,6 +6,8 @@ import { createNews } from './news.js';
 import { createUgc, ugcState } from './ugc.js';
 import { createHacker } from './hacker.js';
 import { createFunAI } from './funai.js';
+import { createSuggestions } from './suggestions.js';
+import { createCalling } from './calling.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -163,6 +165,7 @@ async function seed() {
     g('g3', 'Sky Tower Climb', 'Funtopia', 'Climb the spiral around the giant tower.', 'tower', 654321, 4210, 380),
     g('g4', 'Coin Rush Islands', 'Funtopia', 'Hop between floating islands and grab every coin!', 'coinRush', 432100, 3999, 155),
     g('g5', 'Classic Baseplate', 'Funtopia', 'The classic. A big grey baseplate.', 'baseplate', 210987, 1500, 90),
+    g('g_voicelounge', '🎤 Voice Lounge', 'Funtopia', 'Call your friends and hang out — voice chat lives here.', 'voiceLounge', 0, 0, 0, 50),
   ];
 
   for (const game of games) {
@@ -1448,29 +1451,40 @@ app.get('/api/games/:id', auth, async (req, res) => {
 });
 
 app.post('/api/games', auth, async (req, res) => {
-  const { name, description, world, thumbnail, publish } = req.body || {};
+  const { name, description, world, thumbnail, publish, icon } = req.body || {};
   const id = `g_${crypto.randomUUID()}`;
   const game = {
     id, name: filter(name || 'Untitled Game').slice(0, 50), creator: req.user.name, description: filter(description || '').slice(0, 1000), world: sanitizeWorld(world), visits: 0, likes: 0, dislikes: 0, max_players: 30, created: Date.now(), updated: Date.now(), thumbnail: validThumb(thumbnail), unpublished: !publish
   };
-  const { data, error } = await supabase.from('games').insert(game).select().single();
+  const ic = validIcon(icon);
+  if (ic === null) return res.status(400).json({ error: 'Icon must be a single emoji' });
+  if (ic) game.icon = ic;
+  let { data, error } = await supabase.from('games').insert(game).select().single();
+  if (error && game.icon && /icon/i.test(error.message)) { delete game.icon; ({ data, error } = await supabase.from('games').insert(game).select().single()); }
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ id: data.id });
+  res.json({ id: data.id, ...(game.icon ? {} : { iconIgnored: !!ic }) });
 });
 
 app.put('/api/games/:id', auth, async (req, res) => {
   const { data: g, error: gErr } = await supabase.from('games').select('*').eq('id', req.params.id).single();
   if (gErr || !g) return res.status(404).json({ error: 'Game not found' });
   if (key(g.creator) !== key(req.user.name)) return res.status(403).json({ error: 'Not your game' });
-  const { name, description, world, thumbnail, publish } = req.body || {};
+  const { name, description, world, thumbnail, publish, icon } = req.body || {};
   const updates = {};
   if (name !== undefined) updates.name = filter(name).slice(0, 50) || 'Untitled Game';
   if (description !== undefined) updates.description = filter(description).slice(0, 1000);
   if (world) updates.world = sanitizeWorld(world);
   if (thumbnail) updates.thumbnail = validThumb(thumbnail);
   if (publish !== undefined) updates.unpublished = !publish;
+  if (icon !== undefined) { const v = validIcon(icon); if (v === null) return res.status(400).json({ error: 'Icon must be a single emoji' }); updates.icon = v; }
   updates.updated = Date.now();
-  const { error } = await supabase.from('games').update(updates).eq('id', req.params.id);
+  let { error } = await supabase.from('games').update(updates).eq('id', req.params.id);
+  if (error && updates.icon !== undefined && /icon/i.test(error.message)) {
+    delete updates.icon;
+    ({ error } = await supabase.from('games').update(updates).eq('id', req.params.id));
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ ok: true, iconIgnored: true });
+  }
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -1523,6 +1537,15 @@ app.post('/api/games/:id/thumbnail', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+function validIcon(s) {
+  const v = String(s || '').trim();
+  if (!v) return '';
+  const pts = Array.from(v);
+  if (pts.length === 0 || pts.length > 4) return null;
+  if (/[a-zA-Z0-9]/.test(v)) return null;
+  if (!/\p{Extended_Pictographic}/u.test(v)) return null;
+  return v;
+}
 function validThumb(t) { return typeof t === 'string' && t.startsWith('data:image/') && t.length < 600000 ? t : null; }
 function sanitizeScript(s) {
   if (!s || typeof s !== 'object') return undefined;
@@ -1749,6 +1772,8 @@ createNews({ app, auth, rooms, broadcast, isOwner });
 createUgc({ app, auth, modOnly, supabase, supabaseAdmin, SUPABASE_URL, ITEM, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT, UGC_BUCKET, UGC_GLB_MAX, filter, key, list, ugcDef, validUgcTransform, ensureUgcBucket, loadUgcItems, logMod });
 createHacker({ app, auth, rooms, broadcast, isOwner });
 createFunAI({ app, auth });
+createSuggestions({ app, auth, modOnly, isMod, supabase, filter, logMod });
+createCalling({ app, auth, supabase, notify });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;

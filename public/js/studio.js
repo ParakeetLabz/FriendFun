@@ -73,7 +73,7 @@ export class Studio {
     this.world = structuredClone(o.world);
     if (!Array.isArray(this.world.folders)) this.world.folders = [];
     if (!Array.isArray(this.world.scripts)) this.world.scripts = [];
-    this.gameId = o.gameId || null; this.name = o.name || 'Untitled Game'; this.description = o.description || '';
+    this.gameId = o.gameId || null; this.name = o.name || 'Untitled Game'; this.description = o.description || ''; this.icon = o.icon || '';
     this.meshes = new Map(); this.sel = null; this.multi = []; this.exFilter = ''; this.closedFolders = new Set(); this.undoStack = []; this.redoStack = []; this.dirty = false;
     this.snap = true; this.keys = {};
     this.dom(); this.three(); this.bind(); this.rebuildAll();
@@ -815,7 +815,7 @@ export class Studio {
     this.o.playTest(box, structuredClone(this.world), this.name, () => { box.classList.add('hidden'); this.resize(); });
   }
   async save(extra = {}) {
-    const body = { name: this.name, description: this.description, world: this.world, ...extra };
+    const body = { name: this.name, description: this.description, world: this.world, icon: this.icon || '', ...extra };
     try {
       if (this.gameId) await this.o.api('PUT', '/api/games/' + this.gameId, body);
       else { const r = await this.o.api('POST', '/api/games', body); this.gameId = r.id; this.o.onCreated?.(r.id); }
@@ -838,14 +838,18 @@ export class Studio {
 
   publishDialog() {
     const d = document.createElement('div'); d.className = 'modal-bg';
+    const ICONS = ['🏰', '🌋', '🏝️', '⚔️', '🏆', '🎢', '🚀', '👻', '🧟', '🏎️', '⚽', '🧩', '🎨', '🍕', '🐉', '🔮', '🌈', '⭐', '💎', '🍦', '🎃', '👽', '🤖', '🦖', '🏴‍☠️', '⚡', '🔥', '❄️', '🌊', '🏜️', '🎪', '🎯', '🛸', '🏀', '🎸', '🧸'];
     d.innerHTML = `<div class="modal"><h2>Publish to Funtopia</h2>
       <label>Name<input class="pd-name" maxlength="50" value="${esc(this.name)}"></label>
       <label>Description<textarea class="pd-desc" maxlength="1000" rows="4">${esc(this.description)}</textarea></label>
+      <div class="pd-icons-wrap"><b>Game Icon</b><span class="muted small">Pick an emoji — it shows on your game's card.</span>
+        <div class="pd-icons"><button class="pd-icon ${!this.icon ? 'sel' : ''}" data-icon="" title="No icon">🚫</button>${ICONS.map(e => `<button class="pd-icon ${this.icon === e ? 'sel' : ''}" data-icon="${e}">${e}</button>`).join('')}</div></div>
       <div class="pd-tools"><b>Game Tools</b><span class="muted small">Everyone who plays gets these in their toolbar.</span>
         <div class="pd-gears">${GEARS.map(gr => `<label class="pd-gear"><input type="checkbox" data-gear="${gr.id}" ${(this.world.gears || []).includes(gr.id) ? 'checked' : ''}>${gr.emoji || '📦'} ${esc(gr.name)}</label>`).join('')}</div></div>
       <div class="modal-actions"><button class="btn-secondary pd-cancel">Cancel</button><button class="btn-primary pd-ok">Publish</button></div></div>`;
     document.body.appendChild(d);
     d.querySelector('.pd-cancel').onclick = () => d.remove();
+    d.querySelectorAll('.pd-icon').forEach(b => b.onclick = () => { this.icon = b.dataset.icon; d.querySelectorAll('.pd-icon').forEach(x => x.classList.toggle('sel', x === b)); this.markDirty(); });
     d.querySelector('.pd-ok').onclick = async () => {
       this.name = d.querySelector('.pd-name').value.trim() || 'Untitled Game'; this.description = d.querySelector('.pd-desc').value;
       const gg = [...d.querySelectorAll('[data-gear]:checked')].map(c => c.dataset.gear);

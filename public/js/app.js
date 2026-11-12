@@ -65,7 +65,7 @@ function buildCharacter(avatar) {
   return _avatar3d.buildCharacter(avatar);
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=fabe5f21';
-import { templates } from './worlds.js?v=de7c6426';
+import { templates } from './worlds.js?v=88253767';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
@@ -147,7 +147,7 @@ async function fillThumbs(root = app) {
 const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><rect width="16" height="9" fill="#393b3d"/></svg>');
 function gameCard(g) {
   return `<a class="game-card" href="#/games/${g.id}">
-    <div class="gc-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`} alt=""></div>
+    <div class="gc-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`} alt="">${g.icon ? `<span class="gc-icon">${esc(g.icon)}</span>` : ''}</div>
     <div class="gc-name">${esc(g.name || "Untitled Game")}</div>
     <div class="gc-stats"><span>${icons.thumb} ${rating(g)}</span><span>${icons.people} ${fmt(g.playing)}</span></div>
   </a>`;
@@ -354,7 +354,7 @@ function shell(active, content) {
   <header class="topbar">
     <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
     <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
-    <nav class="tb-nav"><a href="#/discover">Charts</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funai">✨ FunAI</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
+    <nav class="tb-nav"><a href="#/discover">Charts</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funai">✨ FunAI</a><a href="#/suggest">💡 Suggestions</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
     <form class="tb-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search"></form>
     <div class="tb-right">
       <div class="tb-user-wrap">
@@ -629,7 +629,8 @@ function loginPage() {
   <div class="landing-bg"></div>
   <div class="landing-inner">
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
-      <h1>Play, build… and survive the night.</h1><p>Join millions of blocky adventurers — if you dare. Jump into haunted games, dress your avatar for the dark, and build your own cursed worlds in Funtopia Studio. Enter… if you dare. 🎃</p>
+      <h1>Play, build, and hang out with friends.</h1><p>Jump into adventure games, explore wild worlds, dress your blocky avatar, and build your own games in Funtopia Studio — then call your friends and play together. 🎉</p>
+      <div class="landing-chips"><a href="#/discover">🎮 Adventure games</a><a href="#/friends">📞 Call friends</a><a href="#/suggest">💡 Suggestion Box</a></div>
       ${blockverseActive() ? `<a class="bv-strip" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">🟩 <b>Funtopia × Blockverse is LIVE!</b> Free collab gifts, a portal-run course & the World Hopper badge — visit Blockverse ↗</a>` : ''}</div>
     <div class="auth-card">
       <div class="auth-tabs"><button data-m="signup" class="active">Sign Up</button><button data-m="login">Log In</button></div>
@@ -781,7 +782,7 @@ async function gamePage(id) {
       <div class="gp-top">
         <div class="gp-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}></div>
         <div class="gp-info">
-          <h1>${esc(g.name)}</h1>
+          <h1>${g.icon ? esc(g.icon) + ' ' : ''}${esc(g.name)}</h1>
           <div class="gp-by">By <a href="#/users/${encodeURIComponent(g.creator)}">@${esc(g.creator)}</a>${vtag(g.creator)}${g.unpublished ? ' <span class="tag">Private</span>' : ''}</div>
           <button class="play-btn" title="Play"><svg viewBox="0 0 24 24" width="40" height="40"><path fill="#fff" d="M7 4l13 8-13 8z"/></svg></button>
           <div class="gp-actions">
@@ -833,15 +834,15 @@ async function gamePage(id) {
   });
 }
 
-async function playPage(id, server) {
+async function playPage(id, server, autoVoice) {
   const g = await api('GET', '/api/games/' + id);
   me = await api('GET', '/api/me');
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=d2956f7d');
+  const { Game } = await import('./game.js?v=fdd8386b');
   const game = new Game(app.querySelector('.play-container'), {
-    world: g.world, gameId: g.id, gameName: g.name, server, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
+    world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
   });
   cleanup = () => game.destroy();
@@ -1193,7 +1194,7 @@ async function friendsPage() {
       ${feed.playing.length ? `<p>${feed.playing.map(p => `<a href="#/play/${p.gameId}">${esc(p.name)} is playing ${esc(p.gameName)}</a>`).join(' · ')}</p>` : ''}
       <div class="game-row">${feed.games.map(gameCard).join('') || '<p class="muted">Nothing new from friends yet.</p>'}</div></section>
     <section><div class="sec-h"><h2>My Friends (${fr.friends.length})</h2></div>
-      <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-party="${esc(u.name)}">🎉</button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
+      <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-call="${esc(u.name)}">📞 Call</button><button class="btn-secondary btn-small" data-party="${esc(u.name)}">🎉</button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-accept]').forEach(b => b.onclick = async () => { await api('POST', '/api/friends/' + encodeURIComponent(b.dataset.accept)); toast('You are now friends with ' + b.dataset.accept); me = await api('GET', '/api/me'); friendsPage(); });
     app.querySelectorAll('[data-decline]').forEach(b => b.onclick = async () => { await api('DELETE', '/api/friends/' + encodeURIComponent(b.dataset.decline)); me = await api('GET', '/api/me'); friendsPage(); });
     app.querySelectorAll('[data-party]').forEach(b => b.onclick = async () => {
@@ -1203,6 +1204,14 @@ async function friendsPage() {
         await api('POST', `/api/party/${p.id}/invite`, { user: b.dataset.party });
         toast('Party invite sent to ' + b.dataset.party + '!');
       } catch (err) { toast(err.message, true); }
+    });
+    app.querySelectorAll('[data-call]').forEach(b => b.onclick = async () => {
+      b.disabled = true; b.textContent = '📞 Calling…';
+      try {
+        await api('POST', '/api/call/invite', { to: b.dataset.call });
+        toast('Calling ' + b.dataset.call + ' — they got an invite! 📞');
+        b.outerHTML = `<a class="btn-join" href="#/play/g_voicelounge?voice=1">Join the call</a>`;
+      } catch (err) { toast(err.message, true); b.disabled = false; b.textContent = '📞 Call'; }
     });
     app.querySelector('.user-search').onsubmit = async e => {
       e.preventDefault();
@@ -1463,7 +1472,7 @@ async function createPage() {
       <p class="muted">Got a <b>.fun</b> game file? It holds the game's scripts and a JSON with its name — load it and it opens as a new experience you can edit in Studio.</p>
       <div class="row"><button class="btn-secondary" id="funImportBtn">📂 Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
     <section><div class="sec-h"><h2>My Experiences (${mine.length})</h2></div>
-      <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
+      <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${g.icon ? esc(g.icon) + ' ' : ''}${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
         <a class="btn-secondary" href="#/studio/${g.id}">Edit</a><a class="btn-secondary" href="#/games/${g.id}">View</a><button class="btn-danger" data-del="${g.id}">Delete</button></div>`).join('') || '<p class="muted">You haven\'t made anything yet. Pick a template above to open Funtopia Studio!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => location.hash = b.dataset.goto);
     setTimeout(() => app.querySelectorAll('img[data-tpl]').forEach(img => { img.src = tplThumb(img.dataset.tpl); }), 30);
@@ -1482,13 +1491,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=ea4b5604');
+  const { Studio } = await import('./studio.js?v=d33071a2');
   const studio = new Studio(app.querySelector('.studio-container'), {
-    gameId: g.id, name: g.name, description: g.description, world: g.world, api, toast, aiAccess: me.aiAccess,
+    gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=d2956f7d');
+      const { Game: GameClass } = await import('./game.js?v=fdd8386b');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1668,6 +1677,7 @@ async function ugcGlbModal(u) {
 const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN, ensureAvatar3d, get me() { return me; }, get BADGE_DEFS() { return BADGE_DEFS; } };
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
+const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
 const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMoney, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
@@ -1788,11 +1798,11 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u53'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u54'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
-      case 'play': return await playPage(seg[1], qp.get('server'));
+      case 'play': return await playPage(seg[1], qp.get('server'), qp.get('voice') === '1');
       case 'create': return await createPage();
       case 'users': return await profilePage(decodeURIComponent(seg[1] || ''));
       case 'friends': return await friendsPage();
@@ -1803,6 +1813,7 @@ async function route() {
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
       case 'ugc': { const m = await import('./ugc-studio.js?v=u50'); return m.ugcPage(ugcDeps); }
+      case 'suggest': { const m = await import('./suggest.js?v=a4d0cca8'); return m.suggestPage(suggestDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e67b220b'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
