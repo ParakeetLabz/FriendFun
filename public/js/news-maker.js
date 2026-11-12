@@ -67,7 +67,7 @@ export async function newsMakerPage(D) {
         if (r.broadcast) {
           statusEl.innerHTML = `<p>📡 <b>Live now:</b> ${esc(r.broadcast.title)} <button class="btn-secondary btn-sm nm-replay">👁 View</button> <button class="btn-secondary btn-sm nm-unbroadcast">Stop</button></p>`;
           statusEl.querySelector('.nm-replay').onclick = async () => {
-            const m = await import('./news-player.js?v=227ee6a3');
+            const m = await import('./news-player.js?v=00b6573e');
             m.showNewsBroadcast({ esc, me, ensureAvatar3d }, r.broadcast);
           };
           statusEl.querySelector('.nm-unbroadcast').onclick = async () => {

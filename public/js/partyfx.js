@@ -3,7 +3,7 @@
 // 1) the whole site glitches and breaks, 2) fades to black,
 // 3) DJ Funtopia pops up and starts the music, 4) the partyfied site reveals.
 // Skippable, reduced-motion aware. Music reuses the jam system (Blocky Bounce, 128 BPM).
-import { startJam, stopJam, currentJam } from './jam.js?v=c39dadc4';
+import { startJam, stopJam, currentJam } from './jam.js?v=da88bb4b';
 
 const SHOWN_KEY = 'ff-party-transition-shown';
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;

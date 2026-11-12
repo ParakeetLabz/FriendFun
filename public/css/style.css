@@ -416,44 +416,6 @@ button.badge-card { cursor: pointer; } button.badge-card:hover { border-color: #
 .pet-img-lg canvas.pet-voxel { width: 84px; height: 84px; }
 .pet-img-lg canvas.gear-voxel { width: 84px; height: 84px; }
 
-/* ---------- Halloween theme (Oct 6 - Nov 2) ---------- */
-.halloween-banner { display: block; background: linear-gradient(135deg, #6a1b9a, #ff6d00); color: #fff; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; text-decoration: none; font-size: 16px; box-shadow: 0 4px 18px #6a1b9a88; }
-.halloween-banner:hover { filter: brightness(1.1); }
-body.halloween { --blue: #ff6d00; }
-body.halloween .topbar { background: linear-gradient(180deg, #2a1445, #170b28); border-bottom: 3px solid #ff6d00; }
-body.halloween .sidebar { background: #170b28; }
-body.halloween .sidebar a { color: #d7bde2; }
-body.halloween .sidebar a:hover { background: #2e1a4d; }
-body.halloween .sidebar a.active { background: #ff6d00; color: #1a1a1a; }
-/* ---------- spooky halloween logo ---------- */
-body.halloween .logo-text { position: relative; color: #ff6d00 !important; font-weight: 900;
-  text-shadow: 0 0 18px #ff6d00aa, 0 0 46px #ff6d0055, 3px 3px 0 #2a0a4a;
-  animation: spooky-flicker 6s infinite; }
-body.halloween .logo-text::after { content: ' 🎃'; }
-body.halloween .logo-text::before { content: ''; position: absolute; left: 2%; right: 2%; top: 96%; height: 16px;
-  background: linear-gradient(#d32f2f, #7f0000); opacity: .92; pointer-events: none;
-  clip-path: polygon(0 0, 100% 0, 100% 25%, 96% 25%, 94% 80%, 92% 25%, 80% 25%, 78% 55%, 76% 25%, 63% 25%, 61% 95%, 59% 25%, 45% 25%, 43% 65%, 41% 25%, 28% 25%, 26% 45%, 24% 25%, 12% 25%, 10% 75%, 8% 25%, 0 25%); }
-@keyframes spooky-flicker {
-  0%, 100% { opacity: 1; } 3% { opacity: .35; } 5% { opacity: 1; } 6% { opacity: .6; } 7% { opacity: 1; }
-  41% { opacity: 1; } 43% { opacity: .25; } 45% { opacity: 1; }
-  69% { opacity: 1; } 70% { opacity: .55; } 71% { opacity: 1; } }
-body.halloween .logo-icon .ff-logo { filter: drop-shadow(0 0 10px #ff6d00) saturate(1.5);
-  animation: spooky-wobble 3.2s ease-in-out infinite; transform-origin: 50% 80%; }
-@keyframes spooky-wobble { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
-body.halloween .btn-primary { background: #ff6d00; }
-body.halloween .btn-primary:hover { background: #ff8f00; }
-body.halloween::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .06;
-  background: repeating-radial-gradient(circle at 50% 130%, #ff6d00 0 70px, transparent 70px 140px); }
-body.halloween h1, body.halloween h2 { color: #ffb74d; text-shadow: 0 2px 12px #ff6d0044; }
-body.halloween .sec-h h2 { color: #ff9800; }
-body.halloween .game-card { background: #221532; border: 1px solid #4a2c6a; }
-body.halloween .game-card:hover { border-color: #ff6d00; box-shadow: 0 4px 20px #ff6d0033; }
-body.halloween .sidebar .logo { filter: drop-shadow(0 0 8px #ff6d0066); }
-.hw-hero { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; background: linear-gradient(135deg, #2a1445, #4a1e00); border-radius: 16px; padding: 22px; margin-bottom: 18px; }
-.hw-hero-emoji { font-size: 72px; filter: drop-shadow(0 4px 12px #ff6d0088); }
-.hw-hero-text h1 { margin: 0 0 6px; color: #ffb74d; }
-.hw-thumb { aspect-ratio: 1; display: grid; place-items: center; font-size: 64px; background: radial-gradient(circle at 50% 35%, #3a2456, #170b28); border-radius: 8px; }
-
 /* ---------- in-game gear toolbar (Roblox backpack style) + kill feed ---------- */
 .inv-bar { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; align-items: stretch; }
 .inv-item { position: relative; width: 72px; min-height: 72px; border-radius: 6px; border: 2px solid rgba(255,255,255,.14); background: rgba(30,30,34,.72); color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 8px 4px 6px; transition: transform .08s, border-color .08s, background .08s; font-family: inherit; }
@@ -600,21 +562,6 @@ a.set-row.set-link:last-child { border-bottom: 0; }
 .xf-row input[type=range] { width: 100%; accent-color: #335fff; }
 .xf-row b { text-align: right; font-weight: 600; }
 /* Spooky Rivals Tournament */
-.tourney-hero { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
-.tourney-prize, .tourney-countdown { flex: 1; min-width: 220px; background: rgba(0,0,0,.3); border: 2px solid #b388ff; border-radius: 14px; padding: 18px; text-align: center; }
-.tourney-prize .tp-emoji { font-size: 52px; display: block; }
-.tourney-prize b { display: block; font-size: 18px; margin: 8px 0 4px; }
-.tourney-prize em { color: var(--muted); font-size: 13px; }
-.tourney-countdown span { color: var(--muted); font-size: 13px; }
-.tourney-countdown b { display: block; font-size: 28px; margin-top: 6px; color: #ffca28; }
-.tourney-actions { display: flex; gap: 10px; align-items: center; margin: 12px 0 20px; }
-.tourney-board { display: flex; flex-direction: column; gap: 6px; }
-.tourney-row { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; background: rgba(0,0,0,.25); border-radius: 10px; padding: 10px 14px; }
-.tourney-row.me { border: 2px solid #ffd400; }
-.tourney-rank { font-size: 20px; font-weight: 800; color: #ffca28; }
-.tourney-name { font-weight: 700; }
-.tourney-wins { color: var(--muted); }
-.tourney-hud { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.65); border: 2px solid #b388ff; border-radius: 12px; padding: 8px 18px; font-size: 17px; z-index: 50; white-space: nowrap; }
 /* Rivals remake */
 .rivals-hud { position: absolute; inset: 0; pointer-events: none; z-index: 40; }
 .rv-round { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.65); border: 2px solid #b388ff; border-radius: 12px; padding: 8px 20px; font-size: 17px; white-space: nowrap; }
@@ -626,10 +573,6 @@ a.set-row.set-link:last-child { border-bottom: 0; }
 .rv-hp { width: 220px; height: 14px; background: rgba(0,0,0,.6); border-radius: 8px; overflow: hidden; border: 1px solid #555; }
 .rv-hpfill { height: 100%; width: 100%; background: linear-gradient(90deg, #66bb6a, #9ccc65); transition: width .15s; }
 .rv-ammo { background: rgba(0,0,0,.6); border-radius: 8px; padding: 6px 14px; font-size: 16px; font-weight: 700; border: 1px solid #555; }
-.tourney-loadout { display: flex; align-items: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
-.loadout-picks { display: flex; gap: 8px; }
-.loadout-pick { background: rgba(0,0,0,.3); border: 2px solid #555; border-radius: 10px; padding: 8px 14px; font-size: 15px; cursor: pointer; color: #fff; }
-.loadout-pick.active { border-color: #ffd400; background: rgba(255,212,0,.15); }
 /* Easter eggs */
 .egg-confetti { position: fixed; top: -40px; z-index: 9999; pointer-events: none; animation: egg-fall 3s ease-in forwards; }
 @keyframes egg-fall { to { transform: translateY(110vh) rotate(360deg); } }
@@ -735,8 +678,10 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-3d { position: absolute; inset: 0; }
 .lb-3d canvas { width: 100%; height: 100%; display: block; }
 .lb-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; z-index: 10; }
-.lb-logo { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 800; font-size: 18px; letter-spacing: 1px; }
-.lb-logo-badge { background: linear-gradient(135deg, #7c6cf5, #4a3fd4); width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.lb-logo { display: flex; align-items: center; gap: 12px; color: #fff; text-decoration: none; font-weight: 900; font-size: 22px; letter-spacing: 2px; }
+.lb-logo-mark { width: 42px; height: 42px; display: inline-flex; flex: none; filter: drop-shadow(0 4px 12px rgba(124,58,237,.45)); }
+.lb-logo-mark svg { width: 100%; height: 100%; }
+.lb-logo-word { background: linear-gradient(135deg, #fff, #c4b5fd, #22d3ee, #fff); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-slide 5s ease infinite; }
 .lb-tag { font-size: 11px; background: rgba(124,108,245,.25); border: 1px solid rgba(124,108,245,.5); padding: 2px 8px; border-radius: 999px; letter-spacing: 2px; }
 .lb-top-right { display: flex; align-items: center; gap: 10px; }
 .lb-tix { background: rgba(0,0,0,.5); border: 1px solid rgba(255,215,0,.4); padding: 6px 12px; border-radius: 999px; font-weight: 700; }
@@ -790,54 +735,8 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-emotes { position: absolute; left: 50%; bottom: 92px; transform: translateX(-50%); display: flex; gap: 6px; z-index: 10; }
 .lb-emotes button { width: 44px; height: 44px; border-radius: 12px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); font-size: 20px; cursor: pointer; line-height: 1; }
 .lb-emotes button:hover { background: rgba(255,255,255,.12); }
-/* 🎃 Halloween countdown — banner + backdrop get scarier each day (scare-1..6). */
-.lb-countdown { position: absolute; top: 66px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,140,0,.5); color: #fff; text-decoration: none; font-weight: 800; font-size: 14px; letter-spacing: .5px; white-space: nowrap; }
-.lb-countdown span { font-size: 18px; }
-.lb-countdown.scare-1 { border-color: rgba(255,140,0,.5); box-shadow: 0 0 12px rgba(255,140,0,.25); }
-.lb-countdown.scare-2 { border-color: rgba(255,100,0,.65); box-shadow: 0 0 16px rgba(255,100,0,.35); }
-.lb-countdown.scare-3 { border-color: rgba(180,0,255,.6); box-shadow: 0 0 18px rgba(180,0,255,.35); }
-.lb-countdown.scare-4 { border-color: rgba(255,0,60,.7); box-shadow: 0 0 20px rgba(255,0,60,.4); }
-.lb-countdown.scare-5 { border-color: #ff0033; box-shadow: 0 0 24px rgba(255,0,51,.55); animation: lb-flicker 2.4s infinite; }
-.lb-countdown.scare-6 { border-color: #ff0033; background: rgba(40,0,0,.7); box-shadow: 0 0 30px rgba(255,0,51,.7); animation: lb-flicker 1.2s infinite; }
-@keyframes lb-flicker { 0%, 100% { opacity: 1; } 88% { opacity: 1; } 90% { opacity: .55; } 92% { opacity: 1; } 94% { opacity: .7; } 96% { opacity: 1; } }
-.lb-bg::after { content: ''; position: absolute; inset: 0; pointer-events: none; }
-.lobby.scare-1 .lb-bg::after { background: radial-gradient(ellipse at 50% 100%, rgba(255,120,0,.12), transparent 60%); }
-.lobby.scare-2 .lb-bg::after { background: linear-gradient(180deg, transparent 40%, rgba(120,0,180,.18) 100%), radial-gradient(ellipse at 50% 100%, rgba(255,120,0,.15), transparent 60%); }
-.lobby.scare-3 .lb-bg::after { background: radial-gradient(ellipse at 50% 0%, rgba(0,0,0,.55), transparent 65%), linear-gradient(180deg, transparent 30%, rgba(80,0,140,.25) 100%); }
-.lobby.scare-4 .lb-bg::after { background: radial-gradient(circle at 85% 15%, rgba(255,30,30,.28), transparent 35%), radial-gradient(ellipse at 50% 0%, rgba(0,0,0,.65), transparent 60%), linear-gradient(180deg, transparent 25%, rgba(60,0,100,.3) 100%); }
-.lobby.scare-5 .lb-bg::after { background: radial-gradient(circle at 85% 15%, rgba(255,20,20,.4), transparent 40%), radial-gradient(ellipse at 50% 0%, rgba(0,0,0,.75), transparent 55%), linear-gradient(180deg, transparent 20%, rgba(40,0,80,.35) 100%); }
-.lobby.scare-6 .lb-bg::after { background: radial-gradient(circle at 85% 15%, rgba(255,0,0,.5), transparent 45%), radial-gradient(ellipse at 50% 0%, rgba(0,0,0,.85), transparent 50%), linear-gradient(180deg, rgba(20,0,0,.4), rgba(30,0,60,.4) 100%); }
-@media (max-width: 640px) { .lb-countdown { font-size: 12px; padding: 6px 12px; top: 60px; max-width: 92vw; white-space: normal; text-align: center; } }
-/* 👻 Constant glitches + scary stuff — burst loop never stops, faster at higher scare levels. */
-.lb-countdown b { text-shadow: 1px 0 rgba(255,0,60,.8), -1px 0 rgba(0,255,255,.8); }
-.lb-countdown.scare-6 b { text-shadow: 2px 0 rgba(255,0,60,.9), -2px 0 rgba(0,255,255,.9); }
-.lb-glitch { position: absolute; inset: 0; z-index: 50; pointer-events: none; opacity: 0; background: repeating-linear-gradient(0deg, rgba(255,0,60,.14) 0 2px, transparent 2px 7px, rgba(0,255,255,.12) 7px 9px, transparent 9px 14px); mix-blend-mode: screen; animation: lb-glitch-burst 7s infinite; }
-.lobby.scare-1 .lb-glitch { animation-duration: 9s; }
-.lobby.scare-2 .lb-glitch { animation-duration: 8s; }
-.lobby.scare-3 .lb-glitch { animation-duration: 7s; }
-.lobby.scare-4 .lb-glitch { animation-duration: 6s; }
-.lobby.scare-5 .lb-glitch { animation-duration: 4.5s; }
-.lobby.scare-6 .lb-glitch { animation-duration: 3s; }
-@keyframes lb-glitch-burst {
-  0%, 90%, 94%, 100% { opacity: 0; transform: none; filter: none; }
-  91% { opacity: .6; transform: translate(4px, -2px); }
-  92% { opacity: .35; transform: translate(-4px, 2px); filter: hue-rotate(90deg); }
-  93% { opacity: .5; transform: translate(2px, 1px); }
-}
-.lb-haunt { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
-.lb-haunt span { position: absolute; left: 0; opacity: .85; animation-name: lb-drift; animation-timing-function: linear; animation-iteration-count: infinite; }
-@keyframes lb-drift { from { transform: translateX(-10vw); } to { transform: translateX(110vw); } }
-.lb-eyes { position: absolute; top: 18%; right: 12%; z-index: 5; font-size: 34px; pointer-events: none; opacity: 0; animation: lb-eyes-blink 5s infinite; }
-@keyframes lb-eyes-blink { 0%, 70%, 100% { opacity: 0; } 75%, 85% { opacity: .9; } 80% { opacity: .2; } }
 .lb-emotes button.on { background: rgba(124,108,245,.35); border-color: rgba(124,108,245,.7); }
 
-/* 🎃 SCARY MODE — while Halloween is active the whole site goes blood-dark */
-body.scary { --bg: #070203; --bg2: #0d0407; --card: #170709; --card2: #20090d; --line: #4a0f18; --text: #ffe9e9; --muted: #b08a8a; --blue: #ff2d40; --blue2: #c40f24; --pink: #ff9f43; --grad: linear-gradient(135deg, #ff2d40, #7a0c1c); --glow: 0 0 18px rgba(255,45,64,.45); }
-body.scary .topbar { background: linear-gradient(180deg, #1c0208, #0d0104); border-bottom: 3px solid #a31220; }
-body.scary .sidebar { background: #0d0104; }
-.scary-decor { position: fixed; top: 58px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 10px; font-size: 26px; pointer-events: none; z-index: 40; }
-.scary-decor .sd-bats { display: inline-block; animation: sd-drift 7s ease-in-out infinite alternate; }
-@keyframes sd-drift { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
 
 /* ===== ✨ FunAI ===== */
 .funai-hero{background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:16px;padding:22px 24px;margin-bottom:16px;box-shadow:0 0 28px rgba(124,58,237,.35)}

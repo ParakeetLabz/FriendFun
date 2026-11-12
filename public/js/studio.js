@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=88ba247e';
-import { CATALOG } from './catalog.js?v=fabe5f21';
+import { CATALOG } from './catalog.js?v=56507280';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

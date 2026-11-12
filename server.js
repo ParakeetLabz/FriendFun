@@ -11,9 +11,7 @@ import { createCalling } from './calling.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { templates, hwMansion, hwPumpkin, hwWitch, hwGhost, hwBase, shooterArena, shooterFort, shooterRooftop } from './public/js/worlds.js';
-import { HALLOWEEN_GAMES, seedHalloweenGames } from './halloween.js';
-import { BLOCKVERSE_GAMES, seedBlockverseGames } from './collab.js';
+import { templates, shooterArena, shooterFort, shooterRooftop } from './public/js/worlds.js';
 import { PARTY_PRIZE, PARTY_GOAL, seedPartyGames, endPartyGames } from './party.js';
 import { ITEM, CATALOG, DEFAULT_AVATAR, ECON, BADGES, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT } from './public/js/catalog.js';
 
@@ -312,7 +310,7 @@ async function dailyTix(u) {
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   const streak = (u.tixDay === yesterday) ? (Number(u.tixStreak) || 0) + 1 : 1;
   const streakBonus = Math.min((streak - 1) * 5, 50); // +5/day, cap +50
-  const amt = (ECON.DAILY_TIX + (isClub(u) ? ECON.CLUB_DAILY : 0) + streakBonus) * (halloweenActive() ? 2 : 1);
+  const amt = (ECON.DAILY_TIX + (isClub(u) ? ECON.CLUB_DAILY : 0) + streakBonus);
   const baseUpdate = { tixDay: day, funtix: (Number(u.funtix) || 0) + amt };
   // Try with streak column; fall back without it if the column doesn't exist yet
   let updated, error;
@@ -369,14 +367,6 @@ app.get('/api/me', auth, async (req, res) => {
   if (!list(u, 'earnedBadges').includes('looney')) {
     const badges = [...list(u, 'earnedBadges'), 'looney'];
     await supabase.from('users').update({ earnedBadges: badges }).eq('name', u.name);
-  }
-  // Funtopia × Blockverse collab: free gift items for everyone during the event
-  if (typeof blockverseActive === 'function' && blockverseActive()) {
-    const missBv = BV_PRIZE.filter(id => !u.inventory.includes(id));
-    if (missBv.length) {
-      u.inventory = [...u.inventory, ...missBv];
-      await supabase.from('users').update({ inventory: u.inventory }).eq('name', u.name);
-    }
   }
   // 100 Players Party: free Neon Party Hat for everyone while the party lasts
   if (await partyActive()) {
@@ -1614,7 +1604,6 @@ function winBadges(game) {
   const kinds = new Set((game?.world?.parts || []).map(part => part.k));
   return [
     'game_first_win',
-    ...(game?.event === 'blockverse' ? ['blockverse'] : []),
     ...(kinds.has('coin') ? ['game_coin_hunter'] : []),
     ...(kinds.has('speed') ? ['game_speedster'] : []),
     ...(kinds.has('bounce') ? ['game_bouncer'] : []),
@@ -1839,16 +1828,6 @@ wss.on('connection', (ws) => {
       const earned = ECON.COIN_TIX + (isClub(player.user) ? (Number(ECON.CLUB_COIN_BONUS) || 0) : 0);
       const { data: updated, error } = await supabase.from('users').update({ funtix: (Number(player.user.funtix) || 0) + earned }).eq('name', player.user.name).select().single();
       if (error || !updated) return send(ws, { t: 'error', error: 'Could not add FunTix' });
-      player.user = updated;
-      send(ws, { t: 'money', ...money(updated), earned });
-    }
-    else if (m.t === 'treat') {
-      const now = Date.now();
-      if (now - (player.lastTreat || 0) < 30000) return;
-      player.lastTreat = now;
-      const earned = 10;
-      const { data: updated, error } = await supabase.from('users').update({ funtix: (Number(player.user.funtix) || 0) + earned }).eq('name', player.user.name).select().single();
-      if (error || !updated) return;
       player.user = updated;
       send(ws, { t: 'money', ...money(updated), earned });
     }
@@ -2459,37 +2438,6 @@ addEventListener('resize', () => {
 
 const LOONEY_PRIZE = ['hat_bunnyears', 'face_buckteeth', 'hat_ducktuft', 'face_beak', 'head_bugs', 'head_daffy'];
 
-// Halloween event (Oct 6 - Nov 2)
-const HALLOWEEN_EVENT = { id: 'halloween', name: 'Halloween',
-  starts: Date.parse('2026-10-06T00:00:00Z'), ends: Date.parse('2026-11-02T00:00:00Z') };
-const halloweenActive = () => Date.now() >= HALLOWEEN_EVENT.starts && Date.now() <= HALLOWEEN_EVENT.ends;
-
-app.post('/api/admin/event/seed-halloween', auth, async (req, res) => {
-  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin only' });
-  res.json(await seedHalloweenGames(supabase, sanitizeWorld));
-});
-app.get('/api/event/halloween', auth, async (req, res) => {
-  const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'halloween').order('id');
-  const e = HALLOWEEN_EVENT;
-  res.json({ id: e.id, name: e.name, starts: e.starts, ends: e.ends, active: halloweenActive(), games: games || [] });
-});
-
-// Funtopia × Blockverse collab (Oct 22 - Dec 6, 2026)
-const BLOCKVERSE_EVENT = { id: 'blockverse', name: 'Funtopia × Blockverse',
-  starts: Date.parse('2026-10-22T00:00:00Z'), ends: Date.parse('2026-12-06T00:00:00Z') };
-const blockverseActive = () => Date.now() >= BLOCKVERSE_EVENT.starts && Date.now() <= BLOCKVERSE_EVENT.ends;
-const BV_PRIZE = ['hat_bv_cap', 'shirt_bv_tee', 'gear_foamsword', 'pet_cubit'];
-
-app.post('/api/admin/event/seed-blockverse', auth, async (req, res) => {
-  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin only' });
-  res.json(await seedBlockverseGames(supabase, sanitizeWorld));
-});
-app.get('/api/event/blockverse', auth, async (req, res) => {
-  const { data: games } = await supabase.from('games').select('id,name,description,visits,thumbnail').eq('event', 'blockverse').order('id');
-  const e = BLOCKVERSE_EVENT;
-  res.json({ id: e.id, name: e.name, starts: e.starts, ends: e.ends, active: blockverseActive(), games: games || [] });
-});
-
 // 100 Players Party (Nov 2026) — owner-triggered from the Owner Panel
 let partyCache = { active: false, at: 0 };
 async function partyActive() {
@@ -2549,8 +2497,9 @@ loadUgcItems().then(() => console.log('UGC items loaded:', Object.keys(ugcState.
 ensureUgcBucket().then(() => console.log('UGC bucket ready:', ugcState.bucketOk));
 // Remove Looney games (event deleted Oct 6)
 supabase.from('games').delete().eq('event', 'looney').then(() => console.log('looney games removed'));
-seedHalloweenGames(supabase, sanitizeWorld).then(r => console.log('hw:', r.created));
-seedBlockverseGames(supabase, sanitizeWorld).then(r => console.log('bv:', r.created));
+// Remove Blockverse + Halloween games (events deleted Nov 12, 2026)
+supabase.from('games').delete().in('event', ['halloween', 'blockverse']).then(() => console.log('event games removed'));
+supabase.from('games').delete().eq('id', 'g_spookyrivals').then(() => console.log('tourney arena removed'));
 seedShooterGames().then(r => console.log('shooter:', r.created));
 server.listen(PORT, () => console.log(`Funtopia running on http://localhost:${PORT}`));
 

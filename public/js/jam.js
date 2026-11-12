@@ -1,6 +1,6 @@
 // 🎵 Jam tracks — original procedural chiptune loops (Web Audio, no audio files, no samples).
 // Each track is an original 2-bar composition: 32 sixteenth-steps of lead + bass + hats.
-import { sfx } from './sound.js?v=89850e26';
+import { sfx } from './sound.js?v=0741c43e';
 
 let ctx = null;
 function ac() { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === 'suspended') ctx.resume(); return ctx; }

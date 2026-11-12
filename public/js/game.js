@@ -2,16 +2,16 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=49a61589';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=0e183037';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
 const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
 import { VoiceChat } from './voice.js?v=9d41bd66';
-import { sfx } from './sound.js?v=music26';
-import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=c39dadc4';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM, scaryAvatar } from './catalog.js?v=fabe5f21';
+import { sfx } from './sound.js?v=music27';
+import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=56507280';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -43,10 +43,6 @@ const GAME_TIPS = [
   'Complete achievements to earn exclusive badges!',
   'Right-drag to rotate the camera around you!',
 ];
-
-// ---------- Halloween in-game decor (Oct 24 - Nov 2) ----------
-const HALLOWEEN_DATES = { starts: Date.parse('2026-10-06T00:00:00Z'), ends: Date.parse('2026-11-02T00:00:00Z') };
-const halloweenNow = () => { const n = Date.now(); return n >= HALLOWEEN_DATES.starts && n <= HALLOWEEN_DATES.ends; };
 
 // ---------- pets ----------
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at ground, faces +z.
@@ -81,11 +77,11 @@ function buildGear(gearId) {
   g.scale.setScalar(0.5);
   return g;
 }
-const GEAR_COOLDOWN = { gear_sword: 0.8, gear_foamsword: 0.7, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
+const GEAR_COOLDOWN = { gear_sword: 0.8, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
   gear_blaster: 0.5, gear_raygun: 0.7, gear_crossbow: 0.9, gear_freezeray: 1.0,
   gear_hammer: 1.0, gear_axe: 0.9, gear_katana: 0.6, gear_spear: 0.9, gear_mace: 1.1,
   gear_lasersword: 0.7, gear_cannon: 2.5, gear_bazooka: 2.8 };
-const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_foamsword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
+const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
   gear_blaster: 'pellet', gear_raygun: 'pellet', gear_crossbow: 'pellet', gear_freezeray: 'pellet',
   gear_hammer: 'melee', gear_axe: 'melee', gear_katana: 'melee', gear_spear: 'melee', gear_mace: 'melee',
   gear_lasersword: 'melee', gear_cannon: 'rocket', gear_bazooka: 'rocket' };
@@ -986,14 +982,13 @@ export class Game {
         this.blinkers.push({ p, on: true });
       }
     }
-    this.char = buildChar(halloweenNow() ? scaryAvatar(this.me.avatar, this.me.name) : this.me.avatar, { pet: false, gear: false });
+    this.char = buildChar(this.me.avatar, { pet: false, gear: false });
     this.scene.add(this.char);
     this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3();
     this.setPet(); this.setGear();
     this.ray = new THREE.Raycaster();
     this.resize();
     this.runWorldScripts();
-    if (halloweenNow()) this.addHalloweenDecor();
   }
   runWorldScripts() {
     const scripts = this.world.scripts || [];
@@ -1259,61 +1254,6 @@ export class Game {
       if (d.length() < radius + 1) { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); break; }
     }
   }
-  addHalloweenDecor() {
-    const hw = this.hwDecor = { bats: [], ghosts: [], pumpkins: [] };
-    const spawn = findSpawn(this.world);
-    const M = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85 });
-    this.scene.fog = new THREE.Fog(0x1a0f2e, 45, 170);
-    const glow = new THREE.MeshBasicMaterial({ color: '#ffca28' });
-    // jack-o-lanterns ringing the spawn
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 + 0.4, r = 9 + (i % 3) * 4;
-      const g = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.9, 18, 14), M('#e67e22'));
-      body.scale.set(1, 0.9, 0.9); body.position.y = 0.85; body.castShadow = true; g.add(body);
-      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.35, 8), M('#2e7d32'));
-      stem.position.y = 1.7; g.add(stem);
-      for (const sx of [-1, 1]) {
-        const e = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.28, 3), glow);
-        e.position.set(sx * 0.3, 1.05, 0.76); g.add(e);
-      }
-      const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.16, 0.05), glow);
-      mouth.position.set(0, 0.55, 0.8); g.add(mouth);
-      g.position.set(spawn.x + Math.cos(a) * r, spawn.y, spawn.z + Math.sin(a) * r);
-      g.rotation.y = Math.atan2(-(Math.cos(a) * r), -(Math.sin(a) * r));
-      this.scene.add(g); hw.pumpkins.push(g);
-      g.userData.treatCd = 0;
-    }
-    hw.treatCheck = 0;
-    // bats circling overhead
-    for (let i = 0; i < 5; i++) {
-      const b = new THREE.Group();
-      const bm = new THREE.MeshStandardMaterial({ color: '#2a2138', roughness: 0.9 });
-      b.add(new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.3, 0.5), bm));
-      const wings = [];
-      for (const sx of [-1, 1]) {
-        const pivot = new THREE.Group(); pivot.position.set(sx * 0.15, 0.1, 0);
-        const w = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.5), bm);
-        w.position.set(sx * 0.45, 0, 0); pivot.add(w); b.add(pivot); wings.push(pivot);
-      }
-      this.scene.add(b);
-      hw.bats.push({ g: b, wings, cx: spawn.x, cz: spawn.z, cy: spawn.y + 14 + (i % 3) * 3, r: 10 + i * 3, sp: 0.5 + Math.random() * 0.4, ph: Math.random() * 6.28 });
-    }
-    // floating ghosts
-    for (let i = 0; i < 3; i++) {
-      const g = new THREE.Group();
-      const gm = new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.9, transparent: true, opacity: 0.92 });
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), gm); head.position.y = 0.6; g.add(head);
-      const skirt = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.9, 16, 1, true), gm); skirt.position.y = -0.05; g.add(skirt);
-      const dm = new THREE.MeshBasicMaterial({ color: '#212121' });
-      for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), dm); e.position.set(sx * 0.2, 0.7, 0.48); g.add(e); }
-      const mo = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), dm); mo.scale.set(1, 1.5, 0.5); mo.position.set(0, 0.38, 0.5); g.add(mo);
-      const a = (i / 3) * Math.PI * 2 + 1.2;
-      g.position.set(spawn.x + Math.cos(a) * 14, spawn.y + 4, spawn.z + Math.sin(a) * 14);
-      this.scene.add(g);
-      hw.ghosts.push({ g, baseY: spawn.y + 4, ph: Math.random() * 6.28 });
-    }
-  }
   spawn(first = false) {
     const p = this.checkpoint ? this.checkpoint.clone() : findSpawn(this.world);
     this.pos.copy(p).add(new THREE.Vector3((Math.random() - 0.5) * 2, 0.2, (Math.random() - 0.5) * 2));
@@ -1321,7 +1261,7 @@ export class Game {
     this.jumpBuf = 0; this.coyote = 0; this.jumping = false;
     if (this.debris) { for (const d of this.debris) this.scene.remove(d.m); this.debris = null; }
     this.scene.remove(this.char);
-    this.char = buildChar(halloweenNow() ? scaryAvatar(this.me.avatar, this.me.name) : this.me.avatar, { pet: false, gear: false }); this.scene.add(this.char);
+    this.char = buildChar(this.me.avatar, { pet: false, gear: false }); this.scene.add(this.char);
     this.setGear();
     this.char.position.copy(this.pos);
     if (this.pet) { this.pet.position.copy(this.pos); this.pet.visible = true; }
@@ -1483,7 +1423,7 @@ export class Game {
   hideLoading() { const l = this.c.querySelector('.loading'); if (l) { l.classList.add('fade'); setTimeout(() => l.remove(), 500); } }
   addPlayer(p) {
     if (this.players.has(p.id)) return;
-    const char = buildChar(halloweenNow() ? scaryAvatar(p.avatar, p.name) : p.avatar, { pet: false, gear: false }); const tag = makeNameTag(halloweenNow() ? '🎃 ' + p.name : p.name, p.badge); tag.userData.isTag = true; char.add(tag);
+    const char = buildChar(p.avatar, { pet: false, gear: false }); const tag = makeNameTag(p.name, p.badge); tag.userData.isTag = true; char.add(tag);
     this.scene.add(char);
     const pet = buildPet(p.avatar?.pet);
     if (pet) { pet.position.copy(char.position); this.scene.add(pet); }
@@ -1756,29 +1696,6 @@ export class Game {
     this.scene.traverse(o => {
       if (o.userData.bubble) { o.userData.bubbleT -= dt; if (o.userData.bubbleT <= 0) { o.remove(o.userData.bubble); o.userData.bubble = null; } }
     });
-    // trick-or-treat: touch pumpkins for candy
-    if (this.hwDecor && halloweenNow()) {
-      const hw = this.hwDecor;
-      hw.treatCheck -= dt;
-      if (hw.treatCheck <= 0) {
-        hw.treatCheck = 0.3;
-        for (const g of hw.pumpkins) {
-          if (g.userData.treatCd > 0) { g.userData.treatCd -= 0.3; continue; }
-          const d = g.position.distanceTo(this.pos);
-          if (d < 4) {
-            g.userData.treatCd = 30;
-            this.send({ t: 'treat' });
-            this.showBig('🍬 Trick or Treat! +10', 1500);
-            sfx.coin();
-            // pumpkin bounce
-            const origY = g.position.y;
-            let bt = 0;
-            const bounce = () => { bt += 0.05; g.position.y = origY + Math.sin(bt * Math.PI) * 1.5; if (bt < 1) requestAnimationFrame(bounce); else g.position.y = origY; };
-            bounce();
-          }
-        }
-      }
-    }
     // FunTix rain tickets
     if (this.tixRain) {
       const rain = this.tixRain;
@@ -1804,24 +1721,6 @@ export class Game {
     if (this.world.soccer) this.updateSoccer(dt);
     if (this.world.mystery) this.updateMystery(dt);
     if (this.world.garden) this.updateGarden(dt);
-    // halloween decor animation
-    const hw = this.hwDecor;
-    if (hw) {
-      for (const b of hw.bats) {
-        const a = this.t * b.sp + b.ph;
-        b.g.position.set(b.cx + Math.cos(a) * b.r, b.cy + Math.sin(this.t * 1.3 + b.ph) * 1.2, b.cz + Math.sin(a) * b.r);
-        b.g.rotation.y = -a;
-        const flap = Math.sin(this.t * 10 + b.ph) * 0.55;
-        b.wings[0].rotation.z = flap; b.wings[1].rotation.z = -flap;
-      }
-      for (const gh of hw.ghosts) {
-        gh.g.position.y = gh.baseY + Math.sin(this.t * 1.8 + gh.ph) * 0.9;
-        gh.g.rotation.y = Math.sin(this.t * 0.6 + gh.ph) * 0.6;
-      }
-      hw.pumpkins.forEach((p, i) => p.scale.setScalar(1 + Math.sin(this.t * 3 + i * 1.7) * 0.025));
-    }
-    for (const m of this.meshes.values()) if (m.userData.spin) m.rotation.y += dt * 2.5;
-    // network
     this.netT = (this.netT || 0) + dt;
     if (this.netT > 0.066) { this.netT = 0; this.send({ t: 's', s: [+this.pos.x.toFixed(2), +this.pos.y.toFixed(2), +this.pos.z.toFixed(2), +this.char.rotation.y.toFixed(3), this.dead ? 6 : ANIMS.indexOf(this.anim), this.vehicleId ? VEHICLES.indexOf(this.vehicleId) + 1 : 0] }); }
     this.updateCamera(dt);
@@ -1900,7 +1799,7 @@ function confetti(root) {
   root.querySelector('.game-root').appendChild(box); setTimeout(() => box.remove(), 5000);
 }
 const chatIcon = '<svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
-export const LOGO = '<svg class="ff-logo" viewBox="0 0 40 32" xmlns="http://www.w3.org/2000/svg"><g transform="rotate(-10 12 15)"><rect x="3" y="6" width="18" height="18" rx="4" fill="#fff"/><circle cx="9" cy="13" r="1.7" fill="#1b1d1f"/><circle cx="15" cy="13" r="1.7" fill="#1b1d1f"/><path d="M8 17.5q4 4 8 0" fill="none" stroke="#1b1d1f" stroke-width="1.8" stroke-linecap="round"/></g><g transform="rotate(10 28 17)"><rect x="19" y="8" width="18" height="18" rx="4" fill="#ffd400" stroke="#1b1d1f" stroke-width="1.5"/><circle cx="25" cy="15" r="1.7" fill="#1b1d1f"/><circle cx="31" cy="15" r="1.7" fill="#1b1d1f"/><path d="M24 19.5q4 4 8 0" fill="none" stroke="#1b1d1f" stroke-width="1.8" stroke-linecap="round"/></g></svg>';
+export const LOGO = '<svg class="ff-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fflg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><rect x="3" y="3" width="42" height="42" rx="12" fill="url(#fflg)"/><rect x="14" y="17" width="7" height="9" rx="2" fill="#fff"/><rect x="27" y="17" width="7" height="9" rx="2" fill="#fff"/><path d="M16 31q8 6 16 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path d="M41 2l1.7 4.6L47 8.3l-4.3 1.7L41 14.6 39.3 10 35 8.3l4.3-1.7z" fill="#22d3ee"/></svg>';
 export const CLUB = `<svg class="club-badge" viewBox="0 0 24 24" width="18" height="18"><title>FriendClub member</title><path fill="#ffd400" d="${CLUB_PATH}"/></svg>`;
 export const tix = '<svg class="tix" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="11" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="#1b1d1f" stroke-width="1.4" opacity=".35"/><path fill="#1b1d1f" d="M7.5 7h9v2.6h-3.2V18h-2.6V9.6H7.5z"/></svg>';
 export const badgeIcon = (id, size = 18) => { const b = BADGES[id]; return b ? `<svg class="club-badge" viewBox="0 0 24 24" width="${size}" height="${size}"><title>${b.name}</title><path fill="${b.color}" d="${b.path}"/></svg>` : ''; };

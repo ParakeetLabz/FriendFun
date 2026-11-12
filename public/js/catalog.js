@@ -17,7 +17,6 @@ export const CATALOG = [
   { id: 'face_mad', type: 'face', name: 'Grumpy', price: 40 },
   { id: 'face_starstruck', type: 'face', name: 'Starstruck', price: 90 },
   { id: 'face_shades', type: 'face', name: 'Shades Smirk', price: 150 },
-  { id: 'face_vampire', type: 'face', name: 'Vampire', price: 180 },
   { id: 'face_sly', type: 'face', name: 'Sly Look', price: 60 },
   { id: 'face_nervous', type: 'face', name: 'Nervous', price: 50 },
   { id: 'face_sparkle', type: 'face', name: 'Sparkling', price: 120 },
@@ -56,36 +55,7 @@ export const CATALOG = [
   { id: 'pet_fox', type: 'pet', name: 'Fox', price: 400, emoji: '🦊', color: '#ff924c' },
   { id: 'pet_robo', type: 'pet', name: 'Robo Pup', price: 600, emoji: '🤖', color: '#90a4ae' },
   { id: 'pet_dragon', type: 'pet', name: 'Dragon', price: 800, emoji: '🐲', color: '#26c6da' },
-  { id: 'hat_witch', type: 'hat', name: 'Witch Hat', price: 250, color: '#7b1fa2' },
-  { id: 'hat_pumpkin_champ', type: 'hat', name: 'Champion Pumpkin Head', price: 0, limited: true, model_url: 'https://vjylxvdvctnmgvnkhgng.supabase.co/storage/v1/object/public/ugc-models/jack_o_lantern.glb' },
-  { id: 'face_fangs', type: 'face', name: 'Vampire Fangs', price: 0, free: true },
-  { id: 'face_stitches', type: 'face', name: 'Stitched Grin', price: 150 },
-  { id: 'head_pumpkin', type: 'head', name: 'Pumpkin Head', price: 500 },
-  { id: 'head_ghost', type: 'head', name: 'Ghost Sheet', price: 400 },
-  { id: 'shirt_vampcape', type: 'shirt', name: 'Vampire Cape', price: 350, color: '#7b1e1e' },
-  { id: 'shirt_mummy', type: 'shirt', name: 'Mummy Wraps', price: 300, color: '#e8e0c8' },
-  { id: 'pet_bat', type: 'pet', name: 'Bat Buddy', price: 300, emoji: '🦇', color: '#5d4037' },
-  { id: 'hat_scarecrow', type: 'hat', name: 'Scarecrow Hat', price: 275, color: '#a67c00' },
-  { id: 'hat_devilhorns', type: 'hat', name: 'Devil Horns', price: 325, color: '#c62828' },
-  { id: 'face_zombie', type: 'face', name: 'Zombie Face', price: 200 },
-  { id: 'shirt_skeleton', type: 'shirt', name: 'Skeleton Suit', price: 450, color: '#212121' },
-  { id: 'shirt_pumpkin', type: 'shirt', name: 'Pumpkin Tee', price: 250, color: '#ef6c00' },
-  { id: 'pet_ghost', type: 'pet', name: 'Ghost Pal', price: 350, emoji: '👻', color: '#f5f5f5' },
-  { id: 'pet_spider', type: 'pet', name: 'Spider Friend', price: 350, emoji: '🕷️', color: '#212121' },
-  { id: 'gear_candybucket', type: 'gear', name: 'Candy Bucket', price: 400, emoji: '🪣', color: '#ff9800' },
   { id: 'hat_wizard', type: 'hat', name: 'Wizard Hat', price: 300, color: '#1a237e' },
-  { id: 'head_zombie', type: 'head', name: 'Zombie Head', price: 450, color: '#7cb342' },
-  { id: 'head_skeleton', type: 'head', name: 'Skeleton Skull', price: 500, color: '#f5f5f5' },
-  { id: 'face_jack', type: 'face', name: "Jack-o'-Lantern Grin", price: 250 },
-  { id: 'shirt_witchrobe', type: 'shirt', name: 'Witch Robe', price: 400, color: '#4a148c' },
-  { id: 'pet_pumpkincat', type: 'pet', name: 'Pumpkin Cat', price: 400, emoji: '🎃', color: '#ef6c00' },
-  { id: 'pet_skelebone', type: 'pet', name: 'Skeleton Pup', price: 450, emoji: '💀', color: '#e0e0e0' },
-  { id: 'gear_broom', type: 'gear', name: 'Witch Broom', price: 550, emoji: '🧹', color: '#8d6e63' },
-  // ---- Funtopia × Blockverse collab (Oct 22 – Dec 6, 2026): free gifts, auto-granted during the event ----
-  { id: 'hat_bv_cap', type: 'hat', name: 'Blockverse Cap', price: 0, limited: true, color: '#2ee06f' },
-  { id: 'shirt_bv_tee', type: 'shirt', name: 'Blockverse Tee', price: 0, limited: true, color: '#17b657' },
-  { id: 'gear_foamsword', type: 'gear', name: 'Foam Sword', price: 0, limited: true, emoji: '⚔️', color: '#2ee06f' },
-  { id: 'pet_cubit', type: 'pet', name: 'Cubit Bot', price: 0, limited: true, emoji: '🟩', color: '#2ee06f' },
   { id: 'gear_none', type: 'gear', name: 'No Gear', price: 0, free: true, emoji: '🚫' },
   { id: 'gear_sword', type: 'gear', name: 'Sword', price: 300, emoji: '🗡️', color: '#cfd8dc' },
   { id: 'gear_slingshot', type: 'gear', name: 'Slingshot', price: 400, emoji: '🎯', color: '#8d6e63' },
@@ -164,7 +134,6 @@ export const CATALOG = [
   { id: 'face_nerd', type: 'face', name: 'Nerd Glasses', price: 100 },
   { id: 'face_monocle', type: 'face', name: 'Monocle', price: 150 },
   { id: 'face_clown', type: 'face', name: 'Clown', price: 130 },
-  { id: 'face_zombie', type: 'face', name: 'Zombie', price: 200 },
   { id: 'face_robot', type: 'face', name: 'Robot Face', price: 180 },
   { id: 'face_alien', type: 'face', name: 'Alien', price: 220 },
   { id: 'face_eyepatch', type: 'face', name: 'Pirate Patch', price: 140 },
@@ -181,7 +150,6 @@ export const CATALOG = [
   { id: 'face_rainbow', type: 'face', name: 'Rainbow Puke', price: 250 },
   { id: 'face_ninja', type: 'face', name: 'Ninja Eyes', price: 170 },
   { id: 'face_cyclops', type: 'face', name: 'Cyclops', price: 190 },
-  { id: 'face_ghostface', type: 'face', name: 'Ghost Face', price: 210 },
   { id: 'face_demon', type: 'face', name: 'Demon', price: 260 },
   { id: 'face_angel', type: 'face', name: 'Angel Face', price: 240 },
   { id: 'face_gold', type: 'face', name: 'Golden Grin', price: 500 },
@@ -238,7 +206,6 @@ export const CATALOG = [
   { id: 'shirt_camo', type: 'shirt', name: 'Camo Jacket', price: 170, color: '#558b2f' },
   { id: 'shirt_goldsuit', type: 'shirt', name: 'Gold Suit', price: 800, color: '#ffd400' },
   { id: 'shirt_rainbow', type: 'shirt', name: 'Rainbow Sweater', price: 220, color: '#ff6f00' },
-  { id: 'shirt_skeleton', type: 'shirt', name: 'Skeleton Suit', price: 320, color: '#212121' },
   { id: 'shirt_astronaut', type: 'shirt', name: 'Astronaut Suit', price: 550, color: '#eceff1' },
   { id: 'shirt_scuba', type: 'shirt', name: 'Scuba Suit', price: 380, color: '#00695c' },
   { id: 'shirt_chefcoat', type: 'shirt', name: 'Chef Coat', price: 200, color: '#ffffff' },
@@ -283,7 +250,6 @@ export const CATALOG = [
   { id: 'pet_monkey', type: 'pet', name: 'Monkey', price: 450, emoji: '🐵', color: '#8d6e63' },
   { id: 'pet_panda', type: 'pet', name: 'Panda', price: 500, emoji: '🐼', color: '#f5f5f5' },
   { id: 'pet_snake', type: 'pet', name: 'Snake', price: 350, emoji: '🐍', color: '#2e7d32' },
-  { id: 'pet_spider', type: 'pet', name: 'Spider', price: 450, emoji: '🕷️', color: '#212121' },
   { id: 'pet_crab', type: 'pet', name: 'Crab', price: 300, emoji: '🦀', color: '#e53935' },
   { id: 'pet_bee', type: 'pet', name: 'Bee', price: 250, emoji: '🐝', color: '#ffeb3b' },
   { id: 'pet_unicorn', type: 'pet', name: 'Unicorn', price: 900, emoji: '🦄', color: '#f8bbd0' },
@@ -413,16 +379,6 @@ export const PET_MODELS = {
     [-0.24, 0.16, 0.26, 0.18, 0.32, 0.18, '#546e7a'], [0.24, 0.16, 0.26, 0.18, 0.32, 0.18, '#546e7a'],
     [-0.24, 0.16, -0.3, 0.18, 0.32, 0.18, '#546e7a'], [0.24, 0.16, -0.3, 0.18, 0.32, 0.18, '#546e7a'],
     [0, 0.62, -0.52, 0.08, 0.08, 0.3, '#37474f'],
-  ] },
-  pet_bat: { boxes: [
-    [0, 0.5, 0, 0.45, 0.45, 0.5, '#5d4037'],
-    [0, 0.85, 0.15, 0.4, 0.38, 0.4, '#5d4037'],
-    [-0.12, 0.9, 0.36, 0.08, 0.1, 0.04, '#ff5252'], [0.12, 0.9, 0.36, 0.08, 0.1, 0.04, '#ff5252'],
-    [-0.12, 1.1, 0.1, 0.1, 0.18, 0.08, '#5d4037'], [0.12, 1.1, 0.1, 0.1, 0.18, 0.08, '#5d4037'],
-    [0, 0.78, 0.32, 0.1, 0.08, 0.1, '#ffffff'],
-    [-0.55, 0.62, -0.05, 0.65, 0.08, 0.45, '#4e342e', 0.35], [0.55, 0.62, -0.05, 0.65, 0.08, 0.45, '#4e342e', -0.35],
-    [-0.95, 0.75, -0.05, 0.25, 0.06, 0.3, '#4e342e', 0.5], [0.95, 0.75, -0.05, 0.25, 0.06, 0.3, '#4e342e', -0.5],
-    [-0.2, 0.16, 0.05, 0.12, 0.32, 0.12, '#4e342e'], [0.2, 0.16, 0.05, 0.12, 0.32, 0.12, '#4e342e'],
   ] },
   pet_dragon: { boxes: [
     [0, 0.5, -0.1, 0.65, 0.6, 1.0, '#26c6da'],
@@ -572,23 +528,6 @@ export const PET_MODELS = {
     [0, 1.3, 0.26, 0.04, 0.12, 0.04, '#e53935'],
     [0, 0.5, 0.3, 0.6, 0.2, 0.4, '#a5d6a7'],
   ] },
-  pet_spider: { boxes: [
-    [0, 0.5, 0, 0.6, 0.45, 0.7, '#212121'],
-    [0, 0.45, 0.45, 0.45, 0.35, 0.35, '#212121'],
-    [-0.15, 0.5, 0.62, 0.09, 0.1, 0.05, '#e53935'],
-    [0.15, 0.5, 0.62, 0.09, 0.1, 0.05, '#e53935'],
-    [-0.05, 0.52, 0.62, 0.07, 0.08, 0.05, '#e53935'],
-    [0.05, 0.52, 0.62, 0.07, 0.08, 0.05, '#e53935'],
-    [-0.45, 0.35, 0.25, 0.35, 0.1, 0.1, '#212121', 0.5],
-    [-0.45, 0.35, -0.05, 0.35, 0.1, 0.1, '#212121', 0.2],
-    [-0.45, 0.35, -0.3, 0.35, 0.1, 0.1, '#212121', -0.2],
-    [-0.45, 0.35, 0.45, 0.3, 0.1, 0.1, '#212121', 0.7],
-    [0.45, 0.35, 0.25, 0.35, 0.1, 0.1, '#212121', -0.5],
-    [0.45, 0.35, -0.05, 0.35, 0.1, 0.1, '#212121', -0.2],
-    [0.45, 0.35, -0.3, 0.35, 0.1, 0.1, '#212121', 0.2],
-    [0.45, 0.35, 0.45, 0.3, 0.1, 0.1, '#212121', -0.7],
-    [0, 0.72, -0.1, 0.2, 0.12, 0.3, '#e53935'],
-  ] },
   pet_crab: { boxes: [
     [0, 0.35, 0, 0.8, 0.4, 0.6, '#e53935'],
     [-0.15, 0.65, 0.25, 0.08, 0.25, 0.08, '#e53935'],
@@ -676,13 +615,6 @@ export const GEAR_MODELS = {
     [0, 1.9, 0, 0.09, 0.7, 0.09, '#37474f'],
     [0, 2.45, 0, 0.3, 0.35, 0.3, '#90a4ae'],
     [0, 2.28, 0, 0.32, 0.08, 0.32, '#212121'],
-  ] },
-  gear_foamsword: { boxes: [
-    [0, 1.7, 0, 0.34, 2.4, 0.34, '#2ee06f'],
-    [0, 3.0, 0, 0.36, 0.3, 0.36, '#7dffab'],
-    [0, 0.45, 0, 0.8, 0.16, 0.32, '#17b657'],
-    [0, 0.12, 0, 0.19, 0.55, 0.19, '#0c2417'],
-    [0, -0.2, 0, 0.26, 0.16, 0.26, '#0c2417'],
   ] },
   gear_sword: { boxes: [
     [0, 1.7, 0, 0.18, 2.4, 0.18, '#cfd8dc'],
@@ -798,27 +730,11 @@ export const GEAR_MODELS = {
 export const ECON = { START_TIX: 100, DAILY_TIX: 25, PLAY_TIX: 2, PLAY_TIX_EVERY: 60000, COIN_TIX: 1, WIN_TIX: 25,
   CLUB_PRICE: 300, CLUB_DAYS: 30, CLUB_DAILY: 25, CLUB_PLAY_MULT: 2, CLUB_COIN_BONUS: 1 };
 export const ITEM = Object.fromEntries(CATALOG.map(i => [i.id, i]));
-// 🎃 Scary costumes forced on every player while Halloween is active
-// (game.js + lobby.js). Each entry is a combo of catalog ids applied by slot;
-// the pick is deterministic per player name so a player matches everywhere.
-export const SCARY_COSTUMES = [
-  ['head_pumpkin'],
-  ['head_ghost'],
-  ['hat_witch', 'face_fangs'],
-  ['shirt_mummy', 'face_stitches'],
-];
-export function scaryAvatar(av, name) {
-  if (!av) return av;
-  const h = [...String(name || '')].reduce((a, c) => a + c.charCodeAt(0), 0);
-  const out = { ...av };
-  for (const id of SCARY_COSTUMES[h % SCARY_COSTUMES.length]) { const it = ITEM[id]; if (it) out[it.type] = id; }
-  return out;
-}
 // UGC (player-created items): remixable templates per slot. A UGC item stores
 // { template, color } and renders with the template's geometry/texture.
 export const UGC_TEMPLATES = {
-  hat: ['hat_cap', 'hat_tophat', 'hat_crown', 'hat_beanie', 'hat_witch', 'hat_cowboy', 'hat_horns', 'hat_halo', 'hat_cone', 'hat_catears', 'hat_bearears', 'hat_foxears', 'hat_helm_knight', 'hat_headphones', 'hat_scarecrow', 'hat_devilhorns'],
-  shirt: ['shirt_star', 'shirt_heart', 'shirt_stripes', 'shirt_suit', 'shirt_vampcape', 'shirt_mummy'],
+  hat: ['hat_cap', 'hat_tophat', 'hat_crown', 'hat_beanie', 'hat_cowboy', 'hat_horns', 'hat_halo', 'hat_cone', 'hat_catears', 'hat_bearears', 'hat_foxears', 'hat_helm_knight', 'hat_headphones', ],
+  shirt: ['shirt_star', 'shirt_heart', 'shirt_stripes', 'shirt_suit', ],
 };
 export const UGC_MAX_PRICE = 10000;
 export const UGC_CREATOR_CUT = 0.7;
@@ -833,7 +749,6 @@ export const BADGES = {
   creator: { name: 'Creator', desc: 'Published a game.', color: '#00b06f', path: 'M3 17.25V21h3.75L17.8 9.94l-3.75-3.75zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z' },
   champ: { name: 'Obby Champ', desc: 'Beat an obby.', color: '#4aa3ff', path: 'M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3zM6 7v1a2 2 0 0 0 2 2V7zm10 0v3a2 2 0 0 0 2-2V7z' },
   looney: { name: 'Looney Tunes', desc: 'Collected all 20 Looney Coins in the Looney Tunes event.', color: '#ff6d00', path: 'M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 12.2l7.1-.6z' },
-  blockverse: { name: 'World Hopper', desc: 'Beat the Blockverse Portal Run during the Funtopia × Blockverse collab.', color: '#2ee06f', path: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z' },
   streak7: { name: 'Week Warrior', desc: 'Logged in 7 days in a row.', color: '#ff4757', path: 'M13 2L3 14h7l-1 8 10-12h-7z' },
   streak30: { name: 'Dedicated', desc: 'Logged in 30 days in a row.', color: '#a55eea', path: 'M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 12.2l7.1-.6z' },
   tycoon: { name: 'FunTix Tycoon', desc: 'Held 5,000 FunTix at once.', color: '#ffd400', path: 'M12 2v20M17 7H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H6' },

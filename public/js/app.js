@@ -1,4 +1,4 @@
-import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=4afa3277';
+import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=f35f8472';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -23,7 +23,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=49a61589').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=0e183037').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -64,11 +64,11 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=fabe5f21';
-import { templates } from './worlds.js?v=88253767';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=56507280';
+import { templates } from './worlds.js?v=62531363';
 import { isVerified } from './verified.js?v=6fb5be32';
 const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
-import { startSpooky, stopSpooky, sfx } from './sound.js?v=music26';
+import { sfx } from './sound.js?v=music27';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
 let app = document.getElementById('app');
@@ -187,8 +187,7 @@ const UPDATES = [
     '🔁 Remix your game with follow-ups: "make it faster", "add coins", "make it spooky"',
     '💾 Save games to your FunAI shelf, download them as HTML files, or copy the code',
   ]},
-  { id: 'u15', date: 'Oct 30, 2026', title: 'Mega drop: 22 updates + scary mode', items: [
-    '🎃 Scary mode is ON: every player wears a Halloween costume in-game and in the lobby, and the whole site went blood-dark with bats + webs until Sunday 7pm',
+  { id: 'u15', date: 'Oct 30, 2026', title: 'Mega drop: 22 updates', items: [
     'Steal a Blob: 3 new blobs — Shadow Blob (5,000), Galaxy Blob (25,000, it color-cycles!), Void Blob (75,000)',
     'Steal a Blob: 2 new passes — 💎 3x Blob Income (1,000 FunTix, stacks with 2x) and 🏦 Mega Start +1,500 coins (400 FunTix)',
     'Steal a Blob: new 💰 Sell all button — sells every blob you own in one tap',
@@ -205,11 +204,6 @@ const UPDATES = [
     'A separate violet + gold version of the whole website — home, discover, avatar, marketplace, create, friends, groups, profile, settings',
     'The new Pro character: a restylable visor bot — change its body, visor and outfit trim on the Avatar page',
     'Jump from Funtopia Settings’ gold 👑 FunTopia Pro banner; head back from Pro Settings. Live at funtopia-pro.vercel.app',
-  ]},
-  { id: 'u12', date: 'Oct 26, 2026', title: 'Halloween countdown gets scarier every day', items: [
-    'The lobby counts down to Halloween — and every day it gets scarier, on its own',
-    'Constant glitches plus drifting ghosts, bats, spiders and skulls, and eyes blinking in the dark — faster and more of them as the scare level climbs',
-    'Runs through Sunday Nov 1 at 7pm: Nov 1 is the LAST DAY, then the countdown, glitches and creatures hide and the decor + double daily FunTix switch off',
   ]},
   { id: 'u11', date: 'Oct 24, 2026', title: 'Lobby emotes + lobby is home', items: [
     'The 3D lobby is now the home screen — every lobby button opens as a fullscreen overlay, ✕ takes you back to the lobby',
@@ -256,11 +250,6 @@ const UPDATES = [
   { id: 'u3', date: 'Oct 6, 2026', title: 'Gears are here', items: [
     'Classic gears (sword, slingshot, grapple, rocket) in the Marketplace',
     'Equip a gear on your avatar and use it in any game with left-click',
-  ]},
-  { id: 'u2', date: 'Oct 6, 2026', title: 'Halloween in Funtopia', items: [
-    'Halloween event runs Oct 6 - Nov 2: spooky site theme + double daily FunTix',
-    'Five original spooky games: haunted mansion escape, pumpkin patch hunt, witch tower climb, ghost town, spooky baseplate',
-    'Halloween costumes, pets and creepy menu music',
   ]},
   { id: 'u1', date: 'Oct 5, 2026', title: 'Pets arrive', items: [
     'Pets follow you in games and appear on your avatar',
@@ -317,7 +306,6 @@ function settingsPage() {
     app.querySelector('.set-music').onchange = e => {
       const on = e.target.checked;
       try { localStorage.setItem('ff_music', on ? '1' : '0'); } catch {}
-      if (!on) { try { stopSpooky(); } catch {} }
       toast(on ? 'Music on' : 'Music off');
     };
     app.querySelector('.set-fps').onchange = e => { try { localStorage.setItem('ff_fps', e.target.checked ? '1' : '0'); } catch {} toast(e.target.checked ? 'FPS + ping display on' : 'FPS + ping display off'); };
@@ -350,7 +338,6 @@ function updatesPage() {
 }
 function shell(active, content) {
   return `
-  ${halloweenActive() ? '<div class="scary-decor"><span>🕸️</span><span class="sd-bats">🦇 🦇 🦇</span><span>🕸️</span></div>' : ''}
   <header class="topbar">
     <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
     <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
@@ -413,13 +400,13 @@ async function refreshPartyState() {
   const active = !!p?.active;
   if (active && partyWatchPrev !== true) {
     if (!sessionStorage.getItem('ff-party-transition-shown')) {
-      try { (await import('./partyfx.js?v=81c04ef7')).playPartyTransition(); }
+      try { (await import('./partyfx.js?v=88bcd633')).playPartyTransition(); }
       catch { document.body.classList.add('party-live'); }
     } else {
       document.body.classList.add('party-live');
     }
   } else if (!active && partyWatchPrev === true) {
-    import('./partyfx.js?v=81c04ef7').then(fx => fx.setPartyLive(false)).catch(() => { document.body.classList.remove('party-live'); });
+    import('./partyfx.js?v=88bcd633').then(fx => fx.setPartyLive(false)).catch(() => { document.body.classList.remove('party-live'); });
   } else if (active) {
     document.body.classList.add('party-live');
   }
@@ -526,7 +513,6 @@ function mount(active, html, after) {
     after?.(); fillThumbs();
     return;
   }
-  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive()); document.body.classList.toggle('scary', halloweenActive());
   app.className = ''; app.innerHTML = shell(active, html);
   refreshPartyBar();
   refreshSiteBanner();
@@ -623,7 +609,6 @@ function dailyToast(r) {
 
 // ---------- pages ----------
 function loginPage() {
-  document.body.classList.toggle('halloween', halloweenActive()); document.body.classList.toggle('collab', blockverseActive()); document.body.classList.toggle('scary', halloweenActive());
   app.className = 'landing';
   app.innerHTML = `
   <div class="landing-bg"></div>
@@ -631,7 +616,7 @@ function loginPage() {
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
       <h1>Play, build, and hang out with friends.</h1><p>Jump into adventure games, explore wild worlds, dress your blocky avatar, and build your own games in Funtopia Studio — then call your friends and play together. 🎉</p>
       <div class="landing-chips"><a href="#/discover">🎮 Adventure games</a><a href="#/friends">📞 Call friends</a><a href="#/suggest">💡 Suggestion Box</a></div>
-      ${blockverseActive() ? `<a class="bv-strip" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">🟩 <b>Funtopia × Blockverse is LIVE!</b> Free collab gifts, a portal-run course & the World Hopper badge — visit Blockverse ↗</a>` : ''}</div>
+      </div>
     <div class="auth-card">
       <div class="auth-tabs"><button data-m="signup" class="active">Sign Up</button><button data-m="login">Log In</button></div>
       <form class="auth-form">
@@ -665,18 +650,14 @@ function loginPage() {
 async function homePage() {
   const [games, fr, party] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends'), api('GET', '/api/event/party').catch(() => ({ active: false, games: [] }))]);
   const byId = Object.fromEntries(games.map(g => [g.id, g]));
-  const bvGames = games.filter(g => g.id === 'g_bvportal' || g.id === 'g_bvplaza');
   const partyGames = games.filter(g => g.id === 'g_party100');
   const recent = me.recent.map(id => byId[id]).filter(Boolean);
   const favs = me.favorites.map(id => byId[id]).filter(Boolean);
   const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
-  mount('dashboard', `    ${blockverseActive() ? `<div class="bv-hero home-bv"><div class="hw-hero-emoji">🟩</div><div class="hw-hero-text"><h1>Funtopia × Blockverse</h1><p class="muted">The portal is open! Two crossover worlds, <b>free gifts</b> in your inventory, and the <b>World Hopper badge</b>.</p><p><a class="btn-primary" href="#/play/g_bvportal">▶ Play Portal Run</a> <a class="btn-secondary" href="#/blockverse">Collab Hub</a> <a class="btn-secondary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p></div></div>` : ''}
-    ${party.active ? `<div class="party-hero"><div class="party-confetti"><span>🎉</span><span>✨</span><span>🎊</span><span>🎈</span><span>🥳</span><span>🎉</span></div><div class="hw-hero-emoji">🎉</div><div class="hw-hero-text"><h1>100 Players Party!</h1><p class="muted">Funtopia hit <b>100 players</b>! Dance on the disco floor, meet DJ Funtopia, and grab your <b>free Neon Party Hat</b> — it's already in your inventory!</p><p><a class="btn-primary" href="#/play/g_party100">▶ Join the Party</a></p></div></div>` : ''}
-    ${halloweenActive() ? `<a class="halloween-banner" href="#/halloween">🎃 <b>Halloween is here!</b> Spooky games, costumes & double daily FunTix &rsaquo;</a>` : ''}
+  mount('dashboard', `    ${party.active ? `<div class="party-hero"><div class="party-confetti"><span>🎉</span><span>✨</span><span>🎊</span><span>🎈</span><span>🥳</span><span>🎉</span></div><div class="hw-hero-emoji">🎉</div><div class="hw-hero-text"><h1>100 Players Party!</h1><p class="muted">Funtopia hit <b>100 players</b>! Dance on the disco floor, meet DJ Funtopia, and grab your <b>free Neon Party Hat</b> — it's already in your inventory!</p><p><a class="btn-primary" href="#/play/g_party100">▶ Join the Party</a></p></div></div>` : ''}
     <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
     <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
       <div class="friends-row">${friends.length ? friends.map(userTile).join('') : `<a class="add-friends" href="#/friends"><span>+</span>Add Friends</a>`}</div></section>
-    ${blockverseActive() && bvGames.length ? `<section><div class="sec-h"><h2>🟩 Blockverse Collab Games</h2><a href="#/blockverse">Collab Hub &rsaquo;</a></div><div class="game-row">${bvGames.map(gameCard).join('')}</div></section>` : ''}
     ${party.active && partyGames.length ? `<section><div class="sec-h"><h2>🎉 Party Games</h2></div><div class="game-row">${partyGames.map(gameCard).join('')}</div></section>` : ''}
     ${recent.length ? `<section><div class="sec-h"><h2>Continue</h2></div><div class="game-row">${recent.map(gameCard).join('')}</div></section>` : ''}
     <section><div class="sec-h"><h2>Recommended For You</h2><a href="#/discover">See All &rsaquo;</a></div><div class="game-row">${games.slice(0, 12).map(gameCard).join('')}</div></section>
@@ -712,61 +693,6 @@ async function discoverPage(q) {
     app.querySelector('.disc-sort').onchange = e => { sort = e.target.value; renderResults(); };
     app.querySelectorAll('[data-genre]').forEach(b => b.onclick = () => { genre = b.dataset.genre; app.querySelectorAll('[data-genre]').forEach(x => x.classList.toggle('active', x === b)); renderResults(); });
     app.querySelector('.disc-random').onclick = () => { const g = games[Math.floor(Math.random() * games.length)]; if (g) location.hash = '#/games/' + g.id; };
-  });
-}
-
-async function tourneyPage() {
-  let t = null;
-  try { t = await api('GET', '/api/tourney'); } catch (e) { t = { error: e.message }; }
-  const ends = t && t.endsAt ? t.endsAt : 0;
-  const board = (t && t.board) || [];
-  mount('tourney', `
-    <h1>🎃 Spooky Rivals Tournament</h1>
-    <p class="muted">1v1 shooter in the haunted arena. Most match wins by <b>Wednesday night</b> takes the exclusive <b>Champion Pumpkin Head</b> 👑</p>
-    ${t && t.error ? `<p class="err">${esc(t.error)}</p>` : `
-    <div class="tourney-hero">
-      <div class="tourney-prize"><span class="tp-emoji">🎃</span><b>Champion Pumpkin Head</b><em>Exclusive prize — only the tournament winner gets it</em></div>
-      <div class="tourney-countdown"><span>${t.finalized ? 'Tournament over' : 'Ends in'}</span><b class="tourney-timer">–</b>${t.finalized && t.winner ? `<div>👑 Winner: <b>${esc(t.winner)}</b></div>` : ''}</div>
-    </div>
-    ${t.finalized ? '' : `<div class="tourney-loadout"><span class="muted">Loadout:</span><div class="loadout-picks">
-      ${[['rifle', '🔫 Rifle'], ['smg', '🔫 SMG'], ['shotgun', '🔫 Shotgun'], ['sniper', '🔫 Sniper']].map(([id, label]) => `<button class="loadout-pick" data-w="${id}">${label}</button>`).join('')}
-      </div><span class="muted small">+ 🔫 Pistol secondary</span></div>`}
-    <div class="tourney-actions">${t.finalized ? '<span class="muted">The tournament has ended.</span>' : '<button class="btn-primary tourney-join">Join the Tournament</button><button class="btn-secondary tourney-leave" hidden>Leave Queue</button><span class="muted tourney-status"></span>'}</div>
-    <section><div class="sec-h"><h2>🏆 Leaderboard <span class="muted small">most match wins</span></h2></div>
-      <div class="tourney-board">${board.map((r, i) => `<div class="tourney-row${r.name === me.name ? ' me' : ''}"><span class="tourney-rank">${i + 1}</span><span class="tourney-name">${i === 0 ? '👑 ' : ''}${esc(r.name)}</span><span class="tourney-wins">${r.wins} win${r.wins === 1 ? '' : 's'}</span></div>`).join('') || '<p class="muted">No wins yet — be the first!</p>'}</div></section>`}`,
-  async () => {
-    if (!t || t.error || t.finalized) return;
-    let alive = true;
-    const timer = setInterval(() => {
-      if (!alive) return;
-      const ms = ends - Date.now();
-      const el = app.querySelector('.tourney-timer');
-      if (!el) return;
-      if (ms <= 0) { el.textContent = 'Over!'; return; }
-      const d = Math.floor(ms / 86400000), h = Math.floor(ms % 86400000 / 3600000), m = Math.floor(ms % 3600000 / 60000), s = Math.floor(ms % 60000 / 1000);
-      el.textContent = (d ? d + 'd ' : '') + h + 'h ' + m + 'm ' + s + 's';
-    }, 1000);
-    const joinBtn = app.querySelector('.tourney-join'), leaveBtn = app.querySelector('.tourney-leave'), status = app.querySelector('.tourney-status');
-    const sync = async () => {
-      if (!alive) return;
-      try {
-        const s = await api('GET', '/api/tourney');
-        if (s.myMatch) { alive = false; location.hash = '#/play/g_spookyrivals?server=' + s.myMatch.code; return; }
-        const inQ = !!s.inQueue;
-        joinBtn.hidden = inQ; leaveBtn.hidden = !inQ;
-        status.textContent = inQ ? 'In queue — waiting for an opponent…' : '';
-        if (s.finalized) { alive = false; tourneyPage(); }
-      } catch {}
-    };
-    const picks = app.querySelectorAll('.loadout-pick');
-    const markPick = id => picks.forEach(b => b.classList.toggle('active', b.dataset.w === id));
-    try { const lo = await api('GET', '/api/tourney/loadout'); markPick(lo.primary); } catch {}
-    picks.forEach(b => b.onclick = async () => { try { const r = await api('POST', '/api/tourney/loadout', { primary: b.dataset.w }); markPick(r.primary); toast('Loadout: ' + r.primary); } catch (e) { toast(e.message, true); } });
-    joinBtn.onclick = async () => { try { const r = await api('POST', '/api/tourney/join'); if (r.matched) { alive = false; location.hash = '#/play/g_spookyrivals?server=' + r.code; } else sync(); } catch (e) { toast(e.message, true); } };
-    leaveBtn.onclick = async () => { try { await api('POST', '/api/tourney/leave'); sync(); } catch (e) { toast(e.message, true); } };
-    const poll = setInterval(sync, 5000);
-    sync();
-    cleanup = () => { alive = false; clearInterval(timer); clearInterval(poll); };
   });
 }
 
@@ -840,7 +766,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=fdd8386b');
+  const { Game } = await import('./game.js?v=a7c478de');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1077,7 +1003,6 @@ async function dmPage(name) {
   });
   refreshNotif();
 }
-const HALLOWEEN_DATES = { starts: Date.parse('2026-10-06T00:00:00Z'), ends: Date.parse('2026-11-02T00:00:00Z') };
 function shadeHex(hex, amt) {
   const n = parseInt(hex.slice(1), 16);
   const cl = v => Math.max(0, Math.min(255, v));
@@ -1128,58 +1053,6 @@ function paintPetVoxels(root) {
     const m = GEAR_MODELS[cv.dataset.gear];
     if (m) drawVoxel(cv, m.boxes);
   });
-}
-const halloweenActive = () => { const n = Date.now(); return n >= HALLOWEEN_DATES.starts && n <= HALLOWEEN_DATES.ends; };
-const BV_DATES = { starts: Date.parse('2026-10-22T00:00:00Z'), ends: Date.parse('2026-12-06T00:00:00Z') };
-const blockverseActive = () => { const n = Date.now(); return n >= BV_DATES.starts && n <= BV_DATES.ends; };
-const BV_EMOJI = { g_bvportal: '🌌', g_bvplaza: '🟩' };
-async function blockversePage() {
-  let ev = null;
-  try { ev = await api('GET', '/api/event/blockverse'); } catch { ev = { games: [], active: blockverseActive() }; }
-  const daysLeft = Math.max(0, Math.ceil((BV_DATES.ends - Date.now()) / 86400000));
-  const gifts = ['hat_bv_cap', 'shirt_bv_tee', 'gear_foamsword', 'pet_cubit'].map(id => ITEM[id]).filter(Boolean);
-  mount('blockverse', `
-    <div class="bv-hero">
-      <div class="hw-hero-emoji">🟩</div>
-      <div class="hw-hero-text">
-        <h1>Funtopia × Blockverse</h1>
-        <p class="muted">${ev.active ? `Two worlds, one portal! A crossover course, a plaza hangout, <b>free collab gifts</b> and the <b>World Hopper badge</b> — ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}!` : 'The portal has closed... for now. Thanks for hopping worlds with us!'}</p>
-        <p><a class="btn-primary" href="https://blockverse-one.vercel.app" target="_blank" rel="noopener">Visit Blockverse ↗</a></p>
-      </div>
-    </div>
-    <section><div class="sec-h"><h2>Collab Games (${ev.games.length})</h2></div>
-      <div class="game-row">${ev.games.map(g => `
-        <a class="game-card" href="#/play/${g.id}">
-          <div class="gc-thumb bv-thumb">${BV_EMOJI[g.id] || '🟩'}</div>
-          <b>${esc(g.name)}</b><span class="muted small">${fmt(g.visits)} plays</span>
-        </a>`).join('') || '<p class="muted">The portal is still warming up…</p>'}</div></section>
-    <section><div class="sec-h"><h2>Free Collab Gifts 🎁</h2></div>
-      <p class="muted">Free for everyone while the collab lasts — they're already in your inventory! Find them in the <a href="#/avatar">Avatar Editor</a> and <a href="#/catalog">Marketplace</a>.</p>
-      <div class="game-row">${gifts.map(it => `<div class="game-card"><div class="gc-thumb bv-thumb">${it.emoji || '🎁'}</div><b>${esc(it.name)}</b><span class="muted small">FREE · Limited</span></div>`).join('')}</div></section>
-    <section><div class="sec-h"><h2>World Hopper Badge 🏅</h2></div>
-      <p class="muted">Beat the <a href="#/play/g_bvportal">Blockverse Portal Run</a> to earn the <b>World Hopper</b> badge — only available during the collab!</p></section>`);
-}
-const HALLOWEEN_EMOJI = { g_halloween01: '👻', g_halloween02: '🎃', g_halloween03: '🧙', g_halloween04: '💀', g_halloween05: '🦇' };
-async function halloweenPage() {
-  let ev = null;
-  try { ev = await api('GET', '/api/event/halloween'); } catch { ev = { games: [], active: halloweenActive() }; }
-  const daysLeft = Math.max(0, Math.ceil((HALLOWEEN_DATES.ends - Date.now()) / 86400000));
-  mount('halloween', `
-    <div class="hw-hero">
-      <div class="hw-hero-emoji">🎃</div>
-      <div class="hw-hero-text">
-        <h1>Halloween in Funtopia</h1>
-        <p class="muted">${ev.active ? `Spooky games, creepy costumes & <b>double daily FunTix</b> — ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}!` : 'The spirits have returned to their graves. See you next year!'}</p>
-      </div>
-    </div>
-    <section><div class="sec-h"><h2>Spooky Games (${ev.games.length})</h2></div>
-      <div class="game-row">${ev.games.map(g => `
-        <a class="game-card" href="#/play/${g.id}">
-          <div class="gc-thumb hw-thumb">${HALLOWEEN_EMOJI[g.id] || '🎃'}</div>
-          <b>${esc(g.name)}</b><span class="muted small">${fmt(g.visits)} plays</span>
-        </a>`).join('') || '<p class="muted">The spirits are still preparing the games…</p>'}</div></section>
-    <section><div class="sec-h"><h2>Costumes</h2><a href="#/catalog">Shop all &rsaquo;</a></div>
-      <p class="muted">Witch hats, vampire fangs, pumpkin heads and more — find them in the <a href="#/catalog">Marketplace</a> and the Avatar Editor's new looks.</p></section>`);
 }
 async function friendsPage() {
   const fr = await api('GET', '/api/friends');
@@ -1491,13 +1364,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=d33071a2');
+  const { Studio } = await import('./studio.js?v=0ce4df42');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=fdd8386b');
+      const { Game: GameClass } = await import('./game.js?v=a7c478de');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1682,11 +1555,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=64054beb');
+  const m = await import('./admin.js?v=9e161ce5');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=64054beb');
+  const m = await import('./admin.js?v=9e161ce5');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1767,22 +1640,6 @@ async function addonsPage() {
     });
 }
 
-// ---------- spooky menu music ----------
-let audioUnlocked = false;
-function maybeSpooky() {
-  const seg = (location.hash.slice(1).split('?')[0] || '/home').split('/').filter(Boolean);
-  const inGame = seg[0] === 'play' || seg[0] === 'studio';
-  if (inGame || !halloweenActive()) { try { stopSpooky(); } catch {} return; }
-  if (localStorage.getItem('ff_music') === '0') { try { stopSpooky(); } catch {} return; }
-  if (audioUnlocked) { try { startSpooky(); } catch {} }
-}
-function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-  maybeSpooky();
-}
-addEventListener('pointerdown', unlockAudio);
-addEventListener('keydown', unlockAudio);
 
 // ---------- router ----------
 let routing = 0;
@@ -1798,7 +1655,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u54'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u56'); return m.lobbyPage(lobbyDeps); }
       case 'dashboard': return await homePage();
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
@@ -1808,17 +1665,15 @@ async function route() {
       case 'friends': return await friendsPage();
       case 'messages': return seg[1] ? await dmPage(decodeURIComponent(seg[1])) : await messagesPage();
       case 'groups': return groupsPage();
-      case 'halloween': return await halloweenPage();
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=u50'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=u51'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=a4d0cca8'); return m.suggestPage(suggestDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
-      case 'scripts': { const m = await import('./scripts-page.js?v=e67b220b'); return m.scriptsPage(D); }
+      case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
       case 'club': return clubPage();
-      case 'blockverse': return await blockversePage();
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
       case 'owner': return await ownerPage();
@@ -1829,7 +1684,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=02bebcf8'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=ea648086'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=76d964dd'); return m.skinmakerPage(skinmakerDeps); }
       default: return await homePage();
     }
   } catch (e) {
@@ -1837,7 +1692,7 @@ async function route() {
     mount('', `<div class="error-page"><h1>Oops!</h1><p>${esc(e.message)}</p><a class="btn-primary" href="#/home">Go Home</a></div>`);
   }
 }
-addEventListener('hashchange', () => { route(); maybeSpooky(); });
+addEventListener('hashchange', () => { route(); });
 
 
 loadBadgeDefs();
@@ -1923,4 +1778,4 @@ if (location.pathname.startsWith('/iknow')) {
   }, 5000));
 }
 
-route(); maybeSpooky();
+route();

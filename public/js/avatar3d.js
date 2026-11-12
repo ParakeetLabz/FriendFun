@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=fabe5f21';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=56507280';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
 import { isVerified } from './verified.js?v=6fb5be32';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -24,8 +24,6 @@ function faceTexture(id) {
     case 'mad': eyes(14); g.beginPath(); g.moveTo(32, 32); g.lineTo(54, 42); g.moveTo(96, 32); g.lineTo(74, 42); g.stroke(); g.beginPath(); g.arc(64, 104, 22, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke(); break;
     case 'buckteeth': eyes(); g.beginPath(); g.moveTo(30, 72); g.quadraticCurveTo(64, 114, 98, 72); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(50, 78, 13, 28); g.fillRect(65, 78, 13, 28); g.fillStyle = '#e8e8e8'; g.fillRect(50, 78, 13, 7); g.fillRect(65, 78, 13, 7); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(50, 78, 13, 28); g.strokeRect(65, 78, 13, 28); g.beginPath(); g.moveTo(64, 78); g.lineTo(64, 106); g.stroke(); break;
     case 'beak': eyes(); g.fillStyle = '#ff9800'; g.beginPath(); g.ellipse(64, 84, 31, 14, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fb8c00'; g.beginPath(); g.ellipse(64, 91, 31, 8, 0, 0, Math.PI); g.fill(); g.strokeStyle = '#e65100'; g.lineWidth = 4; g.beginPath(); g.moveTo(35, 86); g.quadraticCurveTo(64, 93, 93, 86); g.stroke(); g.fillStyle = '#e65100'; g.beginPath(); g.ellipse(52, 78, 3.2, 4.5, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(76, 78, 3.2, 4.5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffe0b2'; g.beginPath(); g.ellipse(48, 76, 6, 3, -0.4, 0, Math.PI * 2); g.fill(); break;
-    case 'fangs': eyes(); g.strokeStyle = '#111'; g.lineWidth = 7; g.beginPath(); g.moveTo(32, 72); g.quadraticCurveTo(64, 98, 96, 70); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(48, 76); g.lineTo(57, 76); g.lineTo(52.5, 100); g.closePath(); g.fill(); g.beginPath(); g.moveTo(71, 76); g.lineTo(80, 76); g.lineTo(75.5, 100); g.closePath(); g.fill(); g.fillStyle = '#c62828'; g.beginPath(); g.arc(52.5, 100, 2.5, 0, Math.PI * 2); g.arc(75.5, 100, 2.5, 0, Math.PI * 2); g.fill(); break;
-    case 'stitches': eyes(13); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(30, 78); for (let x = 30; x < 98; x += 8) { g.lineTo(x + 4, 70); g.lineTo(x + 8, 78); } g.stroke(); g.lineWidth = 3; g.strokeStyle = '#6d4c41'; for (let x = 36; x <= 92; x += 14) { g.beginPath(); g.moveTo(x, 68); g.lineTo(x, 88); g.stroke(); } break;
     case '3dglasses': g.fillStyle = '#e53935'; g.fillRect(28, 40, 32, 20); g.fillStyle = '#26c6da'; g.fillRect(68, 40, 32, 20); g.strokeStyle = '#111'; g.lineWidth = 4; g.strokeRect(28, 40, 32, 20); g.strokeRect(68, 40, 32, 20); smile(); break;
     case 'alien': g.beginPath(); g.ellipse(40, 48, 10, 18, -0.4, 0, Math.PI * 2); g.ellipse(88, 48, 10, 18, 0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(64, 92, 12, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); break;
     case 'angel': closedHappy(); smile(72, 18); g.strokeStyle = '#ffd400'; g.lineWidth = 5; g.beginPath(); g.arc(64, 22, 16, 0, Math.PI * 2); g.stroke(); break;
@@ -43,7 +41,6 @@ function faceTexture(id) {
     case 'eyepatch': g.beginPath(); g.ellipse(44, 50, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.ellipse(84, 50, 14, 12, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(24, 34); g.lineTo(104, 66); g.stroke(); g.beginPath(); g.moveTo(52, 86); g.quadraticCurveTo(72, 94, 86, 82); g.stroke(); break;
     case 'fire': g.fillStyle = '#ff9800'; g.beginPath(); g.ellipse(44, 50, 9, 12, 0, 0, Math.PI * 2); g.ellipse(84, 50, 9, 12, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(44, 54, 4, 6, 0, 0, Math.PI * 2); g.ellipse(84, 54, 4, 6, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(36, 80); g.quadraticCurveTo(64, 110, 92, 80); g.closePath(); g.fill(); break;
     case 'freckles': eyes(); smile(); g.fillStyle = '#8d6e63'; for (const [x, y] of [[34, 62], [42, 66], [94, 62], [86, 66], [52, 60], [76, 60]]) { g.beginPath(); g.arc(x, y, 2.5, 0, Math.PI * 2); g.fill(); } break;
-    case 'ghostface': g.beginPath(); g.ellipse(46, 52, 9, 14, 0.15, 0, Math.PI * 2); g.ellipse(82, 52, 9, 14, -0.15, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(64, 94, 12, 18, 0, 0, Math.PI * 2); g.fill(); break;
     case 'gold': g.strokeStyle = '#c9a227'; g.fillStyle = '#c9a227'; eyes(); g.lineWidth = 7; smile(); break;
     case 'happy': closedHappy(); g.beginPath(); g.moveTo(38, 74); g.quadraticCurveTo(64, 112, 90, 74); g.closePath(); g.fill(); break;
     case 'hearteyes': g.fillStyle = '#e53935'; heart(44, 52, 12); heart(84, 52, 12); g.fillStyle = '#111'; smile(); break;
@@ -64,7 +61,6 @@ function faceTexture(id) {
     case 'sleepy': g.beginPath(); g.moveTo(34, 52); g.lineTo(54, 52); g.moveTo(74, 52); g.lineTo(94, 52); g.stroke(); g.beginPath(); g.ellipse(64, 92, 8, 10, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#111'; g.font = 'bold 22px Arial'; g.fillText('z', 96, 30); break;
     case 'starstruck': g.fillStyle = '#fdd835'; const st5 = (x, y) => { g.beginPath(); for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4 : 10; g.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); } g.closePath(); g.fill(); }; st5(44, 50); st5(84, 50); g.fillStyle = '#111'; g.beginPath(); g.ellipse(64, 90, 12, 15, 0, 0, Math.PI * 2); g.fill(); break;
     case 'shades': g.fillStyle = '#111'; g.beginPath(); g.roundRect(26, 38, 34, 22, 6); g.roundRect(68, 38, 34, 22, 6); g.fill(); g.fillStyle = '#fff'; g.fillRect(32, 42, 14, 4); g.fillRect(74, 42, 14, 4); g.beginPath(); g.moveTo(60, 48); g.lineTo(68, 48); g.stroke(); g.beginPath(); g.moveTo(48, 88); g.quadraticCurveTo(70, 96, 86, 82); g.stroke(); break;
-    case 'vampire': g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(44, 50, 9, 6, -0.3, 0, Math.PI * 2); g.ellipse(84, 50, 9, 6, 0.3, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(34, 84); g.quadraticCurveTo(64, 96, 94, 84); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(48, 86); g.lineTo(56, 86); g.lineTo(52, 102); g.closePath(); g.fill(); g.beginPath(); g.moveTo(72, 86); g.lineTo(80, 86); g.lineTo(76, 102); g.closePath(); g.fill(); break;
     case 'sly': g.beginPath(); g.ellipse(44, 50, 7, 9, 0, 0, Math.PI * 2); g.ellipse(84, 50, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(48, 50, 2.5, 0, Math.PI * 2); g.arc(88, 50, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(52, 88); g.quadraticCurveTo(74, 82, 88, 88); g.stroke(); break;
     case 'nervous': g.beginPath(); g.ellipse(44, 50, 8, 10, 0, 0, Math.PI * 2); g.ellipse(84, 50, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(40, 90); for (let x = 40; x <= 88; x += 8) g.lineTo(x + 4, 86); g.stroke(); g.fillStyle = '#29b6f6'; g.beginPath(); g.moveTo(104, 30); g.quadraticCurveTo(112, 44, 104, 56); g.quadraticCurveTo(96, 44, 104, 30); g.fill(); break;
     case 'sparkle': eyes(); smile(); g.fillStyle = '#fff'; const sp = (x, y, r) => { g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); }; g.fillStyle = '#fdd835'; sp(28, 30, 10); sp(100, 28, 8); sp(108, 78, 7); break;
@@ -78,7 +74,6 @@ function faceTexture(id) {
     case 'unibrow': g.fillRect(30, 32, 68, 10); eyes(); smile(); break;
     case 'vr': g.fillStyle = '#263238'; g.beginPath(); g.roundRect(26, 36, 76, 30, 10); g.fill(); g.fillStyle = '#4fc3f7'; g.fillRect(36, 46, 56, 6); g.fillStyle = '#111'; smile(76, 22); break;
     case 'warpaint': eyes(14); g.strokeStyle = '#e53935'; g.lineWidth = 8; g.beginPath(); g.moveTo(24, 66); g.lineTo(52, 66); g.moveTo(76, 66); g.lineTo(104, 66); g.stroke(); g.strokeStyle = '#111'; g.lineWidth = 7; g.beginPath(); g.moveTo(48, 90); g.lineTo(80, 90); g.stroke(); break;
-    case 'zombie': g.lineWidth = 5; g.beginPath(); g.moveTo(36, 44); g.lineTo(52, 58); g.moveTo(52, 44); g.lineTo(36, 58); g.stroke(); g.beginPath(); g.ellipse(84, 52, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.lineWidth = 4; g.beginPath(); g.moveTo(44, 88); g.lineTo(84, 88); g.stroke(); g.strokeStyle = '#6d4c41'; g.lineWidth = 3; for (const x of [54, 64, 74]) { g.beginPath(); g.moveTo(x, 82); g.lineTo(x, 94); g.stroke(); } break;
     case 'zzz': g.beginPath(); g.moveTo(36, 52); g.quadraticCurveTo(44, 56, 52, 50); g.moveTo(76, 52); g.quadraticCurveTo(84, 56, 92, 50); g.stroke(); g.fillStyle = '#111'; g.font = 'bold 20px Arial'; g.fillText('z', 92, 28); g.fillText('z', 100, 48); g.beginPath(); g.ellipse(64, 92, 8, 10, 0, 0, Math.PI * 2); g.stroke(); break;
   }
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
@@ -373,34 +368,10 @@ function buildSlimeHead(g) {
   const hi = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.45 }));
   hi.position.set(-0.32, 0.92, 0.5); hi.scale.set(1, 1.5, 0.5); g.add(hi);
 }
-function buildPumpkinHead(g) {
-  const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 });
-  const add = (geo, color, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
-  const p = add(new THREE.SphereGeometry(0.68, 24, 18), '#e67e22', 0, 0.62); p.scale.set(1, 0.95, 0.95);
-  for (let i = -2; i <= 2; i++) { const r = add(new THREE.TorusGeometry(0.7, 0.03, 6, 24), '#d35400', 0, 0.62); r.rotation.y = Math.PI / 2 + i * 0.28; r.scale.set(1, 0.95, 1); }
-  add(new THREE.CylinderGeometry(0.09, 0.14, 0.32, 10), '#2e7d32', 0, 1.32);
-  const glow = new THREE.MeshBasicMaterial({ color: '#ffca28' });
-  const tri = (x, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.26, 3), glow); m.position.set(x, y, 0.6); m.rotation.x = -0.12; g.add(m); };
-  tri(-0.25, 0.8); tri(0.25, 0.8);
-  let px = -0.32;
-  for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, i % 2 ? 0.2 : 0.12, 0.04), glow); m.position.set(px, 0.34 + (i % 2 ? 0.03 : -0.03), 0.62); m.rotation.z = (i % 2 ? -1 : 1) * 0.2; g.add(m); px += 0.16; }
-}
-function buildGhostHead(g) {
-  const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.9 });
-  const add = (geo, color, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
-  const b = add(new THREE.SphereGeometry(0.62, 24, 18), '#f5f5f5', 0, 0.78); b.scale.set(1, 1.2, 0.95);
-  add(new THREE.CylinderGeometry(0.6, 0.72, 0.55, 24, 1, true), '#f5f5f5', 0, 0.12);
-  const dark = new THREE.MeshBasicMaterial({ color: '#212121' });
-  for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), dark); e.scale.set(1, 1.5, 0.5); e.position.set(sx * 0.24, 0.88, 0.56); g.add(e); }
-  const mo = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), dark); mo.scale.set(1, 1.4, 0.5); mo.position.set(0, 0.5, 0.58); g.add(mo);
-  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2; add(new THREE.ConeGeometry(0.09, 0.22, 6), '#f5f5f5', Math.cos(a) * 0.66, -0.12, Math.sin(a) * 0.66); }
-}
 const HEADS = {
   head_bugs: { h: 1.3, custom: buildBugsHead },
   head_daffy: { h: 1.3, custom: buildDaffyHead },
   head_slimebody: { h: 1.35, custom: buildSlimeHead },
-  head_pumpkin: { h: 1.45, custom: buildPumpkinHead },
-  head_ghost: { h: 1.6, custom: buildGhostHead },
   head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) },
   head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },

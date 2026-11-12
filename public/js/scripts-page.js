@@ -1,6 +1,6 @@
 // 🔌 Fun Plugin Scripts page — code scripting with the `fun` API + GitHub sync.
-import { FUN_PLUGIN, createFunAPI, syncScriptsToGitHub, loadScriptsFromGitHub } from './fun-plugin.js?v=5e1bcf37';
-import { compileFunScript, FUNSCRIPT_EXAMPLE } from './funscript.js?v=6cad5c05';
+import { FUN_PLUGIN, createFunAPI, syncScriptsToGitHub, loadScriptsFromGitHub } from './fun-plugin.js?v=a3e8e8f8';
+import { compileFunScript, FUNSCRIPT_EXAMPLE } from './funscript.js?v=9867117d';
 
 const FUN_API_DOCS = `// 🔌 Fun Plugin API by @fun
 // Available as 'fun' in your scripts:
