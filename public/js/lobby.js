@@ -7,6 +7,9 @@ import { LOGO } from './ui.js?v=f35f8472';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Calling All Villains logo, drawn as original inline SVG (purple wordmark + V motif).
+const CAV_LOGO = `<svg viewBox="0 0 150 48" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Calling All Villains"><defs><linearGradient id="cavg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8b4fe"/><stop offset=".55" stop-color="#a855f7"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs><polyline points="2,5 8,15 14,5" fill="none" stroke="#c084fc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="136,5 142,15 148,5" fill="none" stroke="#c084fc" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><text x="75" y="11" text-anchor="middle" style="font-size:9px;font-weight:900;letter-spacing:2px" fill="#e9d5ff" font-family="system-ui,sans-serif">ZAM!</text><text x="75" y="24" text-anchor="middle" style="font-size:11px;font-weight:900;letter-spacing:1px" fill="url(#cavg)" font-family="system-ui,sans-serif">CALLING ALL</text><text x="75" y="40" text-anchor="middle" style="font-size:16px;font-weight:900;letter-spacing:1px" fill="url(#cavg)" font-family="system-ui,sans-serif">VILLAINS</text></svg>`;
+
 export async function lobbyPage(D) {
   const { api, esc, fmt, toast, avatarImgTag } = D;
   const me = D.me;
@@ -49,6 +52,7 @@ export async function lobbyPage(D) {
       <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
       <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
       <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
+      ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
     </nav>
     <aside class="lb-panel">
       <div class="lb-mode-label">FEATURED MODE</div>
@@ -182,68 +186,6 @@ export async function lobbyPage(D) {
   el.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; });
   addEventListener('pointerup', () => { dragging = false; });
   el.addEventListener('pointermove', e => { if (dragging) { targetSpin += (e.clientX - lastX) * 0.008; lastX = e.clientX; } });
-  // Owner TV: a big screen at the back of the lobby, only the owner sees it.
-  // Tap it to open the Owner Panel.
-  if (me.owner) {
-    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 288;
-    const cx = cv.getContext('2d');
-    // Mr. Puzzles theme: dark CRT casing, light static face, color-bar grin.
-    cx.fillStyle = '#26262c'; cx.fillRect(0, 0, 512, 288);
-    for (let i = 0; i < 500; i++) { cx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.18)'; cx.fillRect(Math.random() * 512, Math.random() * 288, 2, 2); }
-    cx.fillStyle = '#d9d9d2';
-    cx.beginPath(); cx.roundRect(28, 30, 456, 228, 14); cx.fill();
-    for (let i = 0; i < 700; i++) { cx.fillStyle = Math.random() > 0.5 ? 'rgba(255,255,255,.35)' : 'rgba(0,0,0,.12)'; cx.fillRect(30 + Math.random() * 452, 32 + Math.random() * 224, 2, 2); }
-    // bowler hat with one straight antenna and one bent antenna
-    cx.fillStyle = '#111';
-    cx.beginPath(); cx.ellipse(256, 38, 62, 30, 0, Math.PI, 0); cx.fill();
-    cx.fillRect(176, 36, 160, 8);
-    cx.fillStyle = '#555'; cx.fillRect(206, 26, 100, 6);
-    cx.strokeStyle = '#111'; cx.lineWidth = 4; cx.lineCap = 'round';
-    cx.beginPath(); cx.moveTo(232, 12); cx.lineTo(226, 2); cx.stroke();
-    cx.beginPath(); cx.moveTo(282, 12); cx.lineTo(296, 4); cx.lineTo(310, 10); cx.stroke();
-    cx.beginPath(); cx.arc(226, 2, 4, 0, 7); cx.fill();
-    cx.beginPath(); cx.arc(310, 10, 4, 0, 7); cx.fill();
-    // mismatched eyes: one big, one small, with a zigzag eyebrow
-    cx.fillStyle = '#111';
-    cx.beginPath(); cx.arc(185, 102, 26, 0, 7); cx.fill();
-    cx.beginPath(); cx.arc(328, 106, 15, 0, 7); cx.fill();
-    cx.fillStyle = '#fff';
-    cx.beginPath(); cx.arc(193, 94, 8, 0, 7); cx.fill();
-    cx.beginPath(); cx.arc(333, 101, 5, 0, 7); cx.fill();
-    cx.strokeStyle = '#111'; cx.lineWidth = 4; cx.lineJoin = 'round';
-    cx.beginPath(); cx.moveTo(306, 78); cx.lineTo(318, 86); cx.lineTo(330, 78); cx.lineTo(342, 86); cx.stroke();
-    // title (kept at the same spot as before)
-    cx.textAlign = 'center';
-    cx.fillStyle = '#1a1a1f'; cx.font = '900 44px system-ui, sans-serif';
-    cx.fillText('OWNER PANEL', 256, 168);
-    // big grin with TV color-bar teeth
-    const bars = ['#ffd800', '#00c8ff', '#7dff2e', '#ff6da5', '#ff3b30', '#2f6bff'];
-    cx.save();
-    cx.beginPath(); cx.moveTo(150, 188); cx.quadraticCurveTo(256, 252, 362, 188); cx.quadraticCurveTo(256, 214, 150, 188); cx.closePath(); cx.clip();
-    cx.fillStyle = '#1a1a1f'; cx.fillRect(150, 188, 212, 64);
-    bars.forEach((c, i) => { cx.fillStyle = c; cx.fillRect(152 + i * 35, 190, 33, 52); });
-    cx.restore();
-    cx.strokeStyle = '#1a1a1f'; cx.lineWidth = 4;
-    cx.beginPath(); cx.moveTo(150, 188); cx.quadraticCurveTo(256, 252, 362, 188); cx.stroke();
-    cx.fillStyle = 'rgba(26,26,31,.75)'; cx.font = '600 20px system-ui, sans-serif';
-    cx.fillText('tap to open', 256, 252);
-    cx.fillStyle = 'rgba(255,255,255,.55)'; cx.font = '700 13px system-ui, sans-serif';
-    cx.fillText('P U Z Z L E V I S I O N', 256, 278);
-    const tvTex = new THREE.CanvasTexture(cv); tvTex.colorSpace = THREE.SRGBColorSpace;
-    const tv = new THREE.Group();
-    const tvFrame = new THREE.Mesh(new THREE.BoxGeometry(6.8, 4.0, 0.18), new THREE.MeshStandardMaterial({ color: 0x0d0d14, roughness: 0.4, metalness: 0.6 }));
-    tv.add(tvFrame);
-    const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.6), new THREE.MeshBasicMaterial({ map: tvTex, fog: false }));
-    tvScreen.position.z = 0.1; tv.add(tvScreen);
-    tv.position.set(0, 7.0, -7);
-    scene.add(tv);
-    const tvRay = new THREE.Raycaster(); const tvPtr = new THREE.Vector2();
-    const tvHit = e => { const r = el.getBoundingClientRect(); tvPtr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); tvRay.setFromCamera(tvPtr, camera); return tvRay.intersectObject(tvScreen, false).length > 0; };
-    let tvDownX = 0, tvDownY = 0;
-    el.addEventListener('pointerdown', e => { tvDownX = e.clientX; tvDownY = e.clientY; });
-    el.addEventListener('pointerup', e => { if (Math.hypot(e.clientX - tvDownX, e.clientY - tvDownY) < 6 && tvHit(e)) location.hash = '#/owner'; });
-    el.addEventListener('pointermove', e => { if (!dragging) el.style.cursor = tvHit(e) ? 'pointer' : ''; });
-  }
   const resize = () => { const w = holder.clientWidth, h = holder.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   resize(); addEventListener('resize', resize);
   let myEmote = 'idle', emoteEnd = 0;

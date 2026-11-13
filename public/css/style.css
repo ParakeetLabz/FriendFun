@@ -694,6 +694,9 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-item span { font-size: 18px; }
 .lb-item:hover { background: rgba(255,255,255,.08); color: #fff; }
 .lb-item.active { background: rgba(124,108,245,.25); border-color: rgba(124,108,245,.6); color: #fff; }
+.lb-cav { justify-content: center; padding: 8px 12px; background: linear-gradient(135deg, rgba(124,58,237,.4), rgba(168,85,247,.15)); border-color: rgba(192,132,252,.55); }
+.lb-cav svg { width: 118px; height: auto; display: block; }
+.lb-cav:hover { background: linear-gradient(135deg, rgba(124,58,237,.55), rgba(168,85,247,.3)); border-color: rgba(192,132,252,.8); }
 .lb-dot { background: #ff4757; color: #fff; font-size: 11px; min-width: 20px; height: 20px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; }
 .lb-panel { position: absolute; right: 16px; top: 80px; width: 290px; background: rgba(10,10,20,.72); border: 1px solid rgba(255,255,255,.1); border-radius: 18px; padding: 16px; z-index: 10; backdrop-filter: blur(8px); }
 .lb-mode-label { font-size: 11px; letter-spacing: 2px; color: #8f8fa3; font-weight: 700; margin-bottom: 8px; }

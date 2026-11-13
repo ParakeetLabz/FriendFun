@@ -1619,7 +1619,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=6cde4cc9'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=13b7c5e9'); return m.lobbyPage(lobbyDeps); }
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'), qp.get('voice') === '1');
@@ -1640,7 +1640,7 @@ async function route() {
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
       case 'owner': return await ownerPage();
-      case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=6cde4cc9'); return m.lobbyPage(lobbyDeps); // phone alt to typing "hack" (unlinked; non-owners land on home)
+      case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=13b7c5e9'); return m.lobbyPage(lobbyDeps); // phone alt to typing "hack" (unlinked; non-owners land on home)
 
       case 'moderation': return await moderationPage();
       case 'funtix': case 'funbux': return funtixPage();
