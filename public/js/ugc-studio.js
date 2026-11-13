@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ITEM, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=56507280';
+import { icons } from './icons.js?v=1aa0a4d3';
 
 // Transform editor spec: [key, label, min, max, step, default]
 const XF = [
@@ -14,7 +15,7 @@ const UGC_PALETTE = ['#e53935', '#ff6d00', '#ffeb3b', '#43a047', '#26c6da', '#1e
 const UGC_MODEL_SLOTS = ['hat', 'shirt', 'gear'];
 const UGC_GLB_MAX = 4 * 1024 * 1024;
 // GLB card placeholder (3D loads async)
-const glbCardImg = () => '<div class="glb-ph">📦<span>3D</span></div>';
+const glbCardImg = () => `<div class="glb-ph"><span class="ic">${icons.box}</span><span>3D</span></div>`;
 const ugcCardImg = u => u.model_url ? glbCardImg() : `<img src="${D.itemImage(u)}">`;
 export async function ugcPage(D) {
   const app = document.getElementById('app');
@@ -29,8 +30,8 @@ export async function ugcPage(D) {
   for (const m of mine) if (!ITEM[m.id]) ITEM[m.id] = { id: m.id, type: m.type, name: m.name, price: m.price, color: m.color, template: m.template, model_url: m.model_url || null, model_transform: m.model_transform || null, creator: m.creator, ugc: true };
   D.mount('create', `
     <h1>Create</h1>
-    <div class="av-tabs"><button data-goto="#/create">🎮 Experiences</button><button class="active">🎨 UGC Studio</button></div>
-    ${!ugcStatus.table ? '<p class="ugc-warn">⚠️ UGC database not set up — run supabase_ugc.sql in Supabase, then refresh.</p>' : !ugcStatus.bucket ? '<p class="ugc-warn">⚠️ Model storage not ready — add SUPABASE_SERVICE_KEY on Render, then refresh.</p>' : ''}
+    <div class="av-tabs"><button data-goto="#/create"><span class="ic">${icons.gamepad}</span> Experiences</button><button class="active"><span class="ic">${icons.palette}</span> UGC Studio</button></div>
+    ${!ugcStatus.table ? '<p class="ugc-warn"><span class="ic">${icons.alert}</span> UGC database not set up — run supabase_ugc.sql in Supabase, then refresh.</p>' : !ugcStatus.bucket ? '<p class="ugc-warn"><span class="ic">${icons.alert}</span> Model storage not ready — add SUPABASE_SERVICE_KEY on Render, then refresh.</p>' : ''}
     <p class="muted">Remix a template or upload your own .glb 3D model, pick where it goes, set a price. A moderator reviews every item before it goes on sale — you earn <b>${Math.round(UGC_CREATOR_CUT * 100)}%</b> of every sale.</p>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Live preview</div></div>
@@ -154,7 +155,7 @@ export async function ugcPage(D) {
         } else {
           await D.api('POST', '/api/ugc', { type, template, color, name: nm, price: pr });
         }
-        D.toast('Submitted for review! 🎨');
+        D.toast('Submitted for review!');
         await D.loadUgc();
         ugcPage(D);
       } catch (e) { D.toast(e.message, true); }

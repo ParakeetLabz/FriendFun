@@ -4,7 +4,8 @@ const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'adv
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
 import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=0e183037';
 import { isVerified } from './verified.js?v=6fb5be32';
-const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
+import { icons } from './icons.js?v=1aa0a4d3';
+const vtag = (name) => isVerified(name) ? ' <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>' : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
 const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
@@ -126,9 +127,9 @@ export class Game {
       <div class="hud-topleft">
         <button class="hud-btn menu-btn" title="Menu (Esc)"><span class="ff-mini">${LOGO}</span></button>
         <button class="hud-btn chat-toggle" title="Chat">${chatIcon}</button>
-        <button class="hud-btn emote-btn" title="Emotes">🎭</button>
-        <button class="hud-btn jam-btn" title="Jam tracks">🎵</button>
-        ${['owner', 'admin', 'moderator'].includes(this.me.role) ? '<button class="hud-btn funpanel-btn" title="FunPanel (F4)">🛡️</button>' : ''}
+        <button class="hud-btn emote-btn" title="Emotes"><span class="ic">${icons.smile}</span></button>
+        <button class="hud-btn jam-btn" title="Jam tracks"><span class="ic">${icons.music}</span></button>
+        ${['owner', 'admin', 'moderator'].includes(this.me.role) ? '<button class="hud-btn funpanel-btn" title="FunPanel (F4)"><span class="ic">${icons.shield}</span></button>' : ''}
       </div>
       <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
       <div class="hud-topright">
@@ -141,12 +142,12 @@ export class Game {
       <div class="kill-feed"></div><div class="fps-hud"></div>
       <div class="big-msg"></div>
       ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<div class="funpanel hidden">
-        <h3>🛡️ FunPanel <button class="funpanel-close">×</button></h3>
+        <h3><span class="ic">${icons.shield}</span> FunPanel <button class="funpanel-close">×</button></h3>
         <h4>Players</h4>
         <div class="fp-players"></div>
         <h4>Self</h4>
-        <div class="fp-row"><button class="btn-secondary fp-fly">✈️ Fly: OFF</button><button class="btn-secondary fp-spawn">TP to Spawn</button></div>
-        <div class="fp-row"><button class="btn-secondary fp-noclip">🚫 Noclip: OFF</button><button class="btn-secondary fp-speed">⚡ Speed: OFF</button></div>
+        <div class="fp-row"><button class="btn-secondary fp-fly"><span class="ic">${icons.send}</span> Fly: OFF</button><button class="btn-secondary fp-spawn">TP to Spawn</button></div>
+        <div class="fp-row"><button class="btn-secondary fp-noclip"><span class="ic">${icons.x}</span> Noclip: OFF</button><button class="btn-secondary fp-speed"><span class="ic">${icons.zap}</span> Speed: OFF</button></div>
         ${['owner', 'admin'].includes(this.me.role) ? `<h4>Server</h4>
         <div class="fp-row"><input class="fp-announce" placeholder="Announce to server..." maxlength="200"><button class="btn-primary fp-announce-send">Send</button></div>
         ${this.me.role === 'owner' ? '<div class="fp-row"><button class="btn-danger fp-kickall">Kick everyone</button></div>' : ''}` : ''}
@@ -194,11 +195,11 @@ export class Game {
     const fpc = q('.funpanel-close');
     if (fpc) fpc.onclick = () => this.toggleFunPanel(false);
     const flyB = q('.fp-fly');
-    if (flyB) flyB.onclick = () => { this.fly = !this.fly; flyB.textContent = `✈️ Fly: ${this.fly ? 'ON' : 'OFF'}`; this.sys(`Fly ${this.fly ? 'enabled (Space up / C down)' : 'disabled'}`); };
+    if (flyB) flyB.onclick = () => { this.fly = !this.fly; flyB.textContent = `Fly: ${this.fly ? 'ON' : 'OFF'}`; this.sys(`Fly ${this.fly ? 'enabled (Space up / C down)' : 'disabled'}`); };
     const ncB = q('.fp-noclip');
-    if (ncB) ncB.onclick = () => { this.noclip = !this.noclip; ncB.textContent = `🚫 Noclip: ${this.noclip ? 'ON' : 'OFF'}`; this.sys(`Noclip ${this.noclip ? 'enabled (Space up / C down)' : 'disabled'}`); };
+    if (ncB) ncB.onclick = () => { this.noclip = !this.noclip; ncB.textContent = `Noclip: ${this.noclip ? 'ON' : 'OFF'}`; this.sys(`Noclip ${this.noclip ? 'enabled (Space up / C down)' : 'disabled'}`); };
     const sp2B = q('.fp-speed');
-    if (sp2B) sp2B.onclick = () => { this.speedBoost = !this.speedBoost; sp2B.textContent = `⚡ Speed: ${this.speedBoost ? 'ON' : 'OFF'}`; this.sys(`Speed boost ${this.speedBoost ? 'enabled' : 'disabled'}`); };
+    if (sp2B) sp2B.onclick = () => { this.speedBoost = !this.speedBoost; sp2B.textContent = `Speed: ${this.speedBoost ? 'ON' : 'OFF'}`; this.sys(`Speed boost ${this.speedBoost ? 'enabled' : 'disabled'}`); };
     const spB = q('.fp-spawn');
     if (spB) spB.onclick = () => this.spawn();
     const annS = q('.fp-announce-send');
@@ -578,12 +579,11 @@ export class Game {
     // Mic button in HUD
     const btn = document.createElement('button');
     btn.className = 'voice-btn';
-    btn.textContent = '🎤';
+    btn.innerHTML = '<span class="ic">' + icons.mic + '</span>';
     btn.title = 'Voice chat (proximity)';
     btn.onclick = async () => {
       const on = await this.voice.toggle();
       btn.classList.toggle('on', on);
-      btn.textContent = on ? '🎤' : '🎤';
     };
     this.c.appendChild(btn);
     // Volume updates
@@ -811,7 +811,7 @@ export class Game {
       <button class="btn-secondary" data-fp="bring" data-id="${p.id}" title="Teleport them to you">Bring</button>
       <button class="btn-secondary" data-fp="freeze" data-id="${p.id}" title="Freeze/unfreeze them">${this.frozenIds?.has(p.id) ? 'Unfreeze' : 'Freeze'}</button>
       <button class="btn-secondary" data-fp="mute" data-id="${p.id}" title="Mute 10 min">Mute</button>
-      ${['owner', 'admin'].includes(this.me.role) ? `<button class="btn-secondary" data-fp="gift" data-id="${p.id}" title="Give FunTix">🎁</button>` : ''}
+      ${['owner', 'admin'].includes(this.me.role) ? `<button class="btn-secondary" data-fp="gift" data-id="${p.id}" title="Give FunTix"><span class="ic">${icons.gift}</span></button>` : ''}
       <button class="btn-secondary" data-fp="kick" data-id="${p.id}" title="Kick from server">Kick</button>
       <button class="btn-danger" data-fp="ban" data-id="${p.id}" title="Start a ban (needs a second staff to confirm)">Ban</button>
     </div>`).join('') : '<p class="muted small">No other players here.</p>';

@@ -1,3 +1,4 @@
+import { icons } from './icons.js?v=1aa0a4d3';
 export async function adminPage(D, q = '', gq = '') {
   const { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN } = D;
   const me = D.me, BADGE_DEFS = D.BADGE_DEFS;
@@ -9,7 +10,7 @@ export async function adminPage(D, q = '', gq = '') {
   const badgeOpts = Object.values(BADGE_DEFS).map(b => `<option value="${esc(b.id)}">${esc(b.icon || '')} ${esc(b.name)}${b.custom ? ' (custom)' : ''}</option>`).join('');
   const status = u => u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
   mount('admin', `<h1>Admin Panel</h1>
-    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ' <a href="#/owner">👑 Owner Panel</a> has the owner-only tools.' : ''}</p>
+    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ' <a href="#/owner"><span class="ic">${icons.crown}</span> Owner Panel</a> has the owner-only tools.' : ''}</p>
     <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
     <section class="admin-section"><h3>Create Badge</h3>
       <div class="badge-creator">
@@ -26,17 +27,17 @@ export async function adminPage(D, q = '', gq = '') {
         <button class="btn-danger btn-small badge-delete" data-id="${esc(b.id)}" title="Delete badge">×</button></span>`).join('') || '<span class="muted small">No custom badges yet</span>'}
       </div>
     </section>
-    <section class="admin-section"><h3>🎮 Games <span class="muted small">publish, feature & manage</span></h3>
-      ${gamesError ? `<p style="color:#ff6b6b">⚠️ Games list unavailable: ${esc(gamesError)} — the rest of the panel still works.</p>` : ''}
+    <section class="admin-section"><h3><span class="ic">${icons.gamepad}</span> Games <span class="muted small">publish, feature & manage</span></h3>
+      ${gamesError ? `<p style="color:#ff6b6b"><span class="ic">${icons.alert}</span> Games list unavailable: ${esc(gamesError)} — the rest of the panel still works.</p>` : ''}
       <form class="game-search admin-search"><input name="gq" placeholder="Search games" value="${esc(gq)}"><button class="btn-primary">Search</button></form>
       <div class="lbp">${games.map(g => `
       <div class="lbp-row admin-row-wrap">
         <a class="lbp-name" href="#/play/${encodeURIComponent(g.id)}">${esc(g.name)}</a>
-        ${g.featured ? '<span class="feat-tag">⭐ FEATURED</span>' : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
-        <span class="admin-status">by ${esc(g.creator)} &middot; 👁 ${(g.visits ?? 0).toLocaleString()} &middot; 👍 ${g.likes ?? 0} 👎 ${g.dislikes ?? 0}</span>
+        ${g.featured ? '<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>' : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
+        <span class="admin-status">by ${esc(g.creator)} &middot; <span class="ic">${icons.eye}</span> ${(g.visits ?? 0).toLocaleString()} &middot; <span class="ic">${icons.thumb}</span> ${g.likes ?? 0} <span class="ic flip">${icons.thumb}</span> ${g.dislikes ?? 0}</span>
         <div class="admin-controls">
           <button class="btn-secondary g-pub" data-id="${esc(g.id)}" title="Toggle Discover visibility">${g.unpublished ? 'Publish' : 'Unpublish'}</button>
-          <button class="btn-secondary g-feat" data-id="${esc(g.id)}" title="Pin to top of Discover">${g.featured ? 'Unfeature' : '⭐ Feature'}</button>
+          <button class="btn-secondary g-feat" data-id="${esc(g.id)}" title="Pin to top of Discover">${g.featured ? 'Unfeature' : '<span class="ic">' + icons.star + '</span> Feature'}</button>
           <button class="btn-secondary g-rename" data-id="${esc(g.id)}" title="Rename game">Rename</button>
         </div>
       </div>`).join('') || '<p class="muted">No games found.</p>'}</div>
@@ -169,20 +170,20 @@ export async function ownerPage(D, q = '') {
   const partyGoal = party.goal || 100;
   const partyPct = Math.min(100, Math.round(partyCount / partyGoal * 100));
   const status = u => u.owner ? 'Owner' : u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
-  mount('owner', `<h1>👑 Owner Panel</h1>
+  mount('owner', `<h1><span class="ic">${icons.crown}</span> Owner Panel</h1>
     <p class="muted">Owner-only tools.</p>
-    <p><a class="btn-secondary" href="https://muse.ai" target="_blank" rel="noopener">🤖 Muse AI</a></p>
+    <p><a class="btn-secondary" href="https://muse.ai" target="_blank" rel="noopener"><span class="ic">${icons.sparkles}</span> Muse AI</a></p>
     <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
-    <section class="admin-section owner-tools"><h3>📢 Site Tools <span class="muted small">site-wide</span></h3>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.bell}</span> Site Tools <span class="muted small">site-wide</span></h3>
       <div class="owner-grid">
         <span class="admin-inline"><input class="announce-text" placeholder="Broadcast announcement..." maxlength="200" style="min-width:220px"><button class="btn-primary announce-send">📢 Broadcast</button><button class="btn-secondary announce-clear">Clear</button></span>
-        <span class="admin-inline"><button class="btn-secondary maint-toggle">🔧 Maintenance: OFF</button></span>
+        <span class="admin-inline"><button class="btn-secondary maint-toggle"><span class="ic">${icons.wrench}</span> Maintenance: OFF</button></span>
         <span class="admin-inline"><button class="btn-danger kick-all">Kick all players</button></span>
-        <span class="admin-inline"><input type="number" class="rain-amt" value="50" min="1" max="1000" title="FunTix per online player"><button class="btn-primary funtix-rain">🌧️ FunTix Rain</button></span>
+        <span class="admin-inline"><input type="number" class="rain-amt" value="50" min="1" max="1000" title="FunTix per online player"><button class="btn-primary funtix-rain"><span class="ic">${icons.cloud}</span> FunTix Rain</button></span>
       </div>
       <div class="site-state muted small"></div>
     </section>
-    <section class="admin-section owner-tools"><h3>🎉 100 Players Party <span class="muted small">milestone event</span></h3>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.sparkles}</span> 100 Players Party <span class="muted small">milestone event</span></h3>
       <p class="muted">${party.active ? '<b style="color:#ff2d95">🎉 THE PARTY IS LIVE!</b>' : party.alreadyHappened ? '<b>🎉 The party already happened — it was one-time only, and the Neon Party Hat will never come back.</b>' : `We're at <b>${partyCount} / ${partyGoal} players</b> — start the party when we hit 100!`}</p>
       <div class="party100-bar"><div class="party100-bar-fill" style="width:${partyPct}%"></div></div>
       <p class="muted small">${partyPct}% to ${partyGoal} players</p>
@@ -191,17 +192,17 @@ export async function ownerPage(D, q = '') {
           ? `<span class="admin-inline"><a class="btn-primary" href="#/play/g_party100">▶ Open the Party</a><button class="btn-danger party-stop">End the Party</button></span>`
           : party.alreadyHappened
             ? `<span class="muted small">The party can never be started again.</span>`
-            : `<span class="admin-inline"><button class="btn-primary party-start">🎉 Start the Party</button></span>`}
+            : `<span class="admin-inline"><button class="btn-primary party-start"><span class="ic">${icons.sparkles}</span> Start the Party</button></span>`}
       </div>
       <p class="muted small">Starting the party creates the 🎉 100 Players Party plaza (disco floor, DJ, cake) and gives every player the free Neon Party Hat 🎉 while it lasts. One-time only: once the party ends, it can never be started again — and neither can the Neon Party Hat.</p>
     </section>
-    <section class="admin-section owner-tools"><h3>👑 FriendClub <span class="muted small">danger zone</span></h3>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.crown}</span> FriendClub <span class="muted small">danger zone</span></h3>
       <button class="btn-danger club-reset-all">Remove FriendClub from everyone except @fun</button>
     </section>
-    <section class="admin-section owner-tools"><h3>🚨 Farm Scanner <span class="muted small">auto-scans every 5 min</span></h3>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.alert}</span> Farm Scanner <span class="muted small">auto-scans every 5 min</span></h3>
       <div class="farm-reports"><p class="muted">Scanning...</p></div>
     </section>
-    <section class="admin-section owner-tools"><h3>📡 News Maker <span class="muted small">AI anchor broadcast</span></h3>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.news}</span> News Maker <span class="muted small">AI anchor broadcast</span></h3>
       <div class="news-maker">
         <div class="nm-preview"><canvas class="nm-canvas" width="300" height="300"></canvas><div class="muted small">Anchor preview</div></div>
         <div class="nm-panel">
@@ -209,19 +210,19 @@ export async function ownerPage(D, q = '') {
           <label>Script<textarea class="nm-script" rows="4" maxlength="500" placeholder="Hello Funtopia! This is your news anchor..."></textarea></label>
           <label>AI Voice<select class="nm-voice"></select></label>
           <label>Anchor<select class="nm-anchor"><option value="me">My avatar</option><option value="bot">Newsbot</option></select></label>
-          <div class="nm-actions"><button class="btn-secondary nm-preview-btn">▶ Voice</button><button class="btn-secondary nm-fullpreview-btn">👁 Preview Broadcast</button><button class="btn-primary nm-broadcast">📡 Broadcast Live</button></div>
+          <div class="nm-actions"><button class="btn-secondary nm-preview-btn"><span class="ic">${icons.volume}</span> Voice</button><button class="btn-secondary nm-fullpreview-btn"><span class="ic">${icons.eye}</span> Preview Broadcast</button><button class="btn-primary nm-broadcast">📡 Broadcast Live</button></div>
           <div class="nm-status"></div>
         </div>
       </div>
       <p class="muted small">Or broadcast a video file: <span class="admin-inline"><input class="news-video" placeholder="Video URL (.mp4)..." style="min-width:200px"><button class="btn-secondary news-send">📡 Video</button><button class="btn-secondary news-clear">Clear</button></span></p>
     </section>
-    <section class="admin-section"><h3>🎮 Games <span class="muted small">danger zone</span></h3>
-      ${gamesError ? `<p style="color:#ff6b6b">⚠️ Games list unavailable: ${esc(gamesError)}</p>` : ''}
+    <section class="admin-section"><h3><span class="ic">${icons.gamepad}</span> Games <span class="muted small">danger zone</span></h3>
+      ${gamesError ? `<p style="color:#ff6b6b"><span class="ic">${icons.alert}</span> Games list unavailable: ${esc(gamesError)}</p>` : ''}
       <div class="lbp">${games.map(g => `
       <div class="lbp-row admin-row-wrap">
         <a class="lbp-name" href="#/play/${encodeURIComponent(g.id)}">${esc(g.name)}</a>
-        ${g.featured ? '<span class="feat-tag">⭐ FEATURED</span>' : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
-        <span class="admin-status">by ${esc(g.creator)} &middot; 👁 ${(g.visits ?? 0).toLocaleString()}</span>
+        ${g.featured ? '<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>' : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
+        <span class="admin-status">by ${esc(g.creator)} &middot; <span class="ic">${icons.eye}</span> ${(g.visits ?? 0).toLocaleString()}</span>
         <div class="admin-controls">
           <button class="btn-secondary g-resetv" data-id="${esc(g.id)}" title="Reset visit count">Reset visits</button>
           <button class="btn-danger g-del" data-id="${esc(g.id)}" title="Permanently delete">Delete</button>
@@ -242,7 +243,7 @@ export async function ownerPage(D, q = '') {
             ${u.owner && u.name.toLowerCase() !== 'fun' && !u.envAdmin ? `<button class="btn-secondary owner-revoke" data-name="${esc(u.name)}" title="Remove owner">Remove Owner</button>` : ''}
           </span>
         </div>
-        <div class="admin-controls owner-controls"><span class="owner-label">👑 Owner</span>
+        <div class="admin-controls owner-controls"><span class="owner-label"><span class="ic">${icons.crown}</span> Owner</span>
           <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
           <button class="btn-secondary mod-toggle" data-name="${esc(u.name)}" data-on="${u.role === 'moderator' ? '0' : '1'}" title="Toggle moderator">${u.role === 'moderator' ? 'Remove Mod' : 'Make Mod'}</button>
           ${u.funpanel ? `<button class="btn-secondary funpanel-toggle" data-name="${esc(u.name)}" data-on="0" title="Take back their FunPanel">Revoke FunPanel</button>` : (u.admin || u.owner || u.role === 'moderator' ? '' : `<button class="btn-primary funpanel-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the in-game FunPanel">🎁 Gift FunPanel</button>`)}
@@ -256,7 +257,7 @@ export async function ownerPage(D, q = '') {
           <button class="btn-secondary sysdm-btn" data-name="${esc(u.name)}" title="System DM">System DM</button>
           ${u.banned
             ? `<button class="btn-primary ban-revoke" data-name="${esc(u.name)}" title="Unban this user">Unban</button><span class="banned-tag" title="${esc(u.banReason || 'Banned')}">🚫 BANNED${u.bannedUntil ? ' until ' + new Date(u.bannedUntil).toLocaleDateString() : ''}</span>`
-            : `<button class="btn-danger ban-btn" data-name="${esc(u.name)}" title="Ban user">🔨 Ban</button>`}
+            : `<button class="btn-danger ban-btn" data-name="${esc(u.name)}" title="Ban user"><span class="ic">${icons.wrench}</span> Ban</button>`}
           <button class="btn-danger wipe-games" data-name="${esc(u.name)}" title="Delete games">Wipe Games</button>
           <button class="btn-secondary clear-friends" data-name="${esc(u.name)}" title="Clear friends">Clear Friends</button>
           <button class="btn-secondary clear-badges" data-name="${esc(u.name)}" title="Clear badges">Clear Badges</button>
@@ -266,7 +267,7 @@ export async function ownerPage(D, q = '') {
     const partyStart = app.querySelector('.party-start');
     if (partyStart) partyStart.onclick = async () => {
       if (!confirm('Start the 100 Players Party? This creates the party plaza and gives everyone the free Neon Party Hat.')) return;
-      try { const r = await api('POST', '/api/admin/party/start', {}); toast(`🎉 Party started! ${r.count ?? partyCount} players and counting!`); ownerPage(D, q); import('./partyfx.js?v=88bcd633').then(fx => fx.playPartyTransition()).catch(() => {}); }
+      try { const r = await api('POST', '/api/admin/party/start', {}); toast(`Party started! ${r.count ?? partyCount} players and counting!`); ownerPage(D, q); import('./partyfx.js?v=88bcd633').then(fx => fx.playPartyTransition()).catch(() => {}); }
       catch (e) { toast(e.message, true); }
     };
     const partyStop = app.querySelector('.party-stop');
@@ -393,7 +394,7 @@ export async function ownerPage(D, q = '') {
       try {
         const s = await api('GET', '/api/site');
         el.textContent = `Announcement: ${s.announce ? `"${s.announce.text}" (by ${s.announce.by})` : 'none'} · Maintenance: ${s.maintenance ? 'ON' : 'OFF'}`;
-        const mt = app.querySelector('.maint-toggle'); if (mt) mt.textContent = `🔧 Maintenance: ${s.maintenance ? 'ON' : 'OFF'}`;
+        const mt = app.querySelector('.maint-toggle'); if (mt) mt.textContent = `Maintenance: ${s.maintenance ? 'ON' : 'OFF'}`;
       } catch {}
     };
     refreshSiteState();
@@ -445,7 +446,7 @@ export async function ownerPage(D, q = '') {
         const u = new SpeechSynthesisUtterance(t);
         const v = speechSynthesis.getVoices().find(v => v.name === nmVoice.value);
         if (v) u.voice = v;
-        speechSynthesis.speak(u); toast('🔊 Previewing...');
+        speechSynthesis.speak(u); toast('Previewing...');
       } catch { toast('Voice not available', true); }
     };
     const nmStatus = app.querySelector('.nm-status');
@@ -454,7 +455,7 @@ export async function ownerPage(D, q = '') {
       try {
         const r = await api('GET', '/api/news');
         if (r.broadcast) {
-          nmStatus.innerHTML = `<p>📡 <b>Live:</b> ${esc(r.broadcast.title)} <button class="btn-secondary btn-sm nm-replay">👁 View</button></p>`;
+          nmStatus.innerHTML = `<p><span class="ic">${icons.news}</span> <b>Live:</b> ${esc(r.broadcast.title)} <button class="btn-secondary btn-sm nm-replay"><span class="ic">${icons.eye}</span> View</button></p>`;
           nmStatus.querySelector('.nm-replay').onclick = async () => {
             const m = await import('./news-player.js?v=00b6573e');
             m.showNewsBroadcast({ esc, me, ensureAvatar3d }, r.broadcast);
@@ -481,14 +482,14 @@ export async function ownerPage(D, q = '') {
       if (!confirm('Broadcast this to EVERYONE online?')) return;
       try {
         await api('POST', '/api/owner/news', { type: 'live', title, script, voice: nmVoice?.value, anchor: nmAnchorSel?.value });
-        toast('📡 News broadcast sent!'); refreshNmStatus();
+        toast('News broadcast sent!'); refreshNmStatus();
       } catch (e) { toast(e.message, true); }
     };
     const newsSend = app.querySelector('.news-send');
     if (newsSend) newsSend.onclick = async () => {
       const video = app.querySelector('.news-video')?.value.trim();
       if (!video) { toast('Paste a video URL first', true); return; }
-      try { await api('POST', '/api/owner/news', { video }); toast('📡 Video broadcast sent!'); refreshNmStatus(); }
+      try { await api('POST', '/api/owner/news', { video }); toast('Video broadcast sent!'); refreshNmStatus(); }
       catch (e) { toast(e.message, true); }
     };
     const newsClear = app.querySelector('.news-clear');
@@ -507,14 +508,14 @@ export async function ownerPage(D, q = '') {
     async function loadFarms() {
       try {
         const r = await api('GET', '/api/admin/farms');
-        if (!r.reports.length) { farmDiv.innerHTML = '<p class="muted">✅ No farms detected.</p>'; return; }
+        if (!r.reports.length) { farmDiv.innerHTML = '<p class="muted">No farms detected.</p>'; return; }
         farmDiv.innerHTML = r.reports.map(f => `
           <div class="farm-report">
             <div><strong>${esc(f.gameName)}</strong> by ${esc(f.creator)}</div>
             <div class="muted small">${f.reasons.map(esc).join(' • ')}</div>
             <div class="row">
-              <button class="btn-danger farm-del" data-id="${f.gameId}" data-name="${esc(f.gameName)}">🗑️ Delete Game</button>
-              <button class="btn-secondary farm-ban" data-user="${esc(f.creator)}">🔨 Ban Creator</button>
+              <button class="btn-danger farm-del" data-id="${f.gameId}" data-name="${esc(f.gameName)}"><span class="ic">${icons.trash}</span> Delete Game</button>
+              <button class="btn-secondary farm-ban" data-user="${esc(f.creator)}"><span class="ic">${icons.wrench}</span> Ban Creator</button>
             </div>
           </div>`).join('');
         farmDiv.querySelectorAll('.farm-del').forEach(b => b.onclick = async () => {

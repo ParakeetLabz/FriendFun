@@ -2,6 +2,7 @@
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=0e183037';
+import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO } from './ui.js?v=f35f8472';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -23,6 +24,7 @@ export async function lobbyPage(D) {
   };
   let mode = 'featured';
   let feat = pick(mode);
+  const featThumb = feat ? (feat.icon ? esc(feat.icon) : `<span class="ic">${icons.gamepad}</span>`) : `<span class="ic">${icons.gamepad}</span>`;
   const recentId = (me.recent || [])[0];
   const recent = games.find(g => g.id === recentId);
 
@@ -33,32 +35,32 @@ export async function lobbyPage(D) {
     <header class="lb-top">
       <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span><span class="lb-tag">LOBBY</span></a>
       <div class="lb-top-right">
-        <span class="lb-tix" title="FunTix">🪙 ${fmt(me.funtix ?? 0)}</span>
+        <span class="lb-tix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</span>
         <a class="lb-chip" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(me.name)}</b></a>
-        <a class="lb-iconbtn" href="#/dashboard" title="Classic home">🏠</a>
-        <a class="lb-iconbtn" href="#/settings" title="Settings">⚙️</a>
+        <a class="lb-iconbtn" href="#/settings" title="Settings"><span class="ic">${icons.gear}</span></a>
       </div>
     </header>
     ${party.active ? `<a class="lb-party-banner" href="#/play/g_party100"><span>🎉</span><b>100 Players Party is LIVE!</b> Free Neon Party Hat + disco plaza ›</a>` : ''}
     <nav class="lb-rail">
       <a class="lb-item active" href="#/discover"><span>▶</span>PLAY</a>
-      <a class="lb-item" href="#/avatar"><span>🎽</span>LOCKER</a>
-      <a class="lb-item" href="#/catalog"><span>🛒</span>ITEM SHOP</a>
-      <a class="lb-item" href="#/create"><span>🔨</span>CREATE</a>
-      <a class="lb-item" href="#/friends"><span>👥</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
-      <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span>🏅</span>PROFILE</a>
+      <a class="lb-item" href="#/avatar"><span class="ic">${icons.avatar}</span>LOCKER</a>
+      <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
+      <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
+      <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
+      <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
+      <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
     </nav>
     <aside class="lb-panel">
       <div class="lb-mode-label">FEATURED MODE</div>
       <div class="lb-chips">
-        <button data-m="featured" class="on">⭐ Featured</button>
-        <button data-m="obby">🏃 Obby</button>
-        <button data-m="hangout">🏡 Hangout</button>
+        <button data-m="featured" class="on"><span class="ic">${icons.star}</span> Featured</button>
+        <button data-m="obby"><span class="ic">${icons.zap}</span> Obby</button>
+        <button data-m="hangout"><span class="ic">${icons.home}</span> Hangout</button>
       </div>
       <div class="lb-feat">
-        <div class="lb-feat-thumb">${feat ? `<span>${feat.icon ? esc(feat.icon) : '🎮'}</span>` : '<span>🎮</span>'}</div>
+        <div class="lb-feat-thumb"><span>${featThumb}</span></div>
         <h2 class="lb-feat-name">${feat ? esc(feat.name) : 'No games yet'}</h2>
-        <div class="lb-feat-meta">${feat ? `By @${esc(feat.creator || 'Funtopia')} · 👥 ${fmt(feat.playing || 0)} playing · 👁 ${fmt(feat.visits || 0)}` : ''}</div>
+        <div class="lb-feat-meta">${feat ? `By @${esc(feat.creator || 'Funtopia')} · <span class="ic">${icons.people}</span> ${fmt(feat.playing || 0)} playing · <span class="ic">${icons.eye}</span> ${fmt(feat.visits || 0)}` : ''}</div>
       </div>
       <button class="lb-play" ${feat ? '' : 'disabled'}>▶ PLAY</button>
       <div class="lb-party">
@@ -70,13 +72,13 @@ export async function lobbyPage(D) {
         </div>
       </div>
     </aside>
-    <div class="lb-nameplate"><b>${esc(me.name)}</b><span>🏅 ${(me.badges || []).length} badges · 🔥 ${me.streak || 0} day streak</span></div>
+    <div class="lb-nameplate"><b>${esc(me.name)}</b><span><span class="ic">${icons.award}</span> ${(me.badges || []).length} badges · <span class="ic">${icons.zap}</span> ${me.streak || 0} day streak</span></div>
     <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑'], ['bow', '🫡'], ['dance', '🎸'], ['cheer', '🥳'], ['dab', '🤟']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
     <footer class="lb-tiles">
       ${recent ? `<a class="lb-tile" href="#/play/${recent.id}"><span>⏩</span><b>Continue</b><i>${esc(recent.name)}</i></a>` : ''}
-      <a class="lb-tile" href="#/discover"><span>🏆</span><b>Charts</b><i>Top games right now</i></a>
+      <a class="lb-tile" href="#/discover"><span class="ic">${icons.trophy}</span><b>Charts</b><i>Top games right now</i></a>
       ${party.active ? `<a class="lb-tile" href="#/play/g_party100"><span>🎉</span><b>100 Players Party</b><i>Disco floor, DJ & free hat</i></a>` : ''}
-      <a class="lb-tile" href="#/create"><span>👹</span><b>Horror Gauntlet</b><i>Remix the 250-part course</i></a>
+      <a class="lb-tile" href="#/create"><span class="ic">${icons.alert}</span><b>Horror Gauntlet</b><i>Remix the 250-part course</i></a>
     </footer>
     <div class="lb-overlay" id="lb-overlay">
       <button class="lb-ov-close" title="Back to lobby">✕</button>
@@ -90,17 +92,17 @@ export async function lobbyPage(D) {
     const claimable = [7, 14, 30].find(m => streak >= m && !(soc.streakClaims || []).includes(m));
     const tile = document.createElement('div'); tile.className = 'lb-tile';
     if (claimable) {
-      tile.innerHTML = `<span>🎁</span><b>Streak reward!</b><i>${claimable}-day streak — tap to claim</i>`;
+      tile.innerHTML = `<span class="ic">${icons.gift}</span><b>Streak reward!</b><i>${claimable}-day streak — tap to claim</i>`;
       tile.style.cursor = 'pointer';
       tile.onclick = async () => { try { const r = await api('POST', '/api/social/streak-claim', { milestone: claimable }); toast(`+${r.amount} FunTix streak bonus!`); tile.querySelector('b').textContent = 'Claimed!'; } catch (err) { toast(err.message, true); } };
-    } else tile.innerHTML = `<span>🔥</span><b>${streak}-day streak</b><i>${streak >= 30 ? 'All streak rewards claimed!' : `Next reward at ${[7, 14, 30].find(m => m > streak) || 30} days`}</i>`;
+    } else tile.innerHTML = `<span class="ic">${icons.zap}</span><b>${streak}-day streak</b><i>${streak >= 30 ? 'All streak rewards claimed!' : `Next reward at ${[7, 14, 30].find(m => m > streak) || 30} days`}</i>`;
     tiles.appendChild(tile);
   }).catch(() => {});
   const playBtn = app.querySelector('.lb-play');
   const setFeat = g => {
     feat = g;
     app.querySelector('.lb-feat-name').textContent = g ? g.name : 'No games yet';
-    app.querySelector('.lb-feat-meta').textContent = g ? `By @${g.creator || 'Funtopia'} · 👥 ${fmt(g.playing || 0)} playing · 👁 ${fmt(g.visits || 0)}` : '';
+    app.querySelector('.lb-feat-meta').textContent = g ? `By @${g.creator || 'Funtopia'} · ${fmt(g.playing || 0)} playing · ${fmt(g.visits || 0)} visits` : '';
     playBtn.disabled = !g;
   };
   app.querySelectorAll('.lb-chips button').forEach(b => b.onclick = () => {
@@ -180,6 +182,35 @@ export async function lobbyPage(D) {
   el.addEventListener('pointerdown', e => { dragging = true; lastX = e.clientX; });
   addEventListener('pointerup', () => { dragging = false; });
   el.addEventListener('pointermove', e => { if (dragging) { targetSpin += (e.clientX - lastX) * 0.008; lastX = e.clientX; } });
+  // Owner TV: a big screen at the back of the lobby, only the owner sees it.
+  // Tap it to open the Owner Panel.
+  if (me.owner) {
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 288;
+    const cx = cv.getContext('2d');
+    const g = cx.createLinearGradient(0, 0, 512, 288);
+    g.addColorStop(0, '#7c3aed'); g.addColorStop(1, '#06b6d4');
+    cx.fillStyle = g; cx.fillRect(0, 0, 512, 288);
+    cx.textAlign = 'center';
+    cx.font = '72px serif'; cx.fillText('\u{1F451}', 256, 88);
+    cx.fillStyle = '#fff'; cx.font = '900 54px system-ui, sans-serif';
+    cx.fillText('OWNER PANEL', 256, 168);
+    cx.font = '600 24px system-ui, sans-serif'; cx.fillStyle = 'rgba(255,255,255,.85)';
+    cx.fillText('tap to open', 256, 252);
+    const tvTex = new THREE.CanvasTexture(cv); tvTex.colorSpace = THREE.SRGBColorSpace;
+    const tv = new THREE.Group();
+    const tvFrame = new THREE.Mesh(new THREE.BoxGeometry(6.8, 4.0, 0.18), new THREE.MeshStandardMaterial({ color: 0x0d0d14, roughness: 0.4, metalness: 0.6 }));
+    tv.add(tvFrame);
+    const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.6), new THREE.MeshBasicMaterial({ map: tvTex, fog: false }));
+    tvScreen.position.z = 0.1; tv.add(tvScreen);
+    tv.position.set(0, 7.0, -7);
+    scene.add(tv);
+    const tvRay = new THREE.Raycaster(); const tvPtr = new THREE.Vector2();
+    const tvHit = e => { const r = el.getBoundingClientRect(); tvPtr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); tvRay.setFromCamera(tvPtr, camera); return tvRay.intersectObject(tvScreen, false).length > 0; };
+    let tvDownX = 0, tvDownY = 0;
+    el.addEventListener('pointerdown', e => { tvDownX = e.clientX; tvDownY = e.clientY; });
+    el.addEventListener('pointerup', e => { if (Math.hypot(e.clientX - tvDownX, e.clientY - tvDownY) < 6 && tvHit(e)) location.hash = '#/owner'; });
+    el.addEventListener('pointermove', e => { if (!dragging) el.style.cursor = tvHit(e) ? 'pointer' : ''; });
+  }
   const resize = () => { const w = holder.clientWidth, h = holder.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); };
   resize(); addEventListener('resize', resize);
   let myEmote = 'idle', emoteEnd = 0;

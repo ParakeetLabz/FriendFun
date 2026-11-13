@@ -915,3 +915,18 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
 @media (prefers-reduced-motion: reduce) {
   .btn-primary, .logo-text, .landing-hero h1, .landing-bg::after, .game-card::after, .lb-play, .gc-icon { animation: none !important; }
 }
+
+/* --- SVG UI icons (icons.js) --- */
+.ic { display: inline-flex; vertical-align: -0.18em; }
+.ic svg { width: 1em; height: 1em; }
+.ic.flip svg { transform: scaleY(-1); }
+.btn-wish.on svg { fill: currentColor; }
+.tb-nav a .ic { margin-right: 5px; }
+.lb-item .ic svg { width: 22px; height: 22px; }
+.lb-iconbtn .ic svg { width: 20px; height: 20px; }
+.lb-feat-thumb .ic svg { width: 34px; height: 34px; }
+.lb-tile .ic svg { width: 26px; height: 26px; }
+.hud-btn .ic svg { width: 20px; height: 20px; }
+.voice-btn .ic svg { width: 22px; height: 22px; }
+.btn-wish .ic svg { width: 18px; height: 18px; }
+.rb-ico svg { width: 18px; height: 18px; }

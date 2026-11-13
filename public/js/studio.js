@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=88ba247e';
 import { CATALOG } from './catalog.js?v=56507280';
+import { icons } from './icons.js?v=1aa0a4d3';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -38,7 +39,7 @@ const PRESETS = {
 };
 const MATERIALS = ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 'sand', 'metal', 'baseplate', 'spawn'];
 const KINDS = ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal', 'tp', 'conv', 'lowg', 'ice', 'water', 'magnet', 'shield', 'safe'];
-const SHAPES = [['box', '▭ Box'], ['cyl', '🛢 Cylinder'], ['sph', '⚽ Sphere'], ['cone', '🔺 Cone'], ['ramp', '📐 Ramp']];
+const SHAPES = [['box', 'Box'], ['cyl', 'Cylinder'], ['sph', 'Sphere'], ['cone', 'Cone'], ['ramp', 'Ramp']];
 const toHex = c => '#' + new THREE.Color(c).getHexString();
 // ---------- Visual (no-code) script specs ----------
 const VS_TRIGGERS = [
@@ -89,7 +90,7 @@ export class Studio {
     <div class="studio">
       <div class="st-top">
         <div class="st-title"><span class="ff-mini">FF</span> Funtopia Studio <span class="st-gname">${esc(this.name)}</span><span class="st-dirty"></span></div>
-        <div class="st-top-actions"><button class="st-act" data-a="save">Save</button><button class="st-act" data-a="fun" title="Download this game as a .fun file">⬇ .fun</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
+        <div class="st-top-actions"><button class="st-act" data-a="save">Save</button><button class="st-act" data-a="fun" title="Download this game as a .fun file"><span class="ic">${icons.download}</span> .fun</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
       </div>
       <div class="st-ribbon">
         <div class="rb-group"><div class="rb-row">
@@ -113,13 +114,13 @@ export class Studio {
         </div><div class="rb-label">Edit</div></div>
         <div class="rb-group"><div class="rb-row">
           <button class="rb-btn play" data-a="play" title="Play test (F5)"><span class="rb-ico">&#x25B6;</span>Play</button>
-          <button class="rb-btn" data-a="testobby" title="Test if obby is completable"><span class="rb-ico">🤖</span>Obby</button>
+          <button class="rb-btn" data-a="testobby" title="Test if obby is completable"><span class="rb-ico"><span class="ic">${icons.target}</span></span>Obby</button>
         </div><div class="rb-label">Test</div></div>
         <div class="rb-group"><div class="rb-row rb-light">
           <label class="rb-btn" title="Sky color"><input type="color" class="rb-sky" value="${toHex(this.world.sky || '#8fc8ff')}">Sky</label>
-          <label class="rb-slider" title="Time of day">🕐<input type="range" class="rb-tod" min="0" max="24" step="0.5" value="${this.world.light?.tod ?? 12}"><b class="rb-tod-v">${this.world.light?.tod ?? 12}h</b></label>
-          <label class="rb-slider" title="Brightness">🔆<input type="range" class="rb-amb" min="0" max="2" step="0.1" value="${this.world.light?.ambient ?? 1}"></label>
-          <label class="rb-slider" title="Fog">🌫️<input type="range" class="rb-fog" min="0" max="1" step="0.05" value="${this.world.light?.fog ?? 0.35}"></label>
+          <label class="rb-slider" title="Time of day"><span class="ic">${icons.clock}</span><input type="range" class="rb-tod" min="0" max="24" step="0.5" value="${this.world.light?.tod ?? 12}"><b class="rb-tod-v">${this.world.light?.tod ?? 12}h</b></label>
+          <label class="rb-slider" title="Brightness"><span class="ic">${icons.sun}</span><input type="range" class="rb-amb" min="0" max="2" step="0.1" value="${this.world.light?.ambient ?? 1}"></label>
+          <label class="rb-slider" title="Fog"><span class="ic">${icons.cloud}</span><input type="range" class="rb-fog" min="0" max="1" step="0.05" value="${this.world.light?.fog ?? 0.35}"></label>
         </div><div class="rb-label">Lighting</div></div>
       </div>
       <div class="st-main">
@@ -197,7 +198,7 @@ export class Studio {
         const scriptNames = this._aiScripts.map(s => escHtml(s.name)).join(', ');
         resultEl.innerHTML = `<div class="ai-msg">Done! Added ${this._aiParts.length} parts${this._aiScripts.length ? ` and ${this._aiScripts.length} script${this._aiScripts.length > 1 ? 's' : ''} (${scriptNames})` : ''} automatically. <button class="rb-btn ai-undo" style="margin-left:8px">Undo</button></div>
           ${this._aiScripts.length ? `<div class="ai-sec">Scripts</div>
-          ${this._aiScripts.map(s => `<div class="ai-script-item"><span>📝 ${escHtml(s.name)}</span><button class="rb-btn ai-view-script" data-sid="${s.id}">Edit</button></div>`).join('')}` : ''}
+          ${this._aiScripts.map(s => `<div class="ai-script-item"><span><span class="ic">${icons.edit}</span> ${escHtml(s.name)}</span><button class="rb-btn ai-view-script" data-sid="${s.id}">Edit</button></div>`).join('')}` : ''}
           ${this._aiHtml ? `<div class="ai-sec">HTML Script</div>
           <pre class="ai-code">${escHtml(this._aiHtml.slice(0, 2000))}</pre>
           <button class="rb-btn ai-copy">Copy HTML</button>` : ''}`;
@@ -322,8 +323,8 @@ export class Studio {
           <span class="ex-fico">&#x1F4C1;</span>
           <span class="ex-fname">${esc(f.name)}</span>
           <span class="ex-actions">
-            <button class="ex-act" data-act="rename-folder" title="Rename">✎</button>
-            <button class="ex-act" data-act="del-folder" title="Delete">✕</button>
+            <button class="ex-act" data-act="rename-folder" title="Rename"><span class="ic">${icons.edit}</span></button>
+            <button class="ex-act" data-act="del-folder" title="Delete"><span class="ic">${icons.x}</span></button>
           </span>
         </div>`;
       }
@@ -334,7 +335,7 @@ export class Studio {
         (scriptsByFolder[fid] || []).filter(s => match(s.name)).forEach(s => {
           html += `<div class="ex-item ex-script" data-sid="${s.id}" style="padding-left:${(depth + 1) * 12 + 16}px">
             <span class="ex-sico">&#x1F4DD;</span>${esc(s.name)}
-            <span class="ex-actions"><button class="ex-act" data-act="del-script" title="Delete">✕</button></span>
+            <span class="ex-actions"><button class="ex-act" data-act="del-script" title="Delete"><span class="ic">${icons.x}</span></button></span>
           </div>`;
         });
         // Parts in this folder
@@ -347,8 +348,8 @@ export class Studio {
 
     this.explorer.innerHTML = `
       <div class="ex-toolbar">
-        <button class="ex-tbtn" data-act="new-folder" title="New Folder">📁+</button>
-        <button class="ex-tbtn" data-act="new-script" title="New Script">📝+</button>
+        <button class="ex-tbtn" data-act="new-folder" title="New Folder"><span class="ic">${icons.box}</span>+</button>
+        <button class="ex-tbtn" data-act="new-script" title="New Script"><span class="ic">${icons.code}</span>+</button>
       </div>
       <div class="ex-root">&#x25B8; Workspace</div>
       <div class="ex-item ex-service" data-service="lighting"><span class="ex-sico">&#x2600;&#xFE0F;</span>Lighting</div>` + renderFolder('', 0);
@@ -425,7 +426,7 @@ export class Studio {
     const params = (spec.params || []).map(([key, kind, label, def]) => this.vsParamInput(key, kind, label, a.params?.[key] ?? def)).join('');
     return `<div class="vs-action" data-aid="${a._id}">
       <select class="vs-atype">${VS_ACTIONS.map(x => `<option value="${x.type}"${x.type === spec.type ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
-      ${params}<button class="btn-danger btn-small vs-del" title="Remove">✕</button></div>`;
+      ${params}<button class="btn-danger btn-small vs-del" title="Remove"><span class="ic">${icons.x}</span></button></div>`;
   }
   openVisualEditor(sid) {
     const s = this.world.scripts.find(x => x.id === sid);
@@ -434,7 +435,7 @@ export class Studio {
     for (const a of draft.actions) { if (!a._id) a._id = 'a' + Math.random().toString(36).slice(2, 8); if (!a.params) a.params = {}; }
     const partNames = [...new Set((this.world.parts || []).map(p => p.name).filter(Boolean))];
     const d = document.createElement('div'); d.className = 'modal-bg';
-    d.innerHTML = `<div class="modal modal-wide"><h2>📝 ${esc(s.name)}</h2>
+    d.innerHTML = `<div class="modal modal-wide"><h2><span class="ic">${icons.code}</span> ${esc(s.name)}</h2>
       <style>
         .vs-block{background:rgba(255,255,255,.04);border:1px solid #3a3a3a;border-radius:8px;padding:12px;margin:12px 0}
         .vs-when{font-weight:800;letter-spacing:.15em;color:#ffd400;font-size:12px;margin-bottom:8px}
@@ -497,7 +498,7 @@ export class Studio {
     if (!s) return;
     if (s.kind === 'visual') return this.openVisualEditor(sid);
     const d = document.createElement('div'); d.className = 'modal-bg';
-    d.innerHTML = `<div class="modal modal-wide"><h2>📝 ${esc(s.name)}</h2>
+    d.innerHTML = `<div class="modal modal-wide"><h2><span class="ic">${icons.code}</span> ${esc(s.name)}</h2>
       <p class="muted small">Script API: <code>onStart(fn)</code> · <code>onTouch(partName, fn)</code> · <code>giveTix(player, n)</code> · <code>teleport(player, x, y, z)</code> · <code>say(player, msg)</code> · <code>kill(player)</code></p>
       <textarea class="script-code" spellcheck="false">${esc(s.code || '')}</textarea>
       <div class="modal-actions">
@@ -805,8 +806,8 @@ export class Studio {
         body: JSON.stringify({ world: this.world })
       });
       const res = await r.json();
-      if (res.ok) alert(`✅ Obby is completable!\n${res.checkpoints} checkpoints verified.`);
-      else alert(`❌ Obby has issues:\n\n${res.issues.join('\n')}`);
+      if (res.ok) alert(`Obby is completable!\n${res.checkpoints} checkpoints verified.`);
+      else alert(`Obby has issues:\n\n${res.issues.join('\n')}`);
     } catch (e) { alert('Test failed: ' + e.message); }
   }
   play() {

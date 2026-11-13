@@ -1,4 +1,5 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=f35f8472';
+import { icons } from './icons.js?v=1aa0a4d3';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -67,7 +68,7 @@ function buildCharacter(avatar) {
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=56507280';
 import { templates } from './worlds.js?v=62531363';
 import { isVerified } from './verified.js?v=6fb5be32';
-const vtag = (name) => isVerified(name) ? ' <span style="color:#1d9bf0" title="Verified account">✓</span>' : '';
+const vtag = (name) => isVerified(name) ? ' <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>' : '';
 import { sfx } from './sound.js?v=music27';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
@@ -108,25 +109,6 @@ function removeAccount(name) { if (!name) return; saveAccounts(getAccounts().fil
 function switchAccount(name) { const acc = getAccounts().find(a => a.name.toLowerCase() === String(name).toLowerCase()); if (!acc) return; token = acc.token; localStorage.setItem('ff_token', token); me = null; location.hash = '#/home'; route(); }
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1).replace('.0', '') + 'K' : String(n);
 const rating = g => (g.likes + g.dislikes) ? Math.round(g.likes / (g.likes + g.dislikes) * 100) + '%' : '--';
-const icons = {
-  home: '<svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>',
-  profile: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M3 21c0-5 4-8 9-8s9 3 9 8z"/></svg>',
-  friends: '<svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3.5"/><circle cx="17" cy="9" r="3"/><path d="M1 20c0-4 3-7 7-7s7 3 7 7zM14 20c0-2-.6-4-2-5.5 1.5-1 3-1.5 5-1.5 3.5 0 6 2.5 6 7z"/></svg>',
-  groups: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M15 14c3 0 5 2 5 6"/></svg>',
-  avatar: '<svg viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="6" rx="1"/><rect x="7" y="9" width="10" height="7"/><rect x="3" y="9" width="3.5" height="7"/><rect x="17.5" y="9" width="3.5" height="7"/><rect x="7" y="16.5" width="4.5" height="6"/><rect x="12.5" y="16.5" width="4.5" height="6"/></svg>',
-  shop: '<svg viewBox="0 0 24 24"><path d="M4 7h16l-1.5 13h-13zM8 7a4 4 0 0 1 8 0" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  create: '<svg viewBox="0 0 24 24"><path d="M3 17l11-11 4 4-11 11H3zM15 5l2-2 4 4-2 2z"/></svg>',
-  discover: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>',
-  club: '<svg viewBox="0 0 24 24"><path d="M2 17h20v3H2zM4 16a8 8 0 0 1 16 0zM10.5 7h3v5h-3z"/></svg>',
-  shield: '<svg viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 9.4-8 11-4.6-1.6-8-6-8-11V5z"/></svg>',
-  trophy: '<svg viewBox="0 0 24 24"><path d="M6 3h12v2h3v3a5 5 0 0 1-4.6 5A6 6 0 0 1 13 16.9V19h4v2H7v-2h4v-2.1A6 6 0 0 1 7.6 13 5 5 0 0 1 3 8V5h3zM5 7v1a3 3 0 0 0 1.3 2.5C6.1 9.7 6 8.9 6 8V7zm13 0v1c0 .9-.1 1.7-.3 2.5A3 3 0 0 0 19 8V7z"/></svg>',
-  thumb: '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M2 10h4v11H2zM8 21V10l5-8c1.5 0 2.5 1 2.2 2.6L14.5 9H21c1 0 2 1 1.7 2.2l-2 8.3c-.2.9-1 1.5-2 1.5z"/></svg>',
-  people: '<svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM0 20c0-4 3.5-7 8-7s8 3 8 7zm17 0c0-2-.7-4-2-5.3 4.5-.8 9 1 9 5.3z"/></svg>',
-  puzzle: '<svg viewBox="0 0 24 24"><path d="M10 2h4v3a2 2 0 1 0 3 0h3v4h-3a2 2 0 1 0 0 3v3h-4v-3a2 2 0 1 0-3 0H7v-4h3a2 2 0 1 0 0-3z" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  chat: '<svg viewBox="0 0 24 24"><path d="M4 3h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H8l-4 4V4a1 1 0 0 1 1-1z"/></svg>',
-  news: '<svg viewBox="0 0 24 24"><path d="M4 4h13v12H6l-2 2zm15 1h3v13l-3-2M7 8h8M7 11h8M7 14h5" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
-  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.3 1a7.6 7.6 0 0 0-1.7-1L15 3h-6l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.3-1-2 3.4L4.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7.6 7.6 0 0 0 1.7 1L9 21h6l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.3 1 2-3.4z"/></svg>',
-};
 
 const ADMIN = '<span class="admin-badge">ADMIN</span>';
 
@@ -155,7 +137,7 @@ function gameCard(g) {
 function userTile(u) {
   const st = u.gameId ? 'ingame' : u.online ? 'online' : '';
   return `<a class="user-tile" href="#/users/${encodeURIComponent(u.name)}" title="${u.gameName ? 'Playing ' + esc(u.gameName) : ''}">
-    <div class="ut-img ${st}">${avatarImgTag(u.avatar)}</div><div class="ut-name">${esc(u.name)}${u.moderator ? ' 🛡️' : ''}</div>
+    <div class="ut-img ${st}">${avatarImgTag(u.avatar)}</div><div class="ut-name">${esc(u.name)}${u.moderator ? ` <span class="ic" title="Moderator">${icons.shield}</span>` : ''}</div>
     ${u.gameName ? `<div class="ut-game">${esc(u.gameName)}</div>` : ''}</a>`;
 }
 
@@ -265,37 +247,37 @@ function settingsPage() {
   const fpsOn = localStorage.getItem('ff_fps') === '1';
   const rmOn = localStorage.getItem('ff_reduce_motion') === '1';
   const ctOn = localStorage.getItem('ff_chat_time') === '1';
-  mount('settings', `<h1>⚙️ Settings</h1>
+  mount('settings', `<h1><span class="ic">${icons.gear}</span> Settings</h1>
     <p class="muted">Make Funtopia yours.</p>
     <a href="https://funtopiapro.vercel.app/" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ffd700,#ff9d00);color:#1a0b2e;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(255,215,0,.35);"><span style="font-weight:900;font-size:18px;">👑 FunTopia Pro</span><span style="display:block;font-size:13px;font-weight:600;opacity:.85;">Turn this into FunTopia Pro — the separate version with a new look, new character and new fun →</span></a>
-    <section class="admin-section"><h3>🔊 Sound</h3>
+    <section class="admin-section"><h3><span class="ic">${icons.volume}</span> Sound</h3>
       <label class="set-row"><span>Sound effects</span><input type="checkbox" class="set-sfx" ${sfxOn ? 'checked' : ''}></label>
       <label class="set-row"><span>Music</span><input type="checkbox" class="set-music" ${musicOn ? 'checked' : ''}></label>
     </section>
-    <section class="admin-section"><h3>✨ Graphics</h3>
+    <section class="admin-section"><h3><span class="ic">${icons.sparkles}</span> Graphics</h3>
       <div class="set-row"><span>Game version</span></div>
       <div class="gfx-picks">
-        <button class="btn-secondary gfx-pick ${gfxMode === 'classic' ? 'active' : ''}" data-gfx="classic">🧱 Classic</button>
-        <button class="btn-secondary gfx-pick ${gfxMode === 'advanced' ? 'active' : ''}" data-gfx="advanced">✨ Advanced</button>
+        <button class="btn-secondary gfx-pick ${gfxMode === 'classic' ? 'active' : ''}" data-gfx="classic"><span class="ic">${icons.box}</span> Classic</button>
+        <button class="btn-secondary gfx-pick ${gfxMode === 'advanced' ? 'active' : ''}" data-gfx="advanced"><span class="ic">${icons.sparkles}</span> Advanced</button>
       </div>
       <p class="muted small">Advanced: smooth Roblox-style characters, dynamic shadows, richer lighting.</p>
     </section>
-    <section class="admin-section"><h3>🎮 In game</h3>
+    <section class="admin-section"><h3><span class="ic">${icons.gamepad}</span> In game</h3>
       <label class="set-row"><span>FPS + ping display</span><input type="checkbox" class="set-fps" ${fpsOn ? 'checked' : ''}></label>
       <label class="set-row"><span>Reduce motion</span><input type="checkbox" class="set-rm" ${rmOn ? 'checked' : ''}></label>
       <label class="set-row"><span>Chat timestamps</span><input type="checkbox" class="set-ct" ${ctOn ? 'checked' : ''}></label>
     </section>
-    <section class="admin-section"><h3>🔒 Account</h3>
+    <section class="admin-section"><h3><span class="ic">${icons.shield}</span> Account</h3>
       <div class="set-row"><span>Change password</span></div>
       <input type="password" class="set-curpw" placeholder="Current password" maxlength="64" autocomplete="current-password">
       <input type="password" class="set-newpw" placeholder="New password (4+ characters)" maxlength="64" autocomplete="new-password">
       <button class="btn-primary set-pw-btn">Update password</button>
     </section>
     <section class="admin-section"><h3>More</h3>
-      <a class="set-row set-link" href="#/funai"><span>✨ FunAI — game maker AI</span><span class="muted">›</span></a>
-      <a class="set-row set-link" href="#/skinmaker"><span>🎨 AI Skin Maker — FunAI outfits</span><span class="muted">›</span></a>
-      <a class="set-row set-link" href="#/addons"><span>🧩 Add-ons</span><span class="muted">›</span></a>
-      <a class="set-row set-link" href="#/updates"><span>📰 Updates</span>${hasNewUpdates() ? '<span class="badge">NEW</span>' : '<span class="muted">›</span>'}</a>
+      <a class="set-row set-link" href="#/funai"><span><span class="ic">${icons.sparkles}</span> FunAI — game maker AI</span><span class="muted">›</span></a>
+      <a class="set-row set-link" href="#/skinmaker"><span><span class="ic">${icons.palette}</span> AI Skin Maker — FunAI outfits</span><span class="muted">›</span></a>
+      <a class="set-row set-link" href="#/addons"><span><span class="ic">${icons.puzzle}</span> Add-ons</span><span class="muted">›</span></a>
+      <a class="set-row set-link" href="#/updates"><span><span class="ic">${icons.news}</span> Updates</span>${hasNewUpdates() ? '<span class="badge">NEW</span>' : '<span class="muted">›</span>'}</a>
     </section>`, () => {
     app.querySelector('.set-sfx').onchange = e => {
       const on = e.target.checked;
@@ -313,7 +295,7 @@ function settingsPage() {
     app.querySelector('.set-ct').onchange = e => { try { localStorage.setItem('ff_chat_time', e.target.checked ? '1' : '0'); } catch {} toast(e.target.checked ? 'Chat timestamps on' : 'Chat timestamps off'); };
     app.querySelectorAll('.gfx-pick').forEach(b => b.onclick = () => {
       try { localStorage.setItem('ff_gfx', b.dataset.gfx); } catch {}
-      toast(b.dataset.gfx === 'advanced' ? '✨ Advanced graphics on — rejoin a game to see it' : '🧱 Classic graphics on');
+      toast(b.dataset.gfx === 'advanced' ? 'Advanced graphics on — rejoin a game to see it' : 'Classic graphics on');
       settingsPage();
     });
     app.querySelector('.set-pw-btn').onclick = async () => {
@@ -341,7 +323,7 @@ function shell(active, content) {
   <header class="topbar">
     <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
     <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
-    <nav class="tb-nav"><a href="#/discover">Charts</a><a href="#/catalog">Marketplace</a><a href="#/create">Create</a><a href="#/funai">✨ FunAI</a><a href="#/suggest">💡 Suggestions</a><a href="#/funtix">FunTix</a><a href="#/club">FriendClub</a></nav>
+    <nav class="tb-nav"><a href="#/discover"><span class="ic">${icons.discover}</span> Charts</a><a href="#/catalog"><span class="ic">${icons.shop}</span> Marketplace</a><a href="#/create"><span class="ic">${icons.create}</span> Create</a><a href="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</a><a href="#/suggest"><span class="ic">${icons.bulb}</span> Suggestions</a><a href="#/funtix"><span class="ic">${icons.coins}</span> FunTix</a><a href="#/club"><span class="ic">${icons.club}</span> FriendClub</a></nav>
     <form class="tb-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search"></form>
     <div class="tb-right">
       <div class="tb-user-wrap">
@@ -357,13 +339,13 @@ function shell(active, content) {
           <button class="tb-menu-item tb-logout-all"><span class="sb-ico">&#10006;</span>Log out all</button>
         </div>
       </div>
-      <span class="tb-online" title="Total players">👥<b class="player-count">–</b></span>
+      <span class="tb-online" title="Total players"><span class="ic">${icons.people}</span><b class="player-count">–</b></span>
       <a class="tb-bux" href="#/funtix" title="FunTix">${tix}<span class="me-tix">${fmt(me.funtix ?? 0)}</span></a>
     </div>
   </header>
   <aside class="sidebar">
     <a class="sb-user" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, "headshot")}<span class="sb-user-txt"><b>${esc(me.name)}</b><span>@${esc(me.name)}</span></span></a>
-    ${[['home', 'Lobby', icons.home], ['dashboard', 'Dashboard', icons.discover], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['skinmaker', '🎨 AI Skin Maker', icons.avatar], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['funai', '✨ FunAI', icons.create], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', '👑 Owner', icons.shield]] : [])]
+    ${[['home', 'Lobby', icons.home], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['skinmaker', 'AI Skin Maker', icons.palette], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['funai', 'FunAI', icons.sparkles], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', 'Owner', icons.crown]] : [])]
       .map(([h, l, i, badge]) => h.startsWith('http') ? `<a href="${h}" target="_blank" rel="noopener"><span class="sb-ico">${i}</span>${l}<span class="badge">↗</span></a>` : `<a href="#/${h}" class="${active === h.split('/')[0] ? 'active' : ''}"><span class="sb-ico">${i}</span>${l}${badge ? `<span class="badge">${badge}</span>` : ''}</a>`).join('')}
     <button class="sidebar-logout"><span class="sb-ico">&#9094;</span>Log Out</button>
     <div class="sidebar-footer">Made by <a href="https://parakeetlabz.vercel.app" target="_blank" rel="noopener">Parakeet Labz</a></div>
@@ -423,7 +405,7 @@ async function refreshSiteBanner() {
     if (siteStateCache?.announce) {
       const bar = document.createElement('div');
       bar.className = 'site-banner';
-      bar.innerHTML = `📢 <b>Funtopia:</b> ${esc(siteStateCache.announce.text)}`;
+      bar.innerHTML = `<span class="ic">${icons.bell}</span> <b>Funtopia:</b> ${esc(siteStateCache.announce.text)}`;
       app.querySelector('.topbar')?.after(bar);
     }
   } catch {}
@@ -602,7 +584,7 @@ function dailyToast(r) {
   if (r?.newBadges?.length) {
     r.newBadges.forEach(id => {
       const b = BADGES[id];
-      toast(`🏆 Achievement unlocked: ${b ? b.name : id}!`);
+      toast(`Achievement unlocked: ${b ? b.name : id}!`);
     });
   }
 }
@@ -615,7 +597,7 @@ function loginPage() {
   <div class="landing-inner">
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
       <h1>Play, build, and hang out with friends.</h1><p>Jump into adventure games, explore wild worlds, dress your blocky avatar, and build your own games in Funtopia Studio — then call your friends and play together. 🎉</p>
-      <div class="landing-chips"><a href="#/discover">🎮 Adventure games</a><a href="#/friends">📞 Call friends</a><a href="#/suggest">💡 Suggestion Box</a></div>
+      <div class="landing-chips"><a href="#/discover"><span class="ic">${icons.gamepad}</span> Adventure games</a><a href="#/friends"><span class="ic">${icons.phone}</span> Call friends</a><a href="#/suggest"><span class="ic">${icons.bulb}</span> Suggestion Box</a></div>
       </div>
     <div class="auth-card">
       <div class="auth-tabs"><button data-m="signup" class="active">Sign Up</button><button data-m="login">Log In</button></div>
@@ -647,24 +629,6 @@ function loginPage() {
   };
 }
 
-async function homePage() {
-  const [games, fr, party] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends'), api('GET', '/api/event/party').catch(() => ({ active: false, games: [] }))]);
-  const byId = Object.fromEntries(games.map(g => [g.id, g]));
-  const partyGames = games.filter(g => g.id === 'g_party100');
-  const recent = me.recent.map(id => byId[id]).filter(Boolean);
-  const favs = me.favorites.map(id => byId[id]).filter(Boolean);
-  const friends = fr.friends.sort((a, b) => (b.online - a.online) || (!!b.gameId - !!a.gameId));
-  mount('dashboard', `    ${party.active ? `<div class="party-hero"><div class="party-confetti"><span>🎉</span><span>✨</span><span>🎊</span><span>🎈</span><span>🥳</span><span>🎉</span></div><div class="hw-hero-emoji">🎉</div><div class="hw-hero-text"><h1>100 Players Party!</h1><p class="muted">Funtopia hit <b>100 players</b>! Dance on the disco floor, meet DJ Funtopia, and grab your <b>free Neon Party Hat</b> — it's already in your inventory!</p><p><a class="btn-primary" href="#/play/g_party100">▶ Join the Party</a></p></div></div>` : ''}
-    <div class="home-head">${avatarImgTag(me.avatar, "headshot", "home-avatar")}<h1>Hello, ${esc(me.name)}!</h1></div>
-    <section><div class="sec-h"><h2>Friends (${friends.length})</h2><a href="#/friends">See All &rsaquo;</a></div>
-      <div class="friends-row">${friends.length ? friends.map(userTile).join('') : `<a class="add-friends" href="#/friends"><span>+</span>Add Friends</a>`}</div></section>
-    ${party.active && partyGames.length ? `<section><div class="sec-h"><h2>🎉 Party Games</h2></div><div class="game-row">${partyGames.map(gameCard).join('')}</div></section>` : ''}
-    ${recent.length ? `<section><div class="sec-h"><h2>Continue</h2></div><div class="game-row">${recent.map(gameCard).join('')}</div></section>` : ''}
-    <section><div class="sec-h"><h2>Recommended For You</h2><a href="#/discover">See All &rsaquo;</a></div><div class="game-row">${games.slice(0, 12).map(gameCard).join('')}</div></section>
-    ${(() => { const cc = {}; games.forEach(g => { cc[g.creator] = (cc[g.creator] || 0) + (g.playing || 0); }); const top = Object.entries(cc).sort((x, y) => y[1] - x[1]).slice(0, 6); return top.length ? `<section><div class="sec-h"><h2>🔥 Trending Creators</h2></div><div class="creator-row">${top.map(([n, p]) => `<a class="creator-chip" href="#/users/${encodeURIComponent(n)}">@${esc(n)} · ${fmt(p)} playing</a>`).join('')}</div></section>` : ''; })()}
-    ${favs.length ? `<section><div class="sec-h"><h2>Favorites</h2></div><div class="game-row">${favs.map(gameCard).join('')}</div></section>` : ''}
-  `);
-}
 
 async function discoverPage(q) {
   const games = await api('GET', '/api/games' + (q ? '?q=' + encodeURIComponent(q) : ''));
@@ -685,7 +649,7 @@ async function discoverPage(q) {
   mount('discover', `<h1>Charts</h1>
     <div class="disc-controls"><select class="disc-sort"><option value="playing">Most playing</option><option value="newest">Newest</option><option value="rated">Top rated</option><option value="az">A–Z</option></select>
     <span class="disc-genres">${['all', 'obby', 'hangout', 'shooter', 'tycoon', 'other'].map(x => `<button data-genre="${x}" class="${x === 'all' ? 'active' : ''}">${{ all: 'All', obby: 'Obby', hangout: 'Hangout', shooter: 'Shooter', tycoon: 'Tycoon', other: 'Other' }[x]}</button>`).join('')}</span>
-    <button class="btn-secondary disc-random">🎲 Surprise me</button></div>
+    <button class="btn-secondary disc-random"><span class="ic">${icons.dice}</span> Surprise me</button></div>
     <div class="disc-results"></div>
     <section><div class="sec-h"><h2>Top Rated</h2></div><div class="game-row">${top.map(gameCard).join('')}</div></section>
     <section><div class="sec-h"><h2>Recently Updated</h2></div><div class="game-row">${fresh.map(gameCard).join('')}</div></section>`, () => {
@@ -733,7 +697,7 @@ async function gamePage(id) {
     api('GET', '/api/party').then(p => {
       if (p && p.leader === me.name) {
         const b = document.createElement('button');
-        b.className = 'btn-primary'; b.innerHTML = '🎉 Start Party Game';
+        b.className = 'btn-primary'; b.innerHTML = '<span class="ic">${icons.sparkles}</span> Start Party Game';
         b.onclick = async () => {
           b.disabled = true;
           try { const r = await api('POST', '/api/party/play', { gameId: g.id }); location.hash = '#/play/' + g.id + '?server=' + r.code; }
@@ -766,7 +730,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=a7c478de');
+  const { Game } = await import('./game.js?v=a947e315');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -781,7 +745,7 @@ async function avatarPage(tab = 'body') {
   const av = structuredClone(me.avatar); av.head ??= 'head_classic'; av.rig ??= 'r15';
   let part = 'all';
   mount('avatar', `
-    <h1>Avatar Editor</h1><button class="btn-secondary av-random">🎲 Randomize outfit</button> <a class="btn-secondary" href="#/skinmaker">🎨 AI Skin Maker</a>
+    <h1>Avatar Editor</h1><button class="btn-secondary av-random"><span class="ic">${icons.dice}</span> Randomize outfit</button> <a class="btn-secondary" href="#/skinmaker"><span class="ic">${icons.palette}</span> AI Skin Maker</a>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
@@ -861,7 +825,7 @@ async function loadUgc() {
 
 async function catalogPage(filter = 'all') {
   const filters = ['all', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'vehicle', 'ugc'];
-  const labels = { all: 'All', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles', ugc: 'UGC 🎨' };
+  const labels = { all: 'All', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles', ugc: `${icons.palette} UGC` };
   const list = filter === 'ugc' ? UGC_LIST : CATALOG.filter(i => !i.limited && (filter === 'all' || i.type === filter));
   const soc = await api('GET', '/api/social/me').catch(() => ({ wishlist: [] }));
   const wish = new Set(soc.wishlist || []);
@@ -869,7 +833,7 @@ async function catalogPage(filter = 'all') {
       <div class="cat-item">${i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : (i.ugc && i.model_url ? `<div class="cat-img">${glbCardImg()}</div>` : `<div class="cat-img"><img src="${itemImage(i)}"></div>`)}<div class="cat-name">${esc(i.name)}</div>
         ${i.ugc ? `<div class="muted small">by ${esc(i.creator)} · ${i.sales} sold</div>` : ''}
         <div class="cat-price">${priceHtml(i)}</div>
-        <button class="btn-wish ${wish.has(i.id) ? 'on' : ''}" data-wish="${i.id}" title="Wishlist">${wish.has(i.id) ? '♥' : '♡'}</button>
+        <button class="btn-wish ${wish.has(i.id) ? 'on' : ''}" data-wish="${i.id}" title="Wishlist"><span class="ic">${icons.heart}</span></button>
         ${me.inventory.includes(i.id) ? '<button class="btn-owned" disabled>Owned</button>' : i.club && !me.club ? '<a class="btn-club" href="#/club">Members Only</a>' : `<button class="btn-buy" data-id="${i.id}"${i.ugc ? ' data-ugc="1"' : ''}>Buy</button>`}</div>`;
   mount('catalog', `
     <h1>Marketplace</h1>
@@ -887,8 +851,8 @@ async function catalogPage(filter = 'all') {
       app.querySelectorAll('[data-wish]').forEach(b => b.onclick = async () => {
         const r = await api('POST', '/api/social/wishlist/' + b.dataset.wish);
         if (r.wishlisted) wish.add(b.dataset.wish); else wish.delete(b.dataset.wish);
-        b.textContent = r.wishlisted ? '♥' : '♡'; b.classList.toggle('on', r.wishlisted);
-        toast(r.wishlisted ? 'Added to wishlist ♥' : 'Removed from wishlist');
+        b.innerHTML = '<span class="ic">' + icons.heart + '</span>'; b.classList.toggle('on', r.wishlisted);
+        toast(r.wishlisted ? 'Added to wishlist' : 'Removed from wishlist');
       });
     };
     bindAll();
@@ -928,7 +892,7 @@ function ugcBuyModal(it, onDone) {
 
 // ---------- UGC Studio (player item creator) ----------
 // GLB card placeholder (3D loads async)
-const glbCardImg = () => '<div class="glb-ph">📦<span>3D</span></div>';
+const glbCardImg = () => `<div class="glb-ph"><span class="ic">${icons.box}</span><span>3D</span></div>`;
 const ugcCardImg = u => u.model_url ? glbCardImg() : `<img src="${itemImage(u)}">`;
 function priceHtml(i) {
   if (i.club) return `<span class="club-price">${CLUB} FriendClub</span>`;
@@ -1063,11 +1027,11 @@ async function friendsPage() {
     <div class="search-results"></div>
     ${fr.requests.length ? `<section><div class="sec-h"><h2>Friend Requests (${fr.requests.length})</h2></div><div class="req-list">${fr.requests.map(u => `
       <div class="req">${avatarImgTag(u.avatar)}<a href="#/users/${encodeURIComponent(u.name)}">${esc(u.name)}</a>${(fr.reqNotes || {})[u.name] ? `<span class="req-note">💬 ${esc(fr.reqNotes[u.name])}</span>` : ''}<button class="btn-primary" data-accept="${esc(u.name)}">Accept</button><button class="btn-secondary" data-decline="${esc(u.name)}">Ignore</button></div>`).join('')}</div></section>` : ''}
-    <section><div class="sec-h"><h2>📰 Friend Activity</h2></div>
+    <section><div class="sec-h"><h2><span class="ic">${icons.news}</span> Friend Activity</h2></div>
       ${feed.playing.length ? `<p>${feed.playing.map(p => `<a href="#/play/${p.gameId}">${esc(p.name)} is playing ${esc(p.gameName)}</a>`).join(' · ')}</p>` : ''}
       <div class="game-row">${feed.games.map(gameCard).join('') || '<p class="muted">Nothing new from friends yet.</p>'}</div></section>
     <section><div class="sec-h"><h2>My Friends (${fr.friends.length})</h2></div>
-      <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-call="${esc(u.name)}">📞 Call</button><button class="btn-secondary btn-small" data-party="${esc(u.name)}">🎉</button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
+      <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-call="${esc(u.name)}"><span class="ic">${icons.phone}</span> Call</button><button class="btn-secondary btn-small" data-party="${esc(u.name)}" title="Start a party"><span class="ic">${icons.sparkles}</span></button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-accept]').forEach(b => b.onclick = async () => { await api('POST', '/api/friends/' + encodeURIComponent(b.dataset.accept)); toast('You are now friends with ' + b.dataset.accept); me = await api('GET', '/api/me'); friendsPage(); });
     app.querySelectorAll('[data-decline]').forEach(b => b.onclick = async () => { await api('DELETE', '/api/friends/' + encodeURIComponent(b.dataset.decline)); me = await api('GET', '/api/me'); friendsPage(); });
     app.querySelectorAll('[data-party]').forEach(b => b.onclick = async () => {
@@ -1079,12 +1043,12 @@ async function friendsPage() {
       } catch (err) { toast(err.message, true); }
     });
     app.querySelectorAll('[data-call]').forEach(b => b.onclick = async () => {
-      b.disabled = true; b.textContent = '📞 Calling…';
+      b.disabled = true; b.innerHTML = '<span class="ic">' + icons.phone + '</span> Calling…';
       try {
         await api('POST', '/api/call/invite', { to: b.dataset.call });
-        toast('Calling ' + b.dataset.call + ' — they got an invite! 📞');
+        toast('Calling ' + b.dataset.call + ' — they got an invite!');
         b.outerHTML = `<a class="btn-join" href="#/play/g_voicelounge?voice=1">Join the call</a>`;
-      } catch (err) { toast(err.message, true); b.disabled = false; b.textContent = '📞 Call'; }
+      } catch (err) { toast(err.message, true); b.disabled = false; b.innerHTML = '<span class="ic">' + icons.phone + '</span> Call'; }
     });
     app.querySelector('.user-search').onsubmit = async e => {
       e.preventDefault();
@@ -1107,9 +1071,9 @@ async function showGroupDetail(id, reload) {
       <label>Description<textarea class="group-desc-input" maxlength="240" rows="2">${esc(g.description || '')}</textarea></label>
       <button class="btn-primary btn-sm group-save">Save</button></div>` : ''}
       <div class="group-tabs">
-        <button class="group-tab active" data-tab="ann">📢 Announcements (${(g.announcements || []).length})</button>
-        <button class="group-tab" data-tab="games">🎮 Games (${(g.games || []).length})</button>
-        <button class="group-tab" data-tab="members">👥 Members (${g.memberList.length})</button>
+        <button class="group-tab active" data-tab="ann"><span class="ic">${icons.bell}</span> Announcements (${(g.announcements || []).length})</button>
+        <button class="group-tab" data-tab="games"><span class="ic">${icons.gamepad}</span> Games (${(g.games || []).length})</button>
+        <button class="group-tab" data-tab="members"><span class="ic">${icons.people}</span> Members (${g.memberList.length})</button>
       </div>
       <div class="group-tabpane" data-pane="ann">
         ${isOwner ? `<button class="btn-primary btn-sm group-ann-new">+ New Announcement</button>` : ''}
@@ -1279,10 +1243,10 @@ async function profilePage(name) {
     <div class="profile-head">
       <div class="ph-img ${u.gameId ? 'ingame' : u.online ? 'online' : ''}">${avatarImgTag(u.avatar)}</div>
       <div class="ph-info"><h1>${esc(u.name)}${vtag(u.name)}${badgeIcon2(u.badge)}</h1><div class="muted">@${esc(u.name)}</div>
-        ${soc?.status ? `<div class="ph-status">💬 ${esc(soc.status)}</div>` : ''}
+        ${soc?.status ? `<div class="ph-status"><span class="ic">${icons.chat}</span> ${esc(soc.status)}</div>` : ''}
         <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${soc?.followers ?? 0}</b> Followers</div><div><b>${soc?.following ?? 0}</b> Following</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
       </div>
-      <div class="ph-actions">${isMe ? '<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status">💬 Set status</button>' : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
+      <div class="ph-actions">${isMe ? '<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status"><span class="ic">${icons.chat}</span> Set status</button>' : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
     </div>
     <section><div class="sec-h"><h2>About</h2>${isMe ? '<button class="link edit-bio">Edit</button>' : ''}</div><p class="bio">${esc(u.bio || (isMe ? 'Tell people about yourself!' : 'This user has no bio.'))}</p></section>
     <section><div class="sec-h"><h2>Badges (${u.badges.length})</h2></div>
@@ -1294,7 +1258,7 @@ async function profilePage(name) {
       <div class="profile-avatar"><h2>Currently Wearing</h2>${avatarImgTag(u.avatar, "full")}</div>
       <div><h2>Friends (${u.friendsList.length})</h2><div class="friends-row wrap">${u.friendsList.map(userTile).join('') || '<p class="muted">No friends yet.</p>'}</div></div>
     </section>
-    ${soc?.showcase ? `<section><div class="sec-h"><h2>📌 Showcase</h2></div><div class="game-row">${gameCard(soc.showcase)}</div></section>` : ''}
+    ${soc?.showcase ? `<section><div class="sec-h"><h2><span class="ic">${icons.star}</span> Showcase</h2></div><div class="game-row">${gameCard(soc.showcase)}</div></section>` : ''}
     <section><div class="sec-h"><h2>Creations</h2>${isMe ? `<select class="showcase-pick"><option value="">No showcase</option>${u.games.map(gm => `<option value="${gm.id}" ${soc?.showcase?.id === gm.id ? 'selected' : ''}>${esc(gm.name)}</option>`).join('')}</select>` : ''}</div><div class="game-row">${u.games.map(gameCard).join('') || '<p class="muted">No creations yet.</p>'}</div></section>`, () => {
     app.querySelector('.follow-btn')?.addEventListener('click', async () => { const r = await api('POST', '/api/social/follow/' + encodeURIComponent(u.name)); toast(r.following ? 'Following ' + u.name : 'Unfollowed ' + u.name); profilePage(name); });
     app.querySelector('.gift-btn')?.addEventListener('click', async () => { const amt = prompt(`Gift how many FunTix to ${u.name}? (1–1000)`, '100'); if (amt == null) return; try { const r = await api('POST', '/api/social/gift', { to: u.name, amount: +amt }); toast(`Sent ${r.sent} FunTix to ${u.name}!`); } catch (e) { toast(e.message, true); } });
@@ -1337,13 +1301,13 @@ async function createPage() {
   const tpls = [['baseplate', 'Baseplate', 'An empty grey baseplate. A blank canvas.'], ['heistCity', '🚔 Heist City', 'Cops and robbers! Rob the bank, break out of jail, rule the streets.'], ['whodunit', '🔍 Whodunit Mansion', 'A murder mystery mansion. Question the suspects, find the evidence.'], ['hauntedHotel', '🚪 Haunted Hotel', '20 doors. Something is down the hall. Find the exit.'], ['bedBattle', '🛏️ Bed Battle', 'Team islands, bridges and blasters. Protect your bed!'], ['forestCamp', '🔥 Forest Camp', 'Survive the nights. Keep the campfire burning.'], ['petHatchery', '🥚 Pet Hatchery', 'Hatch eggs, collect coins, grow your pet crew.'], ['lostTemple', '🗿 Temple of the Lost Idol', 'Jungle adventure! Cross the lava river, ride the moving stones, claim the Golden Idol.'], ['skyPirates', '🏴‍☠️ Sky Pirate Isles', 'Sail the skies! Hop floating islands, bounce between them, find the treasure.'], ['dungeonQuest', '⚔️ Deep Dungeon Quest', 'A torch-lit dungeon crawl. Dodge the skeletons and spike traps, reach the exit portal.']];
   mount('create', `
     <h1>Create</h1>
-    <div class="av-tabs"><button class="active">🎮 Experiences</button><button data-goto="#/ugc">🎨 UGC Studio</button><button data-goto="#/funai">✨ FunAI</button></div>
-    <a href="#/funai" style="display:block;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(124,58,237,.35)"><span style="font-weight:900;font-size:18px">✨ Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
+    <div class="av-tabs"><button class="active"><span class="ic">${icons.gamepad}</span> Experiences</button><button data-goto="#/ugc"><span class="ic">${icons.palette}</span> UGC Studio</button><button data-goto="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</button></div>
+    <a href="#/funai" style="display:block;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(124,58,237,.35)"><span style="font-weight:900;font-size:18px"><span class="ic">${icons.sparkles}</span> Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>Load a .fun file</h2></div>
       <p class="muted">Got a <b>.fun</b> game file? It holds the game's scripts and a JSON with its name — load it and it opens as a new experience you can edit in Studio.</p>
-      <div class="row"><button class="btn-secondary" id="funImportBtn">📂 Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
+      <div class="row"><button class="btn-secondary" id="funImportBtn"><span class="ic">${icons.upload}</span> Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
     <section><div class="sec-h"><h2>My Experiences (${mine.length})</h2></div>
       <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${g.icon ? esc(g.icon) + ' ' : ''}${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
         <a class="btn-secondary" href="#/studio/${g.id}">Edit</a><a class="btn-secondary" href="#/games/${g.id}">View</a><button class="btn-danger" data-del="${g.id}">Delete</button></div>`).join('') || '<p class="muted">You haven\'t made anything yet. Pick a template above to open Funtopia Studio!</p>'}</div></section>`, () => {
@@ -1364,13 +1328,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=0ce4df42');
+  const { Studio } = await import('./studio.js?v=3cea5690');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=a7c478de');
+      const { Game: GameClass } = await import('./game.js?v=a947e315');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1436,10 +1400,10 @@ async function moderationPage() {
   }
   const badge = l => l === 'urgent' ? '<span class="mod-urgent">URGENT</span>' : l === 'review' ? '<span class="mod-review">REVIEW</span>' : '<span class="mod-clear">CLEAR</span>';
   const reload = () => moderationPage();
-  mount('moderation', `<h1>🛡️ Moderation</h1>
+  mount('moderation', `<h1><span class="ic">${icons.shield}</span> Moderation</h1>
     <section><div class="sec-h"><h2>Policy</h2></div><div class="mod-policy">${MOD_POLICY}</div></section>
     <section><div class="sec-h"><h2>Staff (${mods.length})</h2></div>
-      <div class="friends-row">${mods.map(m => `<a class="user-tile" href="#/users/${encodeURIComponent(m.name)}"><div class="ut-name">🛡️ ${esc(m.name)}</div><div class="ut-game">${esc((m.role || 'moderator').toUpperCase())}</div></a>`).join('')}</div></section>
+      <div class="friends-row">${mods.map(m => `<a class="user-tile" href="#/users/${encodeURIComponent(m.name)}"><div class="ut-name"><span class="ic">${icons.shield}</span> ${esc(m.name)}</div><div class="ut-game">${esc((m.role || 'moderator').toUpperCase())}</div></a>`).join('')}</div></section>
     ${isMod ? `
     <section><div class="sec-h"><h2>Review Queue (${queue.length})</h2></div>
       ${queue.map(r => `<div class="mod-report">${badge(r.label)}
@@ -1555,11 +1519,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=9e161ce5');
+  const m = await import('./admin.js?v=3f4e2063');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=9e161ce5');
+  const m = await import('./admin.js?v=3f4e2063');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1655,8 +1619,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u56'); return m.lobbyPage(lobbyDeps); }
-      case 'dashboard': return await homePage();
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u60'); return m.lobbyPage(lobbyDeps); }
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'), qp.get('voice') === '1');
@@ -1668,8 +1631,8 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=u51'); return m.ugcPage(ugcDeps); }
-      case 'suggest': { const m = await import('./suggest.js?v=a4d0cca8'); return m.suggestPage(suggestDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=u53'); return m.ugcPage(ugcDeps); }
+      case 'suggest': { const m = await import('./suggest.js?v=908a5e82'); return m.suggestPage(suggestDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
@@ -1677,15 +1640,15 @@ async function route() {
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
       case 'owner': return await ownerPage();
-      case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); return await homePage(); // phone alt to typing "hack" (unlinked; non-owners land on home)
+      case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=u60'); return m.lobbyPage(lobbyDeps); // phone alt to typing "hack" (unlinked; non-owners land on home)
 
       case 'moderation': return await moderationPage();
       case 'funtix': case 'funbux': return funtixPage();
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
-      case 'funai': { const m = await import('./funai.js?v=02bebcf8'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=76d964dd'); return m.skinmakerPage(skinmakerDeps); }
-      default: return await homePage();
+      case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=48161972'); return m.skinmakerPage(skinmakerDeps); }
+      default: location.hash = '#/home'; return;
     }
   } catch (e) {
     if (!token) return;

@@ -1,3 +1,4 @@
+import { icons } from './icons.js?v=1aa0a4d3';
 // ✨ FunAI — game maker AI page for Funtopia (client).
 // Describe a game -> FunAI designs a Funtopia Studio world -> save it
 // as a real experience and open it straight in Funtopia Studio, or
@@ -10,7 +11,7 @@ export async function funaiPage(D) {
 
   mount('funai', `
     <div class="funai-hero">
-      <h1>✨ FunAI</h1>
+      <h1><span class="ic">${icons.sparkles}</span> FunAI</h1>
       <p>Describe any game. FunAI builds it as a real Funtopia Studio world — then open it in Studio and make it yours.</p>
     </div>
     <section class="funai-panel">
@@ -22,7 +23,7 @@ export async function funaiPage(D) {
         <select class="funai-style">
           <option value="">Any style</option><option>Obby</option><option>Hangout</option><option>Parkour</option><option>Spooky</option><option>Cute</option><option>Space</option><option>Race</option>
         </select>
-        <button class="btn-primary funai-go">✨ Build my game</button>
+        <button class="btn-primary funai-go"><span class="ic">${icons.sparkles}</span> Build my game</button>
       </div>
       <p class="funai-status muted"></p>
     </section>
@@ -30,10 +31,10 @@ export async function funaiPage(D) {
       <div class="funai-stage-head">
         <h2 class="funai-title">Your world</h2>
         <div class="funai-actions">
-          <button class="btn-primary funai-studio">🏗️ Open in Studio</button>
-          <button class="btn-secondary funai-publish">🌍 Publish &amp; play</button>
-          <button class="btn-secondary funai-save">💾 Save to shelf</button>
-          <button class="btn-secondary funai-dl">⬇ World JSON</button>
+          <button class="btn-primary funai-studio"><span class="ic">${icons.edit}</span> Open in Studio</button>
+          <button class="btn-secondary funai-publish"><span class="ic">${icons.globe}</span> Publish &amp; play</button>
+          <button class="btn-secondary funai-save"><span class="ic">${icons.save}</span> Save to shelf</button>
+          <button class="btn-secondary funai-dl"><span class="ic">${icons.download}</span> World JSON</button>
         </div>
       </div>
       <p class="funai-desc muted"></p>
@@ -42,15 +43,15 @@ export async function funaiPage(D) {
       <p class="muted small">Top-down map of your world — every block FunAI placed, colored like the real thing. The blue square is the spawn.</p>
       <div class="funai-row funai-remix-row">
         <input class="funai-remix" maxlength="600" placeholder="Tell FunAI a change — e.g. add more coins, make it taller, add a castle">
-        <button class="btn-primary funai-remix-btn">🔁 Remix</button>
+        <button class="btn-primary funai-remix-btn"><span class="ic">${icons.refresh}</span> Remix</button>
       </div>
       <details class="funai-codewrap"><summary>See the world data</summary><pre class="funai-code"></pre></details>
     </section>
     <section class="funai-shelf-wrap">
-      <h2>📚 My FunAI shelf</h2>
+      <h2><span class="ic">${icons.book}</span> My FunAI shelf</h2>
       <div class="funai-shelf"></div>
     </section>
-    <p class="muted">Want a new look to match? <a href="#/skinmaker">🎨 Try the AI Skin Maker →</a></p>`, () => {
+    <p class="muted">Want a new look to match? <a href="#/skinmaker"><span class="ic">${icons.palette}</span> Try the AI Skin Maker →</a></p>`, () => {
     const q = s => document.querySelector(s);
     const input = q('.funai-input'), status = q('.funai-status'), stage = q('.funai-stage');
     let current = null; // { title, description, world }
@@ -83,7 +84,7 @@ export async function funaiPage(D) {
     const show = g => {
       current = g;
       stage.classList.remove('hidden');
-      q('.funai-title').textContent = '🎮 ' + g.title;
+      q('.funai-title').textContent = g.title;
       q('.funai-desc').textContent = g.description || '';
       q('.funai-meta').textContent = g.world.parts.length + ' parts · ' + kindCounts(g.world);
       q('.funai-code').textContent = JSON.stringify(g.world, null, 1).slice(0, 20000);
@@ -94,7 +95,7 @@ export async function funaiPage(D) {
     const createGame = async (g, publish) => {
       try {
         const r = await api('POST', '/api/games', { name: g.title, description: g.description, world: g.world, publish });
-        toast(publish ? '🌍 Published! Opening your game…' : '🏗️ Created! Opening Studio…');
+        toast(publish ? 'Published! Opening your game…' : 'Created! Opening Studio…');
         location.hash = publish ? '#/games/' + r.id : '#/studio/' + r.id;
       } catch (e) { toast(e.message, true); }
     };
@@ -104,8 +105,8 @@ export async function funaiPage(D) {
       q('.funai-shelf').innerHTML = games.length ? games.map((g, i) => `
         <div class="funai-card">
           <b>${esc(g.title)}</b><span class="muted small">${esc(g.description || '')}</span><span class="muted small">${g.world?.parts?.length || 0} parts</span>
-          <div class="funai-actions"><button class="btn-secondary" data-view="${i}">👀 View</button><button class="btn-secondary" data-studio="${i}">🏗️ Studio</button><button class="btn-danger" data-del="${i}">Delete</button></div>
-        </div>`).join('') : '<p class="muted">Nothing saved yet. Build a world and hit 💾 Save to shelf.</p>';
+          <div class="funai-actions"><button class="btn-secondary" data-view="${i}"><span class="ic">${icons.eye}</span> View</button><button class="btn-secondary" data-studio="${i}"><span class="ic">${icons.edit}</span> Studio</button><button class="btn-danger" data-del="${i}">Delete</button></div>
+        </div>`).join('') : '<p class="muted">Nothing saved yet. Build a world and hit Save to shelf.</p>';
       q('.funai-shelf').querySelectorAll('[data-view]').forEach(b => b.onclick = () => { const g = shelf()[+b.dataset.view]; if (g) show(g); });
       q('.funai-shelf').querySelectorAll('[data-studio]').forEach(b => b.onclick = () => { const g = shelf()[+b.dataset.studio]; if (g) createGame(g, false); });
       q('.funai-shelf').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const g = shelf(); g.splice(+b.dataset.del, 1); saveShelf(g); renderShelf(); });
@@ -127,8 +128,8 @@ export async function funaiPage(D) {
       try {
         const r = await api('POST', '/api/funai/generate', { prompt, style: q('.funai-style').value, ...(world ? { world } : {}) });
         show({ title: r.title, description: r.description, world: r.world });
-        toast('✨ FunAI built your world!');
-      } catch (e) { toast(e.message, true); status.textContent = '⚠️ ' + e.message; }
+        toast('FunAI built your world!');
+      } catch (e) { toast(e.message, true); status.textContent = e.message; }
       think(false);
     };
 

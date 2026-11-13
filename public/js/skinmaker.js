@@ -1,3 +1,4 @@
+import { icons } from './icons.js?v=1aa0a4d3';
 // 🎨 AI Skin Maker — describe a look, FunAI designs the outfit (client).
 // FunAI picks pieces from the Marketplace (POST /api/funai/skin); the page
 // previews the full look, buys any pieces you don't own yet, and wears it
@@ -22,7 +23,7 @@ export async function skinmakerPage(D) {
 
   mount('skinmaker', `
     <div class="funai-hero">
-      <h1>🎨 AI Skin Maker</h1>
+      <h1><span class="ic">${icons.palette}</span> AI Skin Maker</h1>
       <p>Describe a look. FunAI designs the outfit from the Marketplace — then wear it, or save it to your shelf.</p>
     </div>
     <section class="funai-panel">
@@ -31,7 +32,7 @@ export async function skinmakerPage(D) {
         ${['🧛 Vampire knight', '🤖 Golden robot king', '🧜‍♀️ Ocean mermaid', '🥷 Shadow ninja', '🌈 Rainbow party star', '👑 Royal golden king', '🦖 Dino explorer', '🧊 Ice queen'].map(i => `<button type="button" class="funai-chip">${esc(i)}</button>`).join('')}
       </div>
       <div class="funai-row">
-        <button class="btn-primary skin-go">🎨 Design my look</button>
+        <button class="btn-primary skin-go"><span class="ic">${icons.palette}</span> Design my look</button>
       </div>
       <p class="funai-status skin-status muted"></p>
     </section>
@@ -39,8 +40,8 @@ export async function skinmakerPage(D) {
       <div class="funai-stage-head">
         <h2 class="skin-title">Your look</h2>
         <div class="funai-actions">
-          <button class="btn-primary skin-wear">✨ Wear this look</button>
-          <button class="btn-secondary skin-save">💾 Save to shelf</button>
+          <button class="btn-primary skin-wear"><span class="ic">${icons.sparkles}</span> Wear this look</button>
+          <button class="btn-secondary skin-save"><span class="ic">${icons.save}</span> Save to shelf</button>
         </div>
       </div>
       <p class="skin-desc muted"></p>
@@ -51,11 +52,11 @@ export async function skinmakerPage(D) {
       <p class="skin-swaps muted small"></p>
       <div class="funai-row funai-remix-row">
         <input class="skin-remix" maxlength="600" placeholder="Tell FunAI a change — e.g. make the hat spookier, swap the shirt for gold">
-        <button class="btn-primary skin-remix-btn">🔁 Remix</button>
+        <button class="btn-primary skin-remix-btn"><span class="ic">${icons.refresh}</span> Remix</button>
       </div>
     </section>
     <section class="funai-shelf-wrap">
-      <h2>📚 My skin shelf</h2>
+      <h2><span class="ic">${icons.book}</span> My skin shelf</h2>
       <div class="funai-shelf skin-shelf"></div>
     </section>
     <p class="muted small">Looks are designed from Marketplace pieces. Pieces you don't own yet can be bought right here — wearing applies everything you own.</p>`, () => {
@@ -67,20 +68,20 @@ export async function skinmakerPage(D) {
     const show = skin => {
       current = skin;
       stage.classList.remove('hidden');
-      q('.skin-title').textContent = '✨ ' + skin.name;
+      q('.skin-title').textContent = skin.name;
       q('.skin-desc').textContent = skin.description || '';
       q('.skin-preview-img').innerHTML = avatarImgTag(fullAvatar(skin.avatar), 'full', 'skin-big');
       const rows = SLOTS.map(([s, label]) => {
         const id = skin.avatar[s], it = ITEM[id];
         const isOwned = owned(id);
         const price = priceOf(id);
-        return `<div class="skin-slot"><span><b>${label}</b> — ${esc(it?.name || id)}</span>${isOwned ? '<span class="skin-owned">✓ Owned</span>' : `<button class="btn-secondary skin-buy" data-id="${id}">Buy · ${price} FunTix</button>`}</div>`;
+        return `<div class="skin-slot"><span><b>${label}</b> — ${esc(it?.name || id)}</span>${isOwned ? '<span class="skin-owned"><span class="ic">' + icons.check + '</span> Owned</span>' : `<button class="btn-secondary skin-buy" data-id="${id}">Buy · ${price} FunTix</button>`}</div>`;
       }).join('');
       const swatches = `<div class="skin-slot"><span><b>Colors</b></span><span class="skin-swatches">${COLOR_LABELS.map(([k, label]) => `<span class="skin-sw" title="${label}" style="background:${esc(skin.avatar.colors?.[k] || '#888')}"></span>`).join('')}</span></div>`;
       q('.skin-slots').innerHTML = rows + swatches;
       const miss = missing(skin.avatar);
       const cost = miss.reduce((sum, id) => sum + priceOf(id), 0);
-      q('.skin-wear').textContent = miss.length ? `✨ Buy ${miss.length} missing piece${miss.length > 1 ? 's' : ''} (${cost} FunTix) + wear` : '✨ Wear this look';
+      q('.skin-wear').textContent = miss.length ? `Buy ${miss.length} missing piece${miss.length > 1 ? 's' : ''} (${cost} FunTix) + wear` : 'Wear this look';
       q('.skin-wear').disabled = busy;
       q('.skin-swaps').textContent = skin.swaps?.length ? 'FunAI swapped ' + skin.swaps.join(', ') + ' for the closest match.' : '';
       q('.skin-slots').querySelectorAll('.skin-buy').forEach(b => b.onclick = async () => {
@@ -111,7 +112,7 @@ export async function skinmakerPage(D) {
         D.me.avatar = await api('PUT', '/api/me/avatar', av);
         const tb = document.querySelector('.tb-user img');
         if (tb) tb.src = avatarImage(D.me.avatar);
-        toast('✨ You are wearing ' + current.name + '!');
+        toast('You are wearing ' + current.name + '!');
         show(current);
       } catch (e) { toast(e.message, true); show(current); }
       busy = false;
@@ -124,8 +125,8 @@ export async function skinmakerPage(D) {
         <div class="funai-card skin-card">
           ${avatarImgTag(fullAvatar(g.avatar), 'headshot', 'skin-thumb')}
           <b>${esc(g.name)}</b><span class="muted small">${esc(g.description || '')}</span>
-          <div class="funai-actions"><button class="btn-secondary" data-view="${i}">👀 View</button><button class="btn-primary" data-wear="${i}">✨ Wear</button><button class="btn-danger" data-del="${i}">Delete</button></div>
-        </div>`).join('') : '<p class="muted">Nothing saved yet. Design a look and hit 💾 Save to shelf.</p>';
+          <div class="funai-actions"><button class="btn-secondary" data-view="${i}"><span class="ic">${icons.eye}</span> View</button><button class="btn-primary" data-wear="${i}"><span class="ic">${icons.sparkles}</span> Wear</button><button class="btn-danger" data-del="${i}">Delete</button></div>
+        </div>`).join('') : '<p class="muted">Nothing saved yet. Design a look and hit Save to shelf.</p>';
       q('.skin-shelf').querySelectorAll('[data-view]').forEach(b => b.onclick = () => { const g = shelf()[+b.dataset.view]; if (g) show(g); });
       q('.skin-shelf').querySelectorAll('[data-wear]').forEach(b => b.onclick = async () => { const g = shelf()[+b.dataset.wear]; if (g) { show(g); await wear(); } });
       q('.skin-shelf').querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const g = shelf(); g.splice(+b.dataset.del, 1); saveShelf(g); renderShelf(); });
@@ -147,8 +148,8 @@ export async function skinmakerPage(D) {
       try {
         const r = await api('POST', '/api/funai/skin', { prompt, ...(prev ? { prev } : {}) });
         show({ name: r.name, description: r.description, avatar: r.avatar, swaps: r.swaps || [] });
-        toast('✨ FunAI designed your look!');
-      } catch (e) { toast(e.message, true); status.textContent = '⚠️ ' + e.message; }
+        toast('FunAI designed your look!');
+      } catch (e) { toast(e.message, true); status.textContent = e.message; }
       think(false);
     };
 
