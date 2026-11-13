@@ -31,7 +31,7 @@ export async function ugcPage(D) {
   D.mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button data-goto="#/create"><span class="ic">${icons.gamepad}</span> Experiences</button><button class="active"><span class="ic">${icons.palette}</span> UGC Studio</button></div>
-    ${!ugcStatus.table ? '<p class="ugc-warn"><span class="ic">${icons.alert}</span> UGC database not set up — run supabase_ugc.sql in Supabase, then refresh.</p>' : !ugcStatus.bucket ? '<p class="ugc-warn"><span class="ic">${icons.alert}</span> Model storage not ready — add SUPABASE_SERVICE_KEY on Render, then refresh.</p>' : ''}
+    ${!ugcStatus.table ? `<p class="ugc-warn"><span class="ic">${icons.alert}</span> UGC database not set up — run supabase_ugc.sql in Supabase, then refresh.</p>` : !ugcStatus.bucket ? `<p class="ugc-warn"><span class="ic">${icons.alert}</span> Model storage not ready — add SUPABASE_SERVICE_KEY on Render, then refresh.</p>` : ''}
     <p class="muted">Remix a template or upload your own .glb 3D model, pick where it goes, set a price. A moderator reviews every item before it goes on sale — you earn <b>${Math.round(UGC_CREATOR_CUT * 100)}%</b> of every sale.</p>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Live preview</div></div>

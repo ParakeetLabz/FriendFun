@@ -5,7 +5,7 @@ const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) :
 import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=0e183037';
 import { isVerified } from './verified.js?v=6fb5be32';
 import { icons } from './icons.js?v=1aa0a4d3';
-const vtag = (name) => isVerified(name) ? ' <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>' : '';
+const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
 const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };
 import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
@@ -129,7 +129,7 @@ export class Game {
         <button class="hud-btn chat-toggle" title="Chat">${chatIcon}</button>
         <button class="hud-btn emote-btn" title="Emotes"><span class="ic">${icons.smile}</span></button>
         <button class="hud-btn jam-btn" title="Jam tracks"><span class="ic">${icons.music}</span></button>
-        ${['owner', 'admin', 'moderator'].includes(this.me.role) ? '<button class="hud-btn funpanel-btn" title="FunPanel (F4)"><span class="ic">${icons.shield}</span></button>' : ''}
+        ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<button class="hud-btn funpanel-btn" title="FunPanel (F4)"><span class="ic">${icons.shield}</span></button>` : ''}
       </div>
       <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
       <div class="hud-topright">

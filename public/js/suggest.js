@@ -24,7 +24,7 @@ export async function suggestPage(D) {
   D.mount('suggest', `
     <h1><span class="ic">${icons.bulb}</span> Suggestion Box</h1>
     <p class="muted">Got an idea for FunTopia — or a code snippet for it? Submit it here. The team reviews every suggestion, and the ones we like get added to the game. (Snippets are read by a human first — nothing runs automatically.)</p>
-    ${!status.table ? '<p class="sg-warn"><span class="ic">${icons.alert}</span> The Suggestion Box table is not set up yet — the owner needs to run <code>supabase_suggestions.sql</code> in Supabase once.</p>' : ''}
+    ${!status.table ? `<p class="sg-warn"><span class="ic">${icons.alert}</span> The Suggestion Box table is not set up yet — the owner needs to run <code>supabase_suggestions.sql</code> in Supabase once.</p>` : ''}
     ${me ? `
     <section><div class="sec-h"><h2>Submit a suggestion</h2></div>
       <div class="sg-form">

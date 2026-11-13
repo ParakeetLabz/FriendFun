@@ -10,7 +10,7 @@ export async function adminPage(D, q = '', gq = '') {
   const badgeOpts = Object.values(BADGE_DEFS).map(b => `<option value="${esc(b.id)}">${esc(b.icon || '')} ${esc(b.name)}${b.custom ? ' (custom)' : ''}</option>`).join('');
   const status = u => u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
   mount('admin', `<h1>Admin Panel</h1>
-    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ' <a href="#/owner"><span class="ic">${icons.crown}</span> Owner Panel</a> has the owner-only tools.' : ''}</p>
+    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ` <a href="#/owner"><span class="ic">${icons.crown}</span> Owner Panel</a> has the owner-only tools.` : ''}</p>
     <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
     <section class="admin-section"><h3>Create Badge</h3>
       <div class="badge-creator">
@@ -33,7 +33,7 @@ export async function adminPage(D, q = '', gq = '') {
       <div class="lbp">${games.map(g => `
       <div class="lbp-row admin-row-wrap">
         <a class="lbp-name" href="#/play/${encodeURIComponent(g.id)}">${esc(g.name)}</a>
-        ${g.featured ? '<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>' : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
+        ${g.featured ? `<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>` : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
         <span class="admin-status">by ${esc(g.creator)} &middot; <span class="ic">${icons.eye}</span> ${(g.visits ?? 0).toLocaleString()} &middot; <span class="ic">${icons.thumb}</span> ${g.likes ?? 0} <span class="ic flip">${icons.thumb}</span> ${g.dislikes ?? 0}</span>
         <div class="admin-controls">
           <button class="btn-secondary g-pub" data-id="${esc(g.id)}" title="Toggle Discover visibility">${g.unpublished ? 'Publish' : 'Unpublish'}</button>
@@ -221,7 +221,7 @@ export async function ownerPage(D, q = '') {
       <div class="lbp">${games.map(g => `
       <div class="lbp-row admin-row-wrap">
         <a class="lbp-name" href="#/play/${encodeURIComponent(g.id)}">${esc(g.name)}</a>
-        ${g.featured ? '<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>' : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
+        ${g.featured ? `<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>` : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
         <span class="admin-status">by ${esc(g.creator)} &middot; <span class="ic">${icons.eye}</span> ${(g.visits ?? 0).toLocaleString()}</span>
         <div class="admin-controls">
           <button class="btn-secondary g-resetv" data-id="${esc(g.id)}" title="Reset visit count">Reset visits</button>

@@ -68,7 +68,7 @@ function buildCharacter(avatar) {
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=56507280';
 import { templates } from './worlds.js?v=62531363';
 import { isVerified } from './verified.js?v=6fb5be32';
-const vtag = (name) => isVerified(name) ? ' <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>' : '';
+const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
 import { sfx } from './sound.js?v=music27';
 try { sfx.enabled = localStorage.getItem('ff_sfx') !== '0'; } catch {}
 
@@ -697,7 +697,7 @@ async function gamePage(id) {
     api('GET', '/api/party').then(p => {
       if (p && p.leader === me.name) {
         const b = document.createElement('button');
-        b.className = 'btn-primary'; b.innerHTML = '<span class="ic">${icons.sparkles}</span> Start Party Game';
+        b.className = 'btn-primary'; b.innerHTML = `<span class="ic">${icons.sparkles}</span> Start Party Game`;
         b.onclick = async () => {
           b.disabled = true;
           try { const r = await api('POST', '/api/party/play', { gameId: g.id }); location.hash = '#/play/' + g.id + '?server=' + r.code; }
@@ -730,7 +730,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=a947e315');
+  const { Game } = await import('./game.js?v=2c5a5db9');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1246,7 +1246,7 @@ async function profilePage(name) {
         ${soc?.status ? `<div class="ph-status"><span class="ic">${icons.chat}</span> ${esc(soc.status)}</div>` : ''}
         <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${soc?.followers ?? 0}</b> Followers</div><div><b>${soc?.following ?? 0}</b> Following</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
       </div>
-      <div class="ph-actions">${isMe ? '<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status"><span class="ic">${icons.chat}</span> Set status</button>' : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
+      <div class="ph-actions">${isMe ? `<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status"><span class="ic">${icons.chat}</span> Set status</button>` : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
     </div>
     <section><div class="sec-h"><h2>About</h2>${isMe ? '<button class="link edit-bio">Edit</button>' : ''}</div><p class="bio">${esc(u.bio || (isMe ? 'Tell people about yourself!' : 'This user has no bio.'))}</p></section>
     <section><div class="sec-h"><h2>Badges (${u.badges.length})</h2></div>
@@ -1334,7 +1334,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=a947e315');
+      const { Game: GameClass } = await import('./game.js?v=2c5a5db9');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1519,11 +1519,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=3f4e2063');
+  const m = await import('./admin.js?v=40ae7b35');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=3f4e2063');
+  const m = await import('./admin.js?v=40ae7b35');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1631,8 +1631,8 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=u53'); return m.ugcPage(ugcDeps); }
-      case 'suggest': { const m = await import('./suggest.js?v=908a5e82'); return m.suggestPage(suggestDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=d82a5e8d'); return m.ugcPage(ugcDeps); }
+      case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
