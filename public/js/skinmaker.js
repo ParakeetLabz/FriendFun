@@ -110,7 +110,7 @@ export async function skinmakerPage(D) {
         }
         const av = fullAvatar(current.avatar);
         D.me.avatar = await api('PUT', '/api/me/avatar', av);
-        const tb = document.querySelector('.tb-user img');
+        const tb = document.querySelector('.lb-chip img');
         if (tb) tb.src = avatarImage(D.me.avatar);
         toast('You are wearing ' + current.name + '!');
         show(current);

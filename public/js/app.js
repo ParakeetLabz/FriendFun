@@ -249,7 +249,6 @@ function settingsPage() {
   const ctOn = localStorage.getItem('ff_chat_time') === '1';
   mount('settings', `<h1><span class="ic">${icons.gear}</span> Settings</h1>
     <p class="muted">Make Funtopia yours.</p>
-    <a href="https://funtopiapro.vercel.app/" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ffd700,#ff9d00);color:#1a0b2e;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(255,215,0,.35);"><span style="font-weight:900;font-size:18px;">👑 FunTopia Pro</span><span style="display:block;font-size:13px;font-weight:600;opacity:.85;">Turn this into FunTopia Pro — the separate version with a new look, new character and new fun →</span></a>
     <section class="admin-section"><h3><span class="ic">${icons.volume}</span> Sound</h3>
       <label class="set-row"><span>Sound effects</span><input type="checkbox" class="set-sfx" ${sfxOn ? 'checked' : ''}></label>
       <label class="set-row"><span>Music</span><input type="checkbox" class="set-music" ${musicOn ? 'checked' : ''}></label>
@@ -318,40 +317,6 @@ function updatesPage() {
         <ul>${u.items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>
       </section>`).join('')}</div>`);
 }
-function shell(active, content) {
-  return `
-  <header class="topbar">
-    <button class="tb-burger" onclick="document.body.classList.toggle('nav-open')">&#9776;</button>
-    <a class="logo" href="#/home"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></a>
-    <nav class="tb-nav"><a href="#/discover"><span class="ic">${icons.discover}</span> Charts</a><a href="#/catalog"><span class="ic">${icons.shop}</span> Marketplace</a><a href="#/create"><span class="ic">${icons.create}</span> Create</a><a href="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</a><a href="#/suggest"><span class="ic">${icons.bulb}</span> Suggestions</a><a href="#/funtix"><span class="ic">${icons.coins}</span> FunTix</a><a href="#/club"><span class="ic">${icons.club}</span> FriendClub</a></nav>
-    <form class="tb-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search"></form>
-    <div class="tb-right">
-      <div class="tb-user-wrap">
-        <button class="tb-user" title="Account menu">${avatarImgTag(me.avatar)}<span>${esc(me.name)}</span><span class="tb-caret">&#9662;</span></button>
-        <div class="tb-menu hidden">
-          <a href="#/users/${encodeURIComponent(me.name)}" class="tb-menu-item"><span class="sb-ico">${icons.profile}</span>View Profile</a>
-          <div class="tb-menu-sep"></div>
-          <div class="tb-menu-head">Switch account</div>
-          <div class="tb-accounts"></div>
-          <button class="tb-menu-item tb-add-account"><span class="sb-ico">+</span>Add account</button>
-          <div class="tb-menu-sep"></div>
-          <button class="tb-menu-item tb-logout"><span class="sb-ico">&#9094;</span>Log out</button>
-          <button class="tb-menu-item tb-logout-all"><span class="sb-ico">&#10006;</span>Log out all</button>
-        </div>
-      </div>
-      <span class="tb-online" title="Total players"><span class="ic">${icons.people}</span><b class="player-count">–</b></span>
-      <a class="tb-bux" href="#/funtix" title="FunTix">${tix}<span class="me-tix">${fmt(me.funtix ?? 0)}</span></a>
-    </div>
-  </header>
-  <aside class="sidebar">
-    <a class="sb-user" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, "headshot")}<span class="sb-user-txt"><b>${esc(me.name)}</b><span>@${esc(me.name)}</span></span></a>
-    ${[['home', 'Lobby', icons.home], ['discover', 'Charts', icons.discover], ['avatar', 'Avatar', icons.avatar], ['skinmaker', 'AI Skin Maker', icons.palette], ['catalog', 'Marketplace', icons.shop], ['create', 'Create', icons.create], ['funai', 'FunAI', icons.sparkles], ['friends', 'Friends', icons.friends, me.requests?.length], ['groups', 'Groups', icons.groups], ['users/' + encodeURIComponent(me.name), 'Profile', icons.profile], ['club', 'FriendClub', icons.club], ['moderation', 'Moderation', icons.shield], ['settings', 'Settings', icons.gear], ...(me.admin && !me.owner ? [['admin', 'Admin', icons.shield]] : []), ...(me.owner ? [['owner', 'Owner', icons.crown]] : [])]
-      .map(([h, l, i, badge]) => h.startsWith('http') ? `<a href="${h}" target="_blank" rel="noopener"><span class="sb-ico">${i}</span>${l}<span class="badge">↗</span></a>` : `<a href="#/${h}" class="${active === h.split('/')[0] ? 'active' : ''}"><span class="sb-ico">${i}</span>${l}${badge ? `<span class="badge">${badge}</span>` : ''}</a>`).join('')}
-    <button class="sidebar-logout"><span class="sb-ico">&#9094;</span>Log Out</button>
-    <div class="sidebar-footer">Made by <a href="https://parakeetlabz.vercel.app" target="_blank" rel="noopener">Parakeet Labz</a></div>
-  </aside>
-  <main class="content">${content}</main>`;
-}
 async function refreshPartyBar() {
   document.querySelector('.party-bar')?.remove();
   if (app.className === 'fullscreen') return;
@@ -362,7 +327,7 @@ async function refreshPartyBar() {
     bar.className = 'party-bar';
     bar.innerHTML = `<b>🎉 Party (${p.members.length})</b><span class="party-members">${p.members.map(m => `${esc(m)}${m === p.leader ? ' 👑' : ''}`).join(', ')}</span><button class="link party-leave">Leave</button>`;
     bar.querySelector('.party-leave').onclick = async () => { try { await api('POST', '/api/party/leave'); } catch {} refreshPartyBar(); toast('Left the party'); };
-    app.querySelector('.topbar')?.after(bar);
+    document.querySelector('.lobby')?.appendChild(bar);
   } catch {}
 }
 let onlineTimer = null;
@@ -406,7 +371,7 @@ async function refreshSiteBanner() {
       const bar = document.createElement('div');
       bar.className = 'site-banner';
       bar.innerHTML = `<span class="ic">${icons.bell}</span> <b>Funtopia:</b> ${esc(siteStateCache.announce.text)}`;
-      app.querySelector('.topbar')?.after(bar);
+      document.querySelector('.lobby')?.appendChild(bar);
     }
   } catch {}
 }
@@ -489,30 +454,27 @@ function initEasterEggs() {
 }
 setTimeout(initEasterEggs, 1000);
 
+// The sidebar/topbar shell is gone: the lobby is the only frame. Pages render
+// inside the lobby overlay; mount() just fills the overlay body (or, outside an
+// overlay, the bare #app as a fallback for the error page).
 function mount(active, html, after) {
-  if (overlayMode) {
-    app.innerHTML = html;
+  if (!overlayMode) {
+    app.className = ''; app.innerHTML = html;
     after?.(); fillThumbs();
     return;
   }
-  app.className = ''; app.innerHTML = shell(active, html);
-  refreshPartyBar();
-  refreshSiteBanner();
-  refreshPlayerCount();
-  refreshPartyState();
-  clearInterval(onlineTimer);
-  onlineTimer = setInterval(refreshPlayerCount, 60000);
-  clearInterval(partyTimer);
-  partyTimer = setInterval(refreshPartyState, 20000);
-  const userBtn = app.querySelector('.tb-user');
-  const menu = app.querySelector('.tb-menu');
-  if (userBtn && menu) {
-    userBtn.onclick = e => { e.stopPropagation(); menu.classList.toggle('hidden'); renderAccountList(); };
-    document.addEventListener('click', () => menu.classList.add('hidden'), { once: true });
-    menu.onclick = e => e.stopPropagation();
-  }
+  app.innerHTML = html;
+  after?.(); fillThumbs();
+}
+
+// Account menu on the lobby header chip (moved from the deleted shell topbar).
+let lobbyMenuDocHandler = false;
+function wireLobbyAccountMenu() {
+  const userBtn = document.querySelector('.lb-chip');
+  const menu = document.querySelector('.lb-menu');
+  if (!userBtn || !menu) return;
+  const listEl = menu.querySelector('.tb-accounts');
   const renderAccountList = () => {
-    const listEl = app.querySelector('.tb-accounts');
     if (!listEl) return;
     const accs = getAccounts().filter(a => a.name.toLowerCase() !== me.name.toLowerCase());
     listEl.innerHTML = accs.length
@@ -520,32 +482,36 @@ function mount(active, html, after) {
       : '<div class="tb-menu-empty">No other accounts</div>';
     listEl.querySelectorAll('.tb-switch').forEach(b => b.onclick = () => switchAccount(b.dataset.name));
   };
-  renderAccountList();
-  app.querySelector('.tb-add-account').onclick = () => showAddAccountModal();
-  app.querySelector('.tb-logout').onclick = () => logout();
-  app.querySelector('.tb-logout-all').onclick = () => { if (confirm('Log out of all accounts?')) logoutAll(); };
-  const sbLogout = app.querySelector('.sidebar-logout');
-  if (sbLogout) sbLogout.onclick = () => logout();
-  const bell = app.querySelector('.tb-bell'), panel = app.querySelector('.tb-notif');
-  if (bell && panel) {
-    bell.onclick = async e => {
-      e.stopPropagation();
-      if (panel.classList.contains('hidden')) {
-        try {
-          const n = await api('GET', '/api/notifications');
-          panel.innerHTML = `<div class="tb-notif-head"><b>Notifications</b><button class="link notif-clear">Mark all read</button></div>` +
-            (n.list.length ? n.list.map(x => `<a class="tb-notif-item ${x.read ? '' : 'unread'}" data-id="${x.id}" href="${esc(x.link || '#/home')}"><span>${esc(x.text)}</span><i>${timeAgo(x.created)}</i></a>`).join('') : '<p class="muted small" style="padding:10px">Nothing yet.</p>');
-          panel.querySelector('.notif-clear').onclick = async ev => { ev.stopPropagation(); await api('POST', '/api/notifications/read'); refreshNotif(); bell.onclick(e); };
-          panel.querySelectorAll('.tb-notif-item').forEach(a => a.onclick = () => { api('POST', '/api/notifications/read', { ids: [+a.dataset.id] }).catch(() => {}); });
-        } catch { panel.innerHTML = '<p class="muted small" style="padding:10px">Could not load.</p>'; }
-      }
-      panel.classList.toggle('hidden');
-    };
-    panel.onclick = e => e.stopPropagation();
-    document.addEventListener('click', () => panel.classList.add('hidden'), { once: true });
+  userBtn.onclick = e => { e.stopPropagation(); menu.classList.toggle('hidden'); renderAccountList(); };
+  if (!lobbyMenuDocHandler) {
+    lobbyMenuDocHandler = true;
+    document.addEventListener('click', () => document.querySelector('.lb-menu')?.classList.add('hidden'));
   }
-  document.body.classList.remove('nav-open');
-  after?.(); fillThumbs();
+  menu.onclick = e => e.stopPropagation();
+  menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => menu.classList.add('hidden')));
+  renderAccountList();
+  menu.querySelector('.tb-add-account').onclick = () => showAddAccountModal();
+  menu.querySelector('.tb-logout').onclick = () => logout();
+  menu.querySelector('.tb-logout-all').onclick = () => { if (confirm('Log out of all accounts?')) logoutAll(); };
+}
+
+// Lobby-level services that used to start on every shell render.
+function startLobbyServices() {
+  refreshPartyBar();
+  refreshSiteBanner();
+  refreshPlayerCount();
+  refreshPartyState();
+  clearInterval(onlineTimer);
+  onlineTimer = setInterval(refreshPlayerCount, 60000);
+  clearInterval(partyTimer);
+  partyTimer = setInterval(() => { refreshPartyState(); refreshPartyBar(); }, 20000);
+}
+
+async function renderLobby() {
+  const m = await import('./lobby.js?v=18489ed2');
+  await m.lobbyPage(lobbyDeps);
+  wireLobbyAccountMenu();
+  startLobbyServices();
 }
 function showAddAccountModal() {
   const d = document.createElement('div'); d.className = 'modal-bg';
@@ -633,7 +599,7 @@ function loginPage() {
 async function discoverPage(q) {
   const games = await api('GET', '/api/games' + (q ? '?q=' + encodeURIComponent(q) : ''));
   const genreOf = g => /obby|course|gauntlet|tower|climb/i.test(g.name) ? 'obby' : /shooter|arena|rivals|gun|battle/i.test(g.name) ? 'shooter' : /hangout|town|plaza|house|garden|mansion/i.test(g.name) ? 'hangout' : /tycoon/i.test(g.name) ? 'tycoon' : 'other';
-  if (q) { mount('discover', `<h1>Results for "${esc(q)}"</h1><div class="game-grid">${games.map(gameCard).join('') || '<p class="muted">No games found.</p>'}</div>`); return; }
+  if (q) { mount('discover', `<h1>Results for "${esc(q)}"</h1><form class="user-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search games" value="${esc(q)}"><button class="btn-primary">Search</button></form><div class="game-grid">${games.map(gameCard).join('') || '<p class="muted">No games found.</p>'}</div>`); return; }
   const top = [...games].sort((a, b) => (b.likes / (b.likes + b.dislikes || 1)) - (a.likes / (a.likes + a.dislikes || 1)));
   const fresh = [...games].sort((a, b) => b.updated - a.updated);
   let sort = 'playing', genre = 'all';
@@ -647,6 +613,7 @@ async function discoverPage(q) {
     if (el) el.innerHTML = `<div class="game-grid">${list.map(gameCard).join('') || '<p class="muted">No games in this category.</p>'}</div>`;
   };
   mount('discover', `<h1>Charts</h1>
+    <form class="user-search" onsubmit="event.preventDefault(); location.hash='#/discover?q='+encodeURIComponent(this.q.value)"><input name="q" placeholder="Search games"><button class="btn-primary">Search</button></form>
     <div class="disc-controls"><select class="disc-sort"><option value="playing">Most playing</option><option value="newest">Newest</option><option value="rated">Top rated</option><option value="az">A–Z</option></select>
     <span class="disc-genres">${['all', 'obby', 'hangout', 'shooter', 'tycoon', 'other'].map(x => `<button data-genre="${x}" class="${x === 'all' ? 'active' : ''}">${{ all: 'All', obby: 'Obby', hangout: 'Hangout', shooter: 'Shooter', tycoon: 'Tycoon', other: 'Other' }[x]}</button>`).join('')}</span>
     <button class="btn-secondary disc-random"><span class="ic">${icons.dice}</span> Surprise me</button></div>
@@ -773,7 +740,7 @@ async function avatarPage(tab = 'body') {
     tick();
     cleanup = () => { alive = false; r.dispose(); };
     let saveT = null;
-    const save = () => { clearTimeout(saveT); saveT = setTimeout(async () => { me.avatar = await api('PUT', '/api/me/avatar', av); app.querySelector('.tb-user img').src = avatarImage(me.avatar); }, 300); };
+    const save = () => { clearTimeout(saveT); saveT = setTimeout(async () => { me.avatar = await api('PUT', '/api/me/avatar', av); { const ci = document.querySelector('.lb-chip img'); if (ci) ci.src = avatarImage(me.avatar); } }, 300); };
     const body = app.querySelector('.av-body');
     const render = () => {
       if (tab === 'body') {
@@ -1023,6 +990,7 @@ async function friendsPage() {
   const feed = await api('GET', '/api/social/feed').catch(() => ({ games: [], playing: [] }));
   mount('friends', `
     <h1>Friends</h1>
+    <p><a class="btn-secondary" href="#/groups"><span class="ic">${icons.groups}</span> My Groups</a></p>
     <form class="user-search"><input name="q" placeholder="Search for people by username"><button class="btn-primary">Search</button></form>
     <div class="search-results"></div>
     ${fr.requests.length ? `<section><div class="sec-h"><h2>Friend Requests (${fr.requests.length})</h2></div><div class="req-list">${fr.requests.map(u => `
@@ -1519,11 +1487,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=19f10269');
+  const m = await import('./admin.js?v=99795474');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=19f10269');
+  const m = await import('./admin.js?v=99795474');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1617,9 +1585,17 @@ async function route() {
     if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
     if (my !== routing) return;
     const qp = new URLSearchParams(query || '');
+    // No shell anymore: page routes render the lobby first, then open the page
+    // in the lobby overlay (direct loads included).
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker']);
+    if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
+      await renderLobby();
+      window.__openLobbyOverlay?.(location.hash);
+      return;
+    }
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=13b7c5e9'); return m.lobbyPage(lobbyDeps); }
+      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); return renderLobby(); }
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'), qp.get('voice') === '1');
@@ -1640,14 +1616,14 @@ async function route() {
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
       case 'owner': return await ownerPage();
-      case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); if (overlayMode) window.__clearOverlayApp(); const m = await import('./lobby.js?v=13b7c5e9'); return m.lobbyPage(lobbyDeps); // phone alt to typing "hack" (unlinked; non-owners land on home)
+      case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); if (overlayMode) window.__clearOverlayApp(); return renderLobby(); // phone alt to typing "hack" (unlinked; non-owners land on home)
 
       case 'moderation': return await moderationPage();
       case 'funtix': case 'funbux': return funtixPage();
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=48161972'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=3e09f1d0'); return m.skinmakerPage(skinmakerDeps); }
       default: location.hash = '#/home'; return;
     }
   } catch (e) {

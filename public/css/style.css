@@ -492,6 +492,7 @@ button.badge-card { cursor: pointer; } button.badge-card:hover { border-color: #
 
 /* ---------- owner tools + site banner ---------- */
 .site-banner { background: linear-gradient(90deg, #7c4dff, #2ec4ff); color: #fff; font-weight: 700; padding: 10px 18px; font-size: 15px; }
+.lobby > .party-bar, .lobby > .site-banner { position: absolute; top: 66px; left: 0; right: 0; z-index: 20; }
 .owner-tools { border: 2px solid #ffd400; border-radius: 12px; padding: 14px 16px; margin: 18px 0; background: #2c2a1a; }
 .owner-tools h3 { margin: 0 0 10px; }
 .owner-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
@@ -677,15 +678,16 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 120%, #1a1a3a 0%, #07070f 70%); }
 .lb-3d { position: absolute; inset: 0; }
 .lb-3d canvas { width: 100%; height: 100%; display: block; }
-.lb-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; z-index: 10; }
+.lb-top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; z-index: 30; }
 .lb-logo { display: flex; align-items: center; gap: 12px; color: #fff; text-decoration: none; font-weight: 900; font-size: 22px; letter-spacing: 2px; }
 .lb-logo-mark { width: 42px; height: 42px; display: inline-flex; flex: none; filter: drop-shadow(0 4px 12px rgba(124,58,237,.45)); }
 .lb-logo-mark svg { width: 100%; height: 100%; }
 .lb-logo-word { background: linear-gradient(135deg, #fff, #c4b5fd, #22d3ee, #fff); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-slide 5s ease infinite; }
 .lb-tag { font-size: 11px; background: rgba(124,108,245,.25); border: 1px solid rgba(124,108,245,.5); padding: 2px 8px; border-radius: 999px; letter-spacing: 2px; }
 .lb-top-right { display: flex; align-items: center; gap: 10px; }
-.lb-tix { background: rgba(0,0,0,.5); border: 1px solid rgba(255,215,0,.4); padding: 6px 12px; border-radius: 999px; font-weight: 700; }
-.lb-chip { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); padding: 4px 12px 4px 4px; border-radius: 999px; color: #fff; text-decoration: none; }
+.lb-tix { background: rgba(0,0,0,.5); border: 1px solid rgba(255,215,0,.4); padding: 6px 12px; border-radius: 999px; font-weight: 700; color: #fff; text-decoration: none; }
+.lb-online { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); padding: 6px 12px; border-radius: 999px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.lb-chip { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); padding: 4px 12px 4px 4px; border-radius: 999px; color: #fff; text-decoration: none; cursor: pointer; font: inherit; }
 .lb-chip img { width: 28px; height: 28px; border-radius: 50%; }
 .lb-iconbtn { width: 38px; height: 38px; border-radius: 12px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff; text-decoration: none; }
 .lb-iconbtn:hover { background: rgba(255,255,255,.12); }
@@ -955,7 +957,9 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
   .lb-bg { position: fixed; }
   .lb-3d { position: relative; height: 44vh; height: 44svh; }
   .lb-top { position: fixed; padding: 10px 12px; }
-  .lb-chip { display: none; }
+  .lb-chip { display: flex; padding: 4px; }
+  .lb-chip b { display: none; }
+  .lb-online { display: none; }
   .lb-rail { top: 22vh; gap: 4px; }
   .lb-item { padding: 8px 10px; }
   .lb-item span { font-size: 18px; }

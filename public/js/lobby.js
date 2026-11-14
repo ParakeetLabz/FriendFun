@@ -38,8 +38,21 @@ export async function lobbyPage(D) {
     <header class="lb-top">
       <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span><span class="lb-tag">LOBBY</span></a>
       <div class="lb-top-right">
-        <span class="lb-tix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</span>
-        <a class="lb-chip" href="#/users/${encodeURIComponent(me.name)}">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(me.name)}</b></a>
+        <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
+        <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>
+        <div class="tb-user-wrap">
+          <button class="lb-chip" title="Account menu">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(me.name)}</b><span>&#9662;</span></button>
+          <div class="tb-menu lb-menu hidden">
+            <a href="#/users/${encodeURIComponent(me.name)}" class="tb-menu-item"><span class="sb-ico">${icons.profile}</span>View Profile</a>
+            <div class="tb-menu-sep"></div>
+            <div class="tb-menu-head">Switch account</div>
+            <div class="tb-accounts"></div>
+            <button class="tb-menu-item tb-add-account"><span class="sb-ico">+</span>Add account</button>
+            <div class="tb-menu-sep"></div>
+            <button class="tb-menu-item tb-logout"><span class="sb-ico">&#9094;</span>Log out</button>
+            <button class="tb-menu-item tb-logout-all"><span class="sb-ico">&#10006;</span>Log out all</button>
+          </div>
+        </div>
         <a class="lb-iconbtn" href="#/settings" title="Settings"><span class="ic">${icons.gear}</span></a>
       </div>
     </header>
@@ -53,6 +66,7 @@ export async function lobbyPage(D) {
       <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
       <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
       ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
+      ${me.admin && !me.owner ? `<a class="lb-item" href="#/admin"><span class="ic">${icons.shield}</span>ADMIN</a>` : ''}
     </nav>
     <aside class="lb-panel">
       <div class="lb-mode-label">FEATURED MODE</div>
@@ -130,6 +144,7 @@ export async function lobbyPage(D) {
     if (location.hash === hash) window.__route();
     else location.hash = hash;
   }
+  window.__openLobbyOverlay = openOverlay;
   // every lobby button opens its page as an overlay — the lobby stays underneath
   app.querySelectorAll('a[href^="#/"]').forEach(a => {
     a.addEventListener('click', e => { e.preventDefault(); openOverlay(a.getAttribute('href')); });

@@ -11,7 +11,7 @@ export async function adminPage(D, q = '', gq = '') {
   const badgeOpts = Object.values(BADGE_DEFS).map(b => `<option value="${esc(b.id)}">${esc(b.icon || '')} ${esc(b.name)}${b.custom ? ' (custom)' : ''}</option>`).join('');
   const status = u => u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
   mount('admin', `<h1>Admin Panel</h1>
-    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ` <a href="#/owner"><span class="ic">${icons.crown}</span> Owner Panel</a> has the owner-only tools.` : ''}</p>
+    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ` <a href="#/owner"><span class="ic">${icons.crown}</span> Owner Panel</a> has the owner-only tools.` : ''} <a href="#/moderation"><span class="ic">${icons.shield}</span> Moderation</a> handles bans and reports.</p>
     <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
     <section class="admin-section"><h3>Create Badge</h3>
       <div class="badge-creator">
@@ -176,7 +176,7 @@ export async function ownerPage(D, q = '') {
   const status = u => u.owner ? 'Owner' : u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
   mount('owner', `<h1><span class="ic">${icons.crown}</span> Owner Panel</h1>
     <p class="muted">Owner-only tools.</p>
-    <p><a class="btn-secondary" href="https://muse.ai" target="_blank" rel="noopener"><span class="ic">${icons.sparkles}</span> Muse AI</a></p>
+    <p><a class="btn-secondary" href="https://muse.ai" target="_blank" rel="noopener"><span class="ic">${icons.sparkles}</span> Muse AI</a> <a class="btn-secondary" href="#/admin"><span class="ic">${icons.shield}</span> Admin Panel</a> <a class="btn-secondary" href="#/moderation"><span class="ic">${icons.shield}</span> Moderation</a></p>
     <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
     <section class="admin-section owner-tools"><h3><span class="ic">${icons.bell}</span> Site Tools <span class="muted small">site-wide</span></h3>
       <div class="owner-grid">
