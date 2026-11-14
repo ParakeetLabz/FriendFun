@@ -36,7 +36,7 @@ export async function lobbyPage(D) {
     <div class="lb-bg"></div>
     <div class="lb-3d"></div>
     <header class="lb-top">
-      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span><span class="lb-tag">LOBBY</span></a>
+      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span></a>
       <div class="lb-top-right">
         <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
         <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>

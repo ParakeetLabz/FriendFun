@@ -508,7 +508,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=18489ed2');
+  const m = await import('./lobby.js?v=cc401185');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();

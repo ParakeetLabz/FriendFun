@@ -683,7 +683,6 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-logo-mark { width: 42px; height: 42px; display: inline-flex; flex: none; filter: drop-shadow(0 4px 12px rgba(124,58,237,.45)); }
 .lb-logo-mark svg { width: 100%; height: 100%; }
 .lb-logo-word { background: linear-gradient(135deg, #fff, #c4b5fd, #22d3ee, #fff); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-slide 5s ease infinite; }
-.lb-tag { font-size: 11px; background: rgba(124,108,245,.25); border: 1px solid rgba(124,108,245,.5); padding: 2px 8px; border-radius: 999px; letter-spacing: 2px; }
 .lb-top-right { display: flex; align-items: center; gap: 10px; }
 .lb-tix { background: rgba(0,0,0,.5); border: 1px solid rgba(255,215,0,.4); padding: 6px 12px; border-radius: 999px; font-weight: 700; color: #fff; text-decoration: none; }
 .lb-online { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); padding: 6px 12px; border-radius: 999px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
@@ -960,7 +959,9 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
   .lb-chip { display: flex; padding: 4px; }
   .lb-chip b { display: none; }
   .lb-online { display: none; }
-  .lb-rail { top: 22vh; gap: 4px; }
+  .lb-rail { position: relative; top: auto; left: auto; transform: none; flex-direction: row; overflow-x: auto; padding: 10px 12px; gap: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .lb-rail::-webkit-scrollbar { display: none; }
+  .lb-rail .lb-item { flex: none; min-width: 0; white-space: nowrap; }
   .lb-item { padding: 8px 10px; }
   .lb-item span { font-size: 18px; }
   .lb-cav svg { width: 96px; }
@@ -968,4 +969,27 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
   .lb-nameplate { top: calc(44vh - 72px); bottom: auto; }
   .lb-emotes { position: relative; left: auto; bottom: auto; transform: none; justify-content: center; flex-wrap: wrap; margin: 0 12px 12px; }
   .lb-tiles { position: relative; flex-direction: column; padding: 0 12px 12px; }
+}
+/* Logo (head + text) only on tablet and computer — hidden on phones */
+@media (max-width: 767px) {
+  .lb-logo { display: none; }
+  .lb-top { justify-content: flex-end; }
+  /* Mobile touch targets: header fits in 390px, everything tappable at 44px */
+  .lb-top { gap: 8px; }
+  .lb-tix { min-height: 44px; display: inline-flex; align-items: center; }
+  .lb-chip { min-height: 44px; }
+  .tb-menu-item { min-height: 44px; }
+  .lb-iconbtn { width: 44px; height: 44px; flex: none; }
+  .lb-menu { max-width: calc(100vw - 24px); }
+  .lb-item { min-height: 44px; }
+  .lb-chips button { min-height: 44px; padding: 10px 6px; font-size: 13px; }
+  .lb-ov-close { width: 44px; height: 44px; }
+  /* Overlay pages: 44px touch targets + 16px fields (stops iOS zoom-on-focus) */
+  .lb-ov-body .btn-primary, .lb-ov-body .btn-secondary, .lb-ov-body .btn-danger, .lb-ov-body .btn-buy, .lb-ov-body .btn-owned, .lb-ov-body .btn-join, .lb-ov-body .btn-wish { min-height: 44px; }
+  .lb-ov-body input[type=text], .lb-ov-body input[type=search], .lb-ov-body input[type=password], .lb-ov-body input[type=number], .lb-ov-body input:not([type]), .lb-ov-body textarea { min-height: 44px; font-size: 16px; }
+  .lb-ov-body select:not(.rb-mat) { min-height: 44px; font-size: 16px; }
+  .lb-ov-body input[type=checkbox] { width: 24px; height: 24px; }
+  .disc-genres button { min-height: 44px; padding: 10px 14px; }
+  .part-pick button { min-height: 44px; }
+  .av-tabs button, .cat-filters a, .group-tabs button { min-height: 44px; }
 }
