@@ -209,7 +209,7 @@ section { margin-bottom: 34px; }
 .st-play { z-index: 50; background: #000; }
 
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); transition: transform .2s; } .nav-open .sidebar { transform: none; }
+  .sidebar { transform: translateX(-125%); transition: transform .2s; } .nav-open .sidebar { transform: none; }
   .content { margin-left: 0; padding: 18px; } .tb-burger { display: block; } .tb-nav, .tb-search, .tb-user span, .tb-logout { display: none; }
   .gp-stats { grid-template-columns: repeat(3, 1fr); } .profile-grid { grid-template-columns: 1fr; } .chat-box { width: 70vw; }
 }
@@ -933,3 +933,35 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
 .voice-btn .ic svg { width: 22px; height: 22px; }
 .btn-wish .ic svg { width: 18px; height: 18px; }
 .rb-ico svg { width: 18px; height: 18px; }
+
+/* ---------- Mobile (Nov 2026): phones ---------- */
+@media (max-width: 700px) {
+  /* My Experiences rows wrap so Edit/View/Delete drop to a second line */
+  .my-game { flex-wrap: wrap; }
+  .my-game img { width: 84px; }
+  .my-game .mg-info { flex: 1 1 140px; min-width: 0; }
+  .my-game .mg-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Tab rows scroll sideways instead of forcing the whole page to zoom out */
+  .av-tabs, .cat-filters, .group-tabs { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .av-tabs::-webkit-scrollbar, .cat-filters::-webkit-scrollbar, .group-tabs::-webkit-scrollbar { display: none; }
+  .av-tabs button, .cat-filters a, .group-tabs button { flex: none; white-space: nowrap; }
+  /* Topbar: hide the player count and tighten gaps so it fits in 390px */
+  .topbar { gap: 10px; padding: 0 12px; }
+  .tb-online { display: none; }
+  .tb-right { gap: 10px; }
+  .logo-text { font-size: 20px; }
+  /* Lobby stacks: 3D scene on top, panel + tiles + emotes below, page scrolls */
+  .lobby { overflow-y: auto; }
+  .lb-bg { position: fixed; }
+  .lb-3d { position: relative; height: 44vh; height: 44svh; }
+  .lb-top { position: fixed; padding: 10px 12px; }
+  .lb-chip { display: none; }
+  .lb-rail { top: 22vh; gap: 4px; }
+  .lb-item { padding: 8px 10px; }
+  .lb-item span { font-size: 18px; }
+  .lb-cav svg { width: 96px; }
+  .lb-panel { position: relative; top: auto; right: auto; width: auto; margin: 12px; }
+  .lb-nameplate { top: calc(44vh - 72px); bottom: auto; }
+  .lb-emotes { position: relative; left: auto; bottom: auto; transform: none; justify-content: center; flex-wrap: wrap; margin: 0 12px 12px; }
+  .lb-tiles { position: relative; flex-direction: column; padding: 0 12px 12px; }
+}

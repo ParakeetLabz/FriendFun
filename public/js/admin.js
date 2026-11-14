@@ -1,4 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
+import { refreshVerified } from './verified.js?v=4e9b72be';
 export async function adminPage(D, q = '', gq = '') {
   const { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN } = D;
   const me = D.me, BADGE_DEFS = D.BADGE_DEFS;
@@ -166,6 +167,9 @@ export async function ownerPage(D, q = '') {
   let playerCount = 0, party = { active: false, games: [], count: 0, goal: 100 };
   try { const pc = await api('GET', '/api/player-count'); playerCount = pc.count || 0; } catch {}
   try { party = await api('GET', '/api/event/party'); } catch {}
+  let verifiedList = [], verifiedTable = true;
+  try { const v = await api('GET', '/api/verified'); verifiedList = v.verified || []; verifiedTable = v.table !== false; } catch {}
+  const verifiedSet = new Set(verifiedList.map(n => String(n).toLowerCase()));
   const partyCount = party.count || playerCount;
   const partyGoal = party.goal || 100;
   const partyPct = Math.min(100, Math.round(partyCount / partyGoal * 100));
@@ -195,6 +199,11 @@ export async function ownerPage(D, q = '') {
             : `<span class="admin-inline"><button class="btn-primary party-start"><span class="ic">${icons.sparkles}</span> Start the Party</button></span>`}
       </div>
       <p class="muted small">Starting the party creates the 🎉 100 Players Party plaza (disco floor, DJ, cake) and gives every player the free Neon Party Hat 🎉 while it lasts. One-time only: once the party ends, it can never be started again — and neither can the Neon Party Hat.</p>
+    </section>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.check}</span> Verified accounts <span class="muted small">blue ✓ next to their name</span></h3>
+      ${!verifiedTable ? `<p style="color:#ffd54a">⚠️ Verified list is not set up yet — run supabase_verified.sql in Supabase, then refresh.</p>` : ''}
+      <span class="admin-inline"><input class="verify-name" placeholder="Username to verify..." style="min-width:200px"><button class="btn-primary verify-add">✓ Verify</button></span>
+      <div class="lbp" style="margin-top:10px">${verifiedList.map(n => `<div class="lbp-row"><span class="lbp-name">✓ @${esc(n)}</span>${['fun', 'funtopia'].includes(n.toLowerCase()) ? '<span class="muted small">always verified</span>' : `<button class="btn-secondary verify-remove" data-name="${esc(n)}">Unverify</button>`}</div>`).join('') || '<p class="muted">Nobody verified yet.</p>'}</div>
     </section>
     <section class="admin-section owner-tools"><h3><span class="ic">${icons.crown}</span> FriendClub <span class="muted small">danger zone</span></h3>
       <button class="btn-danger club-reset-all">Remove FriendClub from everyone except @fun</button>
@@ -246,6 +255,7 @@ export async function ownerPage(D, q = '') {
         <div class="admin-controls owner-controls"><span class="owner-label"><span class="ic">${icons.crown}</span> Owner</span>
           <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
           <button class="btn-secondary mod-toggle" data-name="${esc(u.name)}" data-on="${u.role === 'moderator' ? '0' : '1'}" title="Toggle moderator">${u.role === 'moderator' ? 'Remove Mod' : 'Make Mod'}</button>
+          ${['fun', 'funtopia'].includes(u.name.toLowerCase()) ? '<span class="muted small">✓ Verified</span>' : verifiedSet.has(u.name.toLowerCase()) ? `<button class="btn-secondary verify-toggle" data-name="${esc(u.name)}" data-on="0" title="Remove the blue verified check">Unverify</button>` : `<button class="btn-primary verify-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the blue verified check">✓ Verify</button>`}
           ${u.funpanel ? `<button class="btn-secondary funpanel-toggle" data-name="${esc(u.name)}" data-on="0" title="Take back their FunPanel">Revoke FunPanel</button>` : (u.admin || u.owner || u.role === 'moderator' ? '' : `<button class="btn-primary funpanel-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the in-game FunPanel">🎁 Gift FunPanel</button>`)}
           <span class="admin-inline"><input class="item-id" data-name="${esc(u.name)}" placeholder="item id" title="Catalog item id"><button class="btn-secondary item-grant" data-name="${esc(u.name)}" title="Give item">Grant Item</button><button class="btn-secondary item-revoke" data-name="${esc(u.name)}" title="Remove item">Remove Item</button></span>
           <button class="btn-secondary inv-view" data-name="${esc(u.name)}" title="See everything they own">View Items</button>
@@ -276,6 +286,18 @@ export async function ownerPage(D, q = '') {
       try { await api('POST', '/api/admin/party/stop', {}); toast('Party ended'); ownerPage(D, q); }
       catch (e) { toast(e.message, true); }
     };
+    const doVerify = async (name, on) => {
+      try {
+        await api('POST', '/api/admin/verify', { username: name, verified: on });
+        await refreshVerified();
+        toast(on ? `@${name} is now verified ✓` : `@${name} is no longer verified`);
+        ownerPage(D, q);
+      } catch (e) { toast(e.message, true); }
+    };
+    app.querySelectorAll('.verify-toggle').forEach(b => b.onclick = () => doVerify(b.dataset.name, b.dataset.on === '1'));
+    const vAdd = app.querySelector('.verify-add');
+    if (vAdd) vAdd.onclick = () => { const inp = app.querySelector('.verify-name'); const n = inp.value.trim(); if (n) doVerify(n, true); };
+    app.querySelectorAll('.verify-remove').forEach(b => b.onclick = () => { if (confirm(`Unverify @${b.dataset.name}?`)) doVerify(b.dataset.name, false); });
     const gcmd = async (id, command, extra = {}) => {
       try {
         const r = await api('POST', '/api/admin/games/' + encodeURIComponent(id) + '/command', { command, ...extra });

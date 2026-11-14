@@ -8,6 +8,7 @@ import { createHacker } from './hacker.js';
 import { createFunAI } from './funai.js';
 import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
+import { createVerify } from './verify.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -1763,6 +1764,7 @@ createHacker({ app, auth, rooms, broadcast, isOwner });
 createFunAI({ app, auth });
 createSuggestions({ app, auth, modOnly, isMod, supabase, filter, logMod });
 createCalling({ app, auth, supabase, notify });
+createVerify({ app, auth, supabase, isOwner, logMod });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;
