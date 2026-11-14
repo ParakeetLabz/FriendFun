@@ -241,7 +241,6 @@ function drawLabel(b, refs) {
 export function startStealABlob(game) {
   const seed = hashStr(String(game.o.gameId || 'stealablob'));
   const blobs = new Map(); // spawnIdx -> blob
-  const baseByPlayer = new Map(); // playerId -> baseIdx
   const steals = new Map(); // playerId -> { blobId, endsAt }
   let coins = 150, spawnIdx = 0, lastSpawn = 0, lastSlap = 0;
   let rebirths = 0, sellMode = false;
@@ -349,21 +348,46 @@ export function startStealABlob(game) {
     }
   }
 
-  function myBase() {
-    if (game.myId == null) return 0;
-    if (!baseByPlayer.has(game.myId)) {
-      const used = new Set(baseByPlayer.values());
-      for (let i = 0; i < SAB_BASES.length; i++) if (!used.has(i)) { baseByPlayer.set(game.myId, i); break; }
-    }
-    return baseByPlayer.get(game.myId) ?? 0;
+  // --- base assignment: deterministic, identical on every client ---
+  // The old code gave every client base 0 for itself: myBase()/baseFor()
+  // handed out the first free slot in *local arrival order*, and each client
+  // claimed its own base on its first tick — before it had seen anyone
+  // else's blob events — so every player landed on Base 1 (blue) on their
+  // own screen, and clients disagreed about everyone else's base too.
+  // Server pids are assigned sequentially at join (server.js nextPid++), so
+  // pid order IS room join order, shared by every client. A player's base is
+  // their rank among the players currently in the room (myId + game.players,
+  // sorted by pid) — every client computes the same ranks from the same
+  // server-broadcast player list, so everyone agrees on everyone's base.
+  // Tradeoff: if a player leaves mid-game, the players after them shuffle
+  // down one base (their blobs slide over with them). Blobs owned by a
+  // player who left keep the base they were last seen in (frozenBases).
+  // More than 8 players wrap (rank % 8): the map only has 8 bases.
+  const frozenBases = new Map(); // pid -> baseIdx, for players who left
+  let lastPidKey = '', lastRanks = new Map();
+  function currentPids() {
+    const s = new Set(game.players.keys());
+    if (game.myId != null) s.add(game.myId);
+    return [...s].sort((a, b) => a - b);
   }
   function baseFor(pid) {
     if (pid == null) return 0;
-    if (!baseByPlayer.has(pid)) {
-      const used = new Set(baseByPlayer.values());
-      for (let i = 0; i < SAB_BASES.length; i++) if (!used.has(i)) { baseByPlayer.set(pid, i); break; }
-    }
-    return baseByPlayer.get(pid) ?? 0;
+    const ranked = currentPids();
+    const rank = ranked.indexOf(pid);
+    if (rank >= 0) return rank % SAB_BASES.length;
+    if (frozenBases.has(pid)) return frozenBases.get(pid);
+    return 0;
+  }
+  function myBase() { return game.myId == null ? 0 : baseFor(game.myId); }
+  // Remember the base of anyone who leaves, so their orphan blobs don't
+  // jump to base 0. Runs from tick; only does work when the player set changes.
+  function noteLeavers() {
+    const ranked = currentPids();
+    const key = ranked.join(',');
+    if (key === lastPidKey) return;
+    const now = new Map(ranked.map((pid, i) => [pid, i % SAB_BASES.length]));
+    for (const [pid, b] of lastRanks) if (!now.has(pid)) frozenBases.set(pid, b);
+    lastRanks = now; lastPidKey = key;
   }
   function freeSlot(baseIdx) {
     for (let s = 0; s < SAB_SLOTS; s++) {
@@ -375,7 +399,7 @@ export function startStealABlob(game) {
   // "YOUR BASE" beacon: the game never told the player which base is theirs
   // (they spawn at SpawnLocation, away from all bases), so mark it clearly.
   let baseMarker = null;
-  function makeBaseMarker() {
+  function makeBaseMarker(quiet) {
     const idx = myBase();
     const bp = SAB_BASES[idx], bc = SAB_BASE_COLORS[idx];
     const grp = new THREE.Group();
@@ -394,9 +418,9 @@ export function startStealABlob(game) {
     grp.add(ring);
     grp.position.set(bp.x, 0, bp.z);
     game.scene.add(grp);
-    baseMarker = { grp, ringMat };
+    baseMarker = { grp, ringMat, idx };
     baseEl.textContent = `Base ${idx + 1} (${bc.name})`;
-    game.sys(`⭐ Your base is Base ${idx + 1} (${bc.name}) — follow the gold marker!`);
+    if (!quiet) game.sys(`⭐ Your base is Base ${idx + 1} (${bc.name}) — follow the gold marker!`);
   }
   // --- game passes + rebirths ---
   // Passes are catalog items (type 'pass') bought with FunTix via POST
@@ -444,29 +468,31 @@ export function startStealABlob(game) {
     if (Number.isFinite(s.rebirths) && s.rebirths >= 0) rebirths = Math.min(100, Math.floor(s.rebirths));
     if (s.scoutGranted) scoutGranted = true;
     const entries = Array.isArray(s.owned) ? s.owned : [];
-    let placed = 0, mySavedBase = -1;
+    let placed = 0;
+    // Restored blobs go into your CURRENT base (rank among the players in
+    // the room right now), not the base saved last session — the saved base
+    // belonged to a different room line-up, and restoring into it put your
+    // blobs in another player's base on everyone else's screen.
+    const base = myBase();
     for (const e of entries) {
       if (!Number.isInteger(e.id) || e.id < 0) continue;
-      if (!Number.isInteger(e.base) || e.base < 0 || e.base >= SAB_BASES.length) continue;
       if (blobs.has(e.id) && blobs.get(e.id).owner === game.myId) continue; // already mine
       let slot = (Number.isInteger(e.slot) && e.slot >= 0 && e.slot < SAB_SLOTS) ? e.slot : -1;
-      if (slot < 0 || [...blobs.values()].some(b => b.base === e.base && b.slot === slot && (b.state === 'owned' || b.state === 'returning'))) {
-        slot = freeSlot(e.base);
+      if (slot < 0 || [...blobs.values()].some(b => b.base === base && b.slot === slot && (b.state === 'owned' || b.state === 'returning'))) {
+        slot = freeSlot(base);
         if (slot < 0) continue; // base full: blob stays lost rather than stacking
       }
       let b = blobs.get(e.id);
       if (!b) { spawnBlob(e.id); b = blobs.get(e.id); }
       if (!b) continue;
       // a walking blob of the same id: take it over (no duplicate)
-      b.state = 'owned'; b.owner = game.myId; b.base = e.base; b.slot = slot;
-      const p = sabSlotPos(e.base, slot);
+      b.state = 'owned'; b.owner = game.myId; b.base = base; b.slot = slot;
+      const p = sabSlotPos(base, slot);
       b.x = p.x; b.z = p.z; b.surfY = 0.72;
       drawLabel(b);
       sendBlob('buy', b.id);
-      if (mySavedBase < 0) mySavedBase = e.base;
       placed++;
     }
-    if (mySavedBase >= 0) baseByPlayer.set(game.myId, mySavedBase);
     refreshHud();
     if (placed > 0 || coins !== startCoins()) game.sys(`💾 Progress restored: ${placed} blob${placed === 1 ? '' : 's'}, ${Math.floor(coins)} coins`);
   }
@@ -728,9 +754,32 @@ export function startStealABlob(game) {
     // beacon, so the beacon marks your restored base)
     if (!restoredSave && game.myId != null) restoreSave();
     if (game.myId != null && !scoutGrantChecked) { scoutGrantChecked = true; grantScoutBlob(); }
-    // claim + mark your base as soon as your player id is known
+    // claim + mark your base as soon as your player id is known; move the
+    // marker (quietly) if your rank — and so your base — changed
     if (!baseMarker && game.myId != null) makeBaseMarker();
+    else if (baseMarker && game.myId != null && myBase() !== baseMarker.idx) {
+      game.scene.remove(baseMarker.grp); baseMarker = null; makeBaseMarker(true);
+    }
     if (baseMarker) baseMarker.ringMat.opacity = 0.6 + Math.sin(t / 500) * 0.3;
+    // keep every owned blob in its owner's current base: heals transient
+    // disagreements (e.g. two players joining at the same instant) and the
+    // shuffle when someone leaves mid-game
+    noteLeavers();
+    for (const b of blobs.values()) {
+      if ((b.state === 'owned' || b.state === 'returning') && b.owner != null) {
+        const want = baseFor(b.owner);
+        if (want !== b.base) {
+          const slot = freeSlot(want);
+          if (slot >= 0) {
+            b.base = want; b.slot = slot;
+            // 'owned' blobs sit still (their x/z only change while
+            // returning), so send them gliding to the new slot instead of
+            // leaving them stranded in the old base
+            if (b.state === 'owned') b.state = 'returning';
+          }
+        }
+      }
+    }
     // deterministic spawning
     if (t - lastSpawn > 2500) {
       lastSpawn = t;
