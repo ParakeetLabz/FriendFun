@@ -24,7 +24,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=0e183037').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=a33502c9').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -65,7 +65,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=56507280';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=35b15df8';
 import { templates } from './worlds.js?v=62531363';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -95,6 +95,10 @@ async function api(method, url, body) {
   if (r.status === 401 && url !== '/api/login') { logout(true); throw new Error('Please log in'); }
   if (!r.ok) throw new Error(j.error || 'Request failed');
   return j;
+}
+// Dr. Pepper theme: owners grant it (theme_drpepper); only players who have it see it.
+function applyTheme() {
+  document.body.classList.toggle('theme-drpepper', !!(me?.inventory || []).includes('theme_drpepper'));
 }
 export function toast(msg, err = false) {
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
@@ -508,7 +512,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=cc401185');
+  const m = await import('./lobby.js?v=2ce8a696');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -697,7 +701,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=c12ca8c8');
+  const { Game } = await import('./game.js?v=32f55155');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1296,13 +1300,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=3cea5690');
+  const { Studio } = await import('./studio.js?v=0e2ee26c');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=c12ca8c8');
+      const { Game: GameClass } = await import('./game.js?v=32f55155');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1487,11 +1491,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=c19dbf8f');
+  const m = await import('./admin.js?v=2e3ed14e');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=c19dbf8f');
+  const m = await import('./admin.js?v=2e3ed14e');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1583,6 +1587,7 @@ async function route() {
   if (!token && seg[0] !== 'horror') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); return loginPage(); }
   try {
     if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
+    applyTheme();
     if (my !== routing) return;
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
@@ -1607,7 +1612,7 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=d82a5e8d'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=90440012'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
@@ -1623,7 +1628,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=3e09f1d0'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=7c86104f'); return m.skinmakerPage(skinmakerDeps); }
       default: location.hash = '#/home'; return;
     }
   } catch (e) {

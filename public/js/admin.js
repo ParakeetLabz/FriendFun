@@ -254,6 +254,7 @@ export async function ownerPage(D, q = '') {
         </div>
         <div class="admin-controls owner-controls"><span class="owner-label"><span class="ic">${icons.crown}</span> Owner</span>
           <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-primary tix-give" data-name="${esc(u.name)}" title="Add FunTix">Add FunTix</button><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
+          <span class="admin-inline"><button class="btn-primary theme-give" data-name="${esc(u.name)}" title="Give them the Dr. Pepper theme">🥤 Give Dr. Pepper Theme</button><button class="btn-secondary theme-revoke" data-name="${esc(u.name)}" title="Take back the Dr. Pepper theme">Remove Theme</button></span>
           <button class="btn-secondary mod-toggle" data-name="${esc(u.name)}" data-on="${u.role === 'moderator' ? '0' : '1'}" title="Toggle moderator">${u.role === 'moderator' ? 'Remove Mod' : 'Make Mod'}</button>
           ${['fun', 'funtopia'].includes(u.name.toLowerCase()) ? '<span class="muted small">✓ Verified</span>' : verifiedSet.has(u.name.toLowerCase()) ? `<button class="btn-secondary verify-toggle" data-name="${esc(u.name)}" data-on="0" title="Remove the blue verified check">Unverify</button>` : `<button class="btn-primary verify-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the blue verified check">✓ Verify</button>`}
           ${u.funpanel ? `<button class="btn-secondary funpanel-toggle" data-name="${esc(u.name)}" data-on="0" title="Take back their FunPanel">Revoke FunPanel</button>` : (u.admin || u.owner || u.role === 'moderator' ? '' : `<button class="btn-primary funpanel-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the in-game FunPanel">🎁 Gift FunPanel</button>`)}
@@ -344,6 +345,23 @@ export async function ownerPage(D, q = '') {
       const inp = app.querySelector(`.tix-take-amt[data-name="${CSS.escape(b.dataset.name)}"]`);
       return { amount: Math.max(1, Math.floor(Number(inp?.value) || 100)) };
     });
+    // Dr. Pepper theme: grant/revoke the theme_drpepper item. If the target is the
+    // current user, update their inventory + the theme live so they see it at once.
+    const themeCmd = (sel, command, on) => app.querySelectorAll(sel).forEach(b => b.onclick = async () => {
+      try {
+        const r = await api('POST', '/api/admin/users/' + encodeURIComponent(b.dataset.name) + '/command', { command, item: 'theme_drpepper' });
+        toast(r.message || 'Done');
+        if (b.dataset.name.toLowerCase() === me.name.toLowerCase()) {
+          const inv = me.inventory || (me.inventory = []);
+          if (on && !inv.includes('theme_drpepper')) inv.push('theme_drpepper');
+          if (!on) me.inventory = inv.filter(id => id !== 'theme_drpepper');
+          document.body.classList.toggle('theme-drpepper', on);
+        }
+        ownerPage(D, q);
+      } catch (e) { toast(e.message, true); }
+    });
+    themeCmd('.theme-give', 'grant_item', true);
+    themeCmd('.theme-revoke', 'revoke_item', false);
     app.querySelectorAll('.mod-toggle').forEach(b => b.onclick = () => {
       const on = b.dataset.on === '1';
       cmd(b.dataset.name, on ? 'grant_moderator' : 'revoke_moderator', {});

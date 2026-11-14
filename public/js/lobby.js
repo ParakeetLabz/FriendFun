@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=0e183037';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=a33502c9';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO } from './ui.js?v=f35f8472';
 
@@ -163,14 +163,15 @@ export async function lobbyPage(D) {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   holder.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x0a0a14, 14, 30);
+  const hasPepper = (me.inventory || []).includes('theme_drpepper');
+  scene.fog = new THREE.Fog(hasPepper ? 0x140505 : 0x0a0a14, 14, 30);
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 4.1, 13.8);
   camera.lookAt(0, 2.1, 0);
   scene.add(new THREE.HemisphereLight(0x9db4ff, 0x2a0f14, 0.85));
   const key = new THREE.DirectionalLight(0xfff1d6, 1.6); key.position.set(4, 9, 7); scene.add(key);
   const rimR = new THREE.PointLight(0xe8112d, 60, 30); rimR.position.set(-7, 3.5, -4); scene.add(rimR);
-  const rimV = new THREE.PointLight(0x7c4dff, 55, 30); rimV.position.set(7, 2.5, -5); scene.add(rimV);
+  const rimV = new THREE.PointLight(hasPepper ? 0xffb347 : 0x7c4dff, 55, 30); rimV.position.set(7, 2.5, -5); scene.add(rimV);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(26, 48), new THREE.MeshStandardMaterial({ color: 0x101017, roughness: 0.35, metalness: 0.35 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; scene.add(floor);
   const stage = new THREE.Group(); scene.add(stage);

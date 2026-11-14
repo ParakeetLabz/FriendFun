@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=0e183037';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=a33502c9';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -12,7 +12,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=u50';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=56507280';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=35b15df8';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
