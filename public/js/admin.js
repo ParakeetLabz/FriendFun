@@ -253,7 +253,7 @@ export async function ownerPage(D, q = '') {
           </span>
         </div>
         <div class="admin-controls owner-controls"><span class="owner-label"><span class="ic">${icons.crown}</span> Owner</span>
-          <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
+          <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-primary tix-give" data-name="${esc(u.name)}" title="Add FunTix">Add FunTix</button><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
           <button class="btn-secondary mod-toggle" data-name="${esc(u.name)}" data-on="${u.role === 'moderator' ? '0' : '1'}" title="Toggle moderator">${u.role === 'moderator' ? 'Remove Mod' : 'Make Mod'}</button>
           ${['fun', 'funtopia'].includes(u.name.toLowerCase()) ? '<span class="muted small">✓ Verified</span>' : verifiedSet.has(u.name.toLowerCase()) ? `<button class="btn-secondary verify-toggle" data-name="${esc(u.name)}" data-on="0" title="Remove the blue verified check">Unverify</button>` : `<button class="btn-primary verify-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the blue verified check">✓ Verify</button>`}
           ${u.funpanel ? `<button class="btn-secondary funpanel-toggle" data-name="${esc(u.name)}" data-on="0" title="Take back their FunPanel">Revoke FunPanel</button>` : (u.admin || u.owner || u.role === 'moderator' ? '' : `<button class="btn-primary funpanel-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the in-game FunPanel">🎁 Gift FunPanel</button>`)}
@@ -337,6 +337,10 @@ export async function ownerPage(D, q = '') {
       cmd(b.dataset.name, command, extra);
     });
     ownerCmd('.tix-take', 'take_tix', b => {
+      const inp = app.querySelector(`.tix-take-amt[data-name="${CSS.escape(b.dataset.name)}"]`);
+      return { amount: Math.max(1, Math.floor(Number(inp?.value) || 100)) };
+    });
+    ownerCmd('.tix-give', 'grant_tix', b => {
       const inp = app.querySelector(`.tix-take-amt[data-name="${CSS.escape(b.dataset.name)}"]`);
       return { amount: Math.max(1, Math.floor(Number(inp?.value) || 100)) };
     });

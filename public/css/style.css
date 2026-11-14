@@ -974,6 +974,12 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
 @media (max-width: 767px) {
   .lb-logo { display: none; }
   .lb-top { justify-content: flex-end; }
+  /* Admin/Owner panel rows wrap on phones so every control (incl. Add FunTix) stays on-screen */
+  .admin-row-wrap { flex-wrap: wrap; }
+  /* The announce input's inline min-width (220px) pushes Broadcast off-screen; let it shrink on phones */
+  .announce-text { min-width: 0 !important; flex: 1 1 150px; }
+  /* News Maker action buttons wrap so Broadcast Live stays on-screen */
+  .nm-actions { flex-wrap: wrap; }
   /* Mobile touch targets: header fits in 390px, everything tappable at 44px */
   .lb-top { gap: 8px; }
   .lb-tix { min-height: 44px; display: inline-flex; align-items: center; }
