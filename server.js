@@ -10,6 +10,7 @@ import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
 import { createFamily } from './family.js';
+import { createVersion } from './version.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -1767,6 +1768,7 @@ createSuggestions({ app, auth, modOnly, isMod, supabase, filter, logMod });
 createCalling({ app, auth, supabase, notify });
 createVerify({ app, auth, supabase, isOwner, logMod });
 createFamily({ app, auth, supabase, filter, notify, key });
+createVersion({ app, auth, supabase, isOwner });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;

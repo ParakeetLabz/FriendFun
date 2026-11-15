@@ -5,7 +5,7 @@ const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) :
 import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=185b257d';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { displayNameOf } from './ui.js?v=fb1c626d';
+import { displayNameOf } from './ui.js?v=c7d9c2ae';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
 const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };

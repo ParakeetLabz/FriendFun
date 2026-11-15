@@ -1,5 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
-import { displayNameOf } from './ui.js?v=fb1c626d';
+import { displayNameOf, FAMILY_LOGO } from './ui.js?v=c7d9c2ae';
 // 👨‍👩‍👧‍👦 FunTopia Family page (#/family): create or join a family, family-only
 // chat, and the shared family account (name, color, icon, motto).
 const FAMILY_COLORS = ['#7c3aed', '#e2231a', '#0284c7', '#16a34a', '#ec4899', '#f59e0b', '#06b6d4', '#ef4444'];
@@ -23,7 +23,7 @@ export async function familyPage(D) {
 function noFamilyView(D) {
   let color = FAMILY_COLORS[0], icon = FAMILY_ICONS[0];
   D.mount('family', `
-    <h1>👨‍👩‍👧‍👦 FunTopia Family</h1>
+    <h1><span class="ic">${FAMILY_LOGO}</span> FunTopia Family</h1>
     <p class="muted">Connect your accounts into one family. Share a family-only chat and a family account that only your family sees — change its name, color, icon and motto.</p>
     <section><div class="sec-h"><h2>Create a family</h2></div>
       <div class="sg-form">

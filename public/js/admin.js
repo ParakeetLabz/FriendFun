@@ -1,5 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=20fd6e41';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=eb8c8773';
 import { refreshVerified } from './verified.js?v=4e9b72be';
 export async function adminPage(D, q = '', gq = '') {
   const { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN } = D;
@@ -170,6 +170,8 @@ export async function ownerPage(D, q = '') {
   try { party = await api('GET', '/api/event/party'); } catch {}
   let verifiedList = [], verifiedTable = true;
   try { const v = await api('GET', '/api/verified'); verifiedList = v.verified || []; verifiedTable = v.table !== false; } catch {}
+  let siteVersion = '1.0';
+  try { const v = await api('GET', '/api/version'); siteVersion = v.version || '1.0'; } catch {}
   const verifiedSet = new Set(verifiedList.map(n => String(n).toLowerCase()));
   const partyCount = party.count || playerCount;
   const partyGoal = party.goal || 100;
@@ -183,6 +185,7 @@ export async function ownerPage(D, q = '') {
       <div class="owner-grid">
         <span class="admin-inline"><input class="announce-text" placeholder="Broadcast announcement..." maxlength="200" style="min-width:220px"><button class="btn-primary announce-send">📢 Broadcast</button><button class="btn-secondary announce-clear">Clear</button></span>
         <span class="admin-inline"><button class="btn-secondary maint-toggle"><span class="ic">${icons.wrench}</span> Maintenance: OFF</button></span>
+        <span class="admin-inline"><input class="version-input" placeholder="Version — e.g. 1.0" maxlength="16" style="min-width:140px" value="${esc(siteVersion)}"><button class="btn-primary version-save">Save version</button></span>
         <span class="admin-inline"><button class="btn-danger kick-all">Kick all players</button></span>
         <span class="admin-inline"><input type="number" class="rain-amt" value="50" min="1" max="1000" title="FunTix per online player"><button class="btn-primary funtix-rain"><span class="ic">${icons.cloud}</span> FunTix Rain</button></span>
       </div>
@@ -445,6 +448,14 @@ export async function ownerPage(D, q = '') {
       } catch {}
     };
     refreshSiteState();
+    const versionBtn = app.querySelector('.version-save');
+    if (versionBtn) versionBtn.onclick = async () => {
+      const v = app.querySelector('.version-input').value.trim();
+      try {
+        const r = await api('POST', '/api/admin/version', { version: v });
+        toast('Version set to Beta ' + r.version + ' — it shows next to the logo');
+      } catch (e) { toast(e.message, true); }
+    };
     const announceBtn = app.querySelector('.announce-send');
     if (announceBtn) announceBtn.onclick = () => {
       const v = app.querySelector('.announce-text')?.value.trim();

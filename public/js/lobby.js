@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=185b257d';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { LOGO, displayNameOf } from './ui.js?v=fb1c626d';
-import { PEPPER_CAN } from './pepper.js?v=20fd6e41';
+import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=c7d9c2ae';
+import { PEPPER_CAN } from './pepper.js?v=eb8c8773';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -17,9 +17,10 @@ export async function lobbyPage(D) {
   const hasPepper = (me.inventory || []).includes('theme_drpepper');
   const app = document.getElementById('app');
   app.className = 'fullscreen';
-  let games = [], friends = [], party = { active: false };
+  let games = [], friends = [], party = { active: false }, siteVersion = '1.0';
   try { [games, friends] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends').then(r => r.friends || [])]); } catch {}
   try { party = await api('GET', '/api/event/party'); } catch {}
+  try { const v = await api('GET', '/api/version'); siteVersion = v.version || '1.0'; } catch {}
   const online = (friends || []).filter(f => f.online || f.gameId);
   const byPlaying = [...games].sort((a, b) => (b.playing || 0) - (a.playing || 0));
   const pick = mode => {
@@ -38,7 +39,7 @@ export async function lobbyPage(D) {
     <div class="lb-bg"></div>
     <div class="lb-3d"></div>
     <header class="lb-top">
-      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${hasPepper ? PEPPER_CAN : LOGO}</span><span class="lb-logo-word${hasPepper ? ' lb-logo-pepper' : ''}">${hasPepper ? 'Dr Pepper' : 'FUNTOPIA'}</span></a>
+      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${hasPepper ? PEPPER_CAN : LOGO}</span><span class="lb-logo-word${hasPepper ? ' lb-logo-pepper' : ''}">${hasPepper ? 'Dr Pepper' : 'FUNTOPIA'}</span><span class="lb-beta">Beta ${esc(siteVersion)}</span></a>
       <div class="lb-top-right">
         <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${hasPepper ? PEPPER_CAN : icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
         <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>
@@ -61,12 +62,12 @@ export async function lobbyPage(D) {
     </header>
     ${party.active ? `<a class="lb-party-banner" href="#/play/g_party100"><span>🎉</span><b>100 Players Party is LIVE!</b> Free Neon Party Hat + disco plaza ›</a>` : ''}
     <nav class="lb-rail">
-      <a class="lb-item active" href="#/discover"><span>▶</span>PLAY</a>
+      <a class="lb-item active" href="#/discover"><span class="ic">${PLAY_LOGO}</span>PLAY</a>
       <a class="lb-item" href="#/avatar"><span class="ic">${icons.avatar}</span>LOCKER</a>
       <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
       <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
       <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
-      <a class="lb-item" href="#/family"><span class="ic">${icons.groups}</span>FAMILY</a>
+      <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
       <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
       <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
       ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
@@ -84,7 +85,7 @@ export async function lobbyPage(D) {
         <h2 class="lb-feat-name">${feat ? esc(feat.name) : 'No games yet'}</h2>
         <div class="lb-feat-meta">${feat ? `By @${esc(feat.creator || 'Funtopia')} · <span class="ic">${icons.people}</span> ${fmt(feat.playing || 0)} playing · <span class="ic">${icons.eye}</span> ${fmt(feat.visits || 0)}` : ''}</div>
       </div>
-      <button class="lb-play" ${feat ? '' : 'disabled'}>▶ PLAY</button>
+      <button class="lb-play" ${feat ? '' : 'disabled'}>${PLAY_LOGO} PLAY</button>
       <div class="lb-party">
         <div class="lb-mode-label">PARTY</div>
         <div class="lb-party-row">
