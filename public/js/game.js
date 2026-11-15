@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=185b257d';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=334de6b1';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -111,7 +111,7 @@ export class Game {
     this.usedAirJump = false; this.dashT = 0; this.dashCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
-    if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle(); } else this.sys('Test mode - press Stop to return to Studio.');
+    if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
     // Steal a Blob detection: sanitizeWorld() strips the stealablob flag from
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
     // which survive sanitizing. Covers the seeded game + Studio-made blob games.
@@ -581,6 +581,7 @@ export class Game {
     this.voice = new VoiceChat(this);
     // Mic button in HUD
     const btn = document.createElement('button');
+    this.voiceBtn = btn;
     btn.className = 'voice-btn';
     btn.innerHTML = '<span class="ic">' + icons.mic + '</span>';
     btn.title = 'Voice chat (proximity)';
@@ -1372,8 +1373,15 @@ export class Game {
 
   // ---------- network ----------
   connect() {
+    this._sendQueue = [];
     const ws = this.ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
-    ws.onopen = () => ws.send(JSON.stringify({ t: 'join', token: this.o.token, gameId: this.o.gameId, server: this.o.server || null }));
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ t: 'join', token: this.o.token, gameId: this.o.gameId, server: this.o.server || null }));
+      // Flush anything queued while the socket was connecting (e.g. the
+      // auto-voice voice_join) — join goes first, then the queued messages.
+      const q = this._sendQueue || []; this._sendQueue = [];
+      for (const m of q) { try { ws.send(JSON.stringify(m)); } catch {} }
+    };
     ws.onmessage = (ev) => {
       const m = JSON.parse(ev.data);
       if (m.t === 'welcome') {
@@ -1418,7 +1426,14 @@ export class Game {
     };
     ws.onclose = () => { if (!this.destroyed) { this.sys('Disconnected from server.'); this.showBig('Disconnected', 5000); } };
   }
-  send(m) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify(m)); }
+  send(m) {
+    if (this.ws?.readyState === 1) { this.ws.send(JSON.stringify(m)); return; }
+    // Socket not open yet — queue it instead of silently dropping it.
+    // (This was losing the auto-voice voice_join, so the Voice Lounge
+    // never knew a player had voice on.)
+    this._sendQueue = this._sendQueue || [];
+    if (this._sendQueue.length < 50) this._sendQueue.push(m);
+  }
   setMoney(m) {
     if (m.funtix != null) this.txCount.textContent = m.funtix;
     this.o.onMoney?.({ funtix: m.funtix });

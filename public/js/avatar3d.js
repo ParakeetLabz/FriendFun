@@ -415,7 +415,7 @@ const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody
 // no separate hands/shoes). R15 (rig 'r15'): modern Roblox-style — the
 // same blocky language and total height, but arms and legs are two
 // segments with elbow/knee pivots plus a hand/foot at the end.
-// smooth=true only softens the finish (tiny edge bevel + glossier material).
+// smooth=true softens the finish (tiny edge bevel + glossier material). Both rigs build smooth by default now.
 function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const C = { ...avatar.colors };
   const suitColor = BODY_SUITS[avatar.head];
@@ -423,10 +423,11 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const suit = avatar.shirt === 'shirt_suit' && !suitColor;
   const isBugs = avatar.head === 'head_bugs', isDaffy = avatar.head === 'head_daffy';
   const root = new THREE.Group();
-  // R6 gets a softer, glossier finish than the R15 smooth variant —
-  // same six rigid parts, just more modern to look at.
-  const bev = rig === 'r6' ? 0.08 : 0.045;
-  const gls = rig === 'r6' ? 0.45 : 0.5;
+  // Both rigs get the same soft, glossy finish now — R15 used to be
+  // built sharp (smooth=false) while R6 got the rounded look, which is
+  // why R15 looked worse. Same bevel + gloss for both.
+  const bev = 0.08;
+  const gls = 0.45;
   const part = smooth
     ? (w, h, d, color) => rbox(w, h, d, color, bev, gls)
     : box;
@@ -662,7 +663,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
 // R6 always gets the smooth finish now — same six rigid parts, softer
 // edges and a glossier plastic. R15 keeps its look (the advanced-graphics
 // toggle still smooths it via buildCharacterSmooth).
-export function buildCharacter(avatar, opts = {}) { const r6 = avatar?.rig === 'r6'; return buildRig(avatar, opts, r6, r6 ? 'r6' : 'r15'); }
+export function buildCharacter(avatar, opts = {}) { const r6 = avatar?.rig === 'r6'; return buildRig(avatar, opts, true, r6 ? 'r6' : 'r15'); }
 
 // Advanced graphics: same R15 shapes, smoother finish (slight bevel + gloss).
 export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r6' ? 'r6' : 'r15'); }

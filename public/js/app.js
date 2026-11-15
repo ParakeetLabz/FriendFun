@@ -26,7 +26,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=185b257d').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=334de6b1').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=5a31845e');
+  const m = await import('./lobby.js?v=1c6b596b');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -737,7 +737,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=e6eef4c5');
+  const { Game } = await import('./game.js?v=ee9258c2');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1250,7 +1250,7 @@ async function profilePage(name) {
   mount('users', `
     <div class="profile-head">
       <div class="ph-img ${u.gameId ? 'ingame' : u.online ? 'online' : ''}">${avatarImgTag(u.avatar)}</div>
-      <div class="ph-info"><h1>${esc(displayNameOf(u))}${vtag(u.name)}${badgeIcon2(u.badge)}</h1><div class="muted">@${esc(u.name)}</div>
+      <div class="ph-info"><h1>${esc(displayNameOf(u))}${vtag(u.name)}${badgeIcon2(u.badge)}</h1><div class="muted">@${esc(u.name)}${u.userId ? ` · User ID #${u.userId}` : ''}</div>
         ${soc?.status ? `<div class="ph-status"><span class="ic">${icons.chat}</span> ${esc(soc.status)}</div>` : ''}
         <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${soc?.followers ?? 0}</b> Followers</div><div><b>${soc?.following ?? 0}</b> Following</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
       </div>
@@ -1342,7 +1342,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=e6eef4c5');
+      const { Game: GameClass } = await import('./game.js?v=ee9258c2');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });

@@ -224,7 +224,7 @@ async function publicUser(u) {
   const badge = u.badge === 'none' ? null : (badges.includes(u.badge) ? u.badge : badges[0] || null);
 
   return {
-    name: u.name, displayName: u.display_name || '', club: isClub(u), admin: isAdmin(u), moderator: isMod(u), owner: isOwner(u), role: roleOf(u), badges, badge,
+    name: u.name, userId: u.user_id || null, displayName: u.display_name || '', club: isClub(u), admin: isAdmin(u), moderator: isMod(u), owner: isOwner(u), role: roleOf(u), badges, badge,
     funpanel: hasFunpanel(u),
     avatar: u.avatar, created: u.created, bio: u.bio || '', friends: list(u, 'friends').length,
     ...(await statusOf(u.name))
@@ -601,7 +601,12 @@ app.get('/api/leaderboard', auth, async (req, res) => {
 });
 
 app.get('/api/users/:name', auth, async (req, res) => {
-  const { data: u, error: uErr } = await supabase.from('users').select('*').eq('name', key(req.params.name)).single();
+  // Numeric param = a user id (e.g. /api/users/1); otherwise a username.
+  const byId = /^\d+$/.test(req.params.name);
+  const q = byId
+    ? supabase.from('users').select('*').eq('user_id', Number(req.params.name))
+    : supabase.from('users').select('*').eq('name', key(req.params.name));
+  const { data: u, error: uErr } = await q.single();
   if (uErr || !u) return res.status(404).json({ error: 'User not found' });
 
   const { data: gamesData } = await supabase.from('games').select('*').eq('creator', key(u.name));
