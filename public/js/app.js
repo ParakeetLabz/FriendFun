@@ -1,6 +1,7 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=f35f8472';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=00f72729';
+import { THEME_IDS, themesPage } from './themes.js?v=4e24e1f7';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -97,12 +98,28 @@ async function api(method, url, body) {
   if (!r.ok) throw new Error(j.error || 'Request failed');
   return j;
 }
-// Dr. Pepper theme: owners grant it (theme_drpepper); only players who have it see it.
+// App themes (FriendClub exclusive) + Dr. Pepper theme (owner-granted).
+// A saved public theme only applies while the user is a Club member;
+// an explicit 'funtopia' pick means plain violet; otherwise a Dr. Pepper
+// holder (no saved theme) sees the Dr. Pepper theme.
 function applyTheme() {
-  const on = !!(me?.inventory || []).includes('theme_drpepper');
-  document.body.classList.toggle('theme-drpepper', on);
-  applyPepperBranding(on);
-  if (on) startPepperCracks(); else stopPepperCracks();
+  const pepper = !!(me?.inventory || []).includes('theme_drpepper');
+  let saved = '';
+  try { saved = localStorage.getItem('ff_theme') || ''; } catch {}
+  const clubTheme = saved && me?.club && THEME_IDS.has(saved) ? saved : '';
+  document.body.classList.remove('theme-drpepper');
+  THEME_IDS.forEach(id => document.body.classList.remove('theme-' + id));
+  if (clubTheme) {
+    document.body.classList.add('theme-' + clubTheme);
+    applyPepperBranding(false); stopPepperCracks();
+  } else if (saved === 'funtopia') {
+    applyPepperBranding(false); stopPepperCracks();
+  } else if (pepper) {
+    document.body.classList.add('theme-drpepper');
+    applyPepperBranding(true); startPepperCracks();
+  } else {
+    applyPepperBranding(false); stopPepperCracks();
+  }
 }
 
 export function toast(msg, err = false) {
@@ -517,7 +534,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=e11b53b6');
+  const m = await import('./lobby.js?v=b5629b20');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -1492,6 +1509,7 @@ const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CL
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
 const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
+const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
 const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMoney, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
@@ -1521,6 +1539,7 @@ function clubPage() {
       <div class="bux-way"><h3>${tix} +${ECON.CLUB_DAILY} Daily FunTix</h3><p>Get ${ECON.DAILY_TIX + ECON.CLUB_DAILY} FunTix every day instead of ${ECON.DAILY_TIX}.</p></div>
       <div class="bux-way"><h3>${tix} Double Playtime FunTix</h3><p>Earn ${ECON.PLAY_TIX * ECON.CLUB_PLAY_MULT} FunTix per minute of play instead of ${ECON.PLAY_TIX}.</p></div>
       <div class="bux-way"><h3>${CLUB} Member Badge</h3><p>A gold hard hat next to your name on your profile, the leaderboard, in chat and above your head in games.</p></div>
+      <div class="bux-way"><h3>🎨 App Themes</h3><p>Switch the whole site between themes — Classic Roblox, Rock, Ocean and more. <a href="#/themes">Pick a theme</a></p></div>
       <div class="bux-way"><h3>Exclusive Hard Hat</h3><p>The FriendClub Hard Hat goes straight into your inventory. Only members can get it.</p></div>
     </div>`, () => {
     const jb = app.querySelector('.club-join');
@@ -1597,7 +1616,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -1634,6 +1653,7 @@ async function route() {
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
       case 'skinmaker': { const m = await import('./skinmaker.js?v=7c86104f'); return m.skinmakerPage(skinmakerDeps); }
+      case 'themes': return themesPage(themesDeps);
       default: location.hash = '#/home'; return;
     }
   } catch (e) {

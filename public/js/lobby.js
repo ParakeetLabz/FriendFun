@@ -55,6 +55,7 @@ export async function lobbyPage(D) {
             <button class="tb-menu-item tb-logout-all"><span class="sb-ico">&#10006;</span>Log out all</button>
           </div>
         </div>
+        <a class="lb-iconbtn" href="#/themes" title="Themes"><span class="ic">${icons.palette}</span></a>
         <a class="lb-iconbtn" href="#/settings" title="Settings"><span class="ic">${icons.gear}</span></a>
       </div>
     </header>
