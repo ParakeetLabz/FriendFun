@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=a33502c9';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=185b257d';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO } from './ui.js?v=f35f8472';
 import { PEPPER_CAN } from './pepper.js?v=00f72729';
@@ -93,7 +93,7 @@ export async function lobbyPage(D) {
       </div>
     </aside>
     <div class="lb-nameplate"><b>${esc(me.name)}</b><span><span class="ic">${icons.award}</span> ${(me.badges || []).length} badges · <span class="ic">${icons.zap}</span> ${me.streak || 0} day streak</span></div>
-    <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑'], ['bow', '🫡'], ['dance', '🎸'], ['cheer', '🥳'], ['dab', '🤟']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
+    <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['floss', '🕺'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑'], ['salute', '🫡'], ['rock', '🎸'], ['shrug', '🤷']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
     <footer class="lb-tiles">
       ${recent ? `<a class="lb-tile" href="#/play/${recent.id}"><span>⏩</span><b>Continue</b><i>${esc(recent.name)}</i></a>` : ''}
       <a class="lb-tile" href="#/discover"><span class="ic">${icons.trophy}</span><b>Charts</b><i>Top games right now</i></a>

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=a33502c9';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=185b257d';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -20,6 +20,7 @@ const ANIMS = ['idle', 'walk', 'jump', 'fall', 'wave', 'dance', 'dead', 'sit'];
 const EMOTES = [
   { id: 'wave', icon: '👋', name: 'Wave' },
   { id: 'dance', icon: '💃', name: 'Dance' },
+  { id: 'floss', icon: '🕺', name: 'Floss' },
   { id: 'spin', icon: '🌀', name: 'Spin' },
   { id: 'bow', icon: '🙇', name: 'Bow' },
   { id: 'cheer', icon: '🎉', name: 'Cheer' },
@@ -27,9 +28,10 @@ const EMOTES = [
   { id: 'dab', icon: '😎', name: 'Dab' },
   { id: 'sit', icon: '🪑', name: 'Sit' },
   { id: 'salute', icon: '🫡', name: 'Salute' },
+  { id: 'rock', icon: '🎸', name: 'Rock Out' },
   { id: 'shrug', icon: '🤷', name: 'Shrug' },
 ];
-const EMOTE_TIMES = { wave: 2.5, spin: 2.2, bow: 2.5, cheer: 3, laugh: 3, dab: 2.5, dance: 9999, sit: 9999, salute: 2.5, shrug: 2 };
+const EMOTE_TIMES = { wave: 2.5, spin: 2.2, bow: 2.5, cheer: 3, laugh: 3, dab: 2.5, dance: 9999, floss: 9999, rock: 9999, sit: 9999, salute: 2.5, shrug: 2 };
 const GAME_TIPS = [
   'Press / to chat with other players!',
   'Type /e dance to show off your moves!',

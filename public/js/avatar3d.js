@@ -691,17 +691,19 @@ export function animateCharacter(ch, state, t, dt) {
   }
   else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; laf = raf = 0.5; llf = rlf = 0.6; }
   else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; laf = raf = 0.6; llf = rlf = 0.5; }
-  else if (state === 'wave') { ra = -(Math.PI * 0.85 + Math.sin(t * 12) * 0.3); raf = -1.0 + Math.sin(t * 12) * 0.35; }
-  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s; ra = -Math.PI * 0.5 + s; ll = s * 0.4; rl = -s * 0.4; laf = raf = 0.5; llf = rlf = 0.3 + Math.abs(s) * 0.3; }
-  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.6; llf = rlf = Math.PI / 2; laf = raf = 0.4; }
-  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.6; ra = 0.6; laz = 0.5; raz = -0.5; laf = raf = 0.3; llf = rlf = 0.2; }
-  else if (state === 'bow') { tp = 0.75; hp = 0.45; la = ra = 0.5; laf = raf = 0.3; }
-  else if (state === 'cheer') { la = ra = -Math.PI + 0.35; bob = Math.abs(Math.sin(t * 10)) * 0.3; laf = raf = 0.4; llf = rlf = 0.3; }
-  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.1; hp = 0.1 + s * 0.06; la = ra = -0.7; laf = raf = 0.5; }
-  else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; laf = -1.6; raf = 0.2; llf = rlf = 0.2; }
+  else if (state === 'wave') { const w = Math.sin(t * 12); ra = -(Math.PI * 0.85 + w * 0.3); raf = -1.0 + w * 0.35; la = 0.25; laz = 0.3; hp = 0.18; tp = 0.06; bob = Math.abs(Math.sin(t * 6)) * 0.05; }
+  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s * 1.1; ra = -Math.PI * 0.5 + s * 1.1; ll = s * 0.5; rl = -s * 0.5; laf = raf = 0.5; llf = rlf = 0.3 + Math.abs(s) * 0.35; bob = Math.abs(Math.sin(t * 8)) * 0.2; tp = s * 0.12; hp = Math.sin(t * 8) * 0.1; }
+  else if (state === 'floss') { const s = Math.sin(t * 10); la = -Math.PI * 0.35 + s * 0.9; ra = -Math.PI * 0.35 - s * 0.9; laz = 0.5 + s * 0.35; raz = -0.5 - s * 0.35; laf = raf = 0.4; tp = s * 0.18; hp = -s * 0.08; bob = Math.abs(Math.sin(t * 10)) * 0.12; ll = s * 0.25; rl = -s * 0.25; }
+  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.9; llf = rlf = Math.PI / 2; laf = raf = 0.6; hp = Math.sin(t * 1.5) * 0.25; tp = 0.15; }
+  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.7; ra = 0.7; laz = 0.6; raz = -0.6; laf = raf = 0.3; llf = rlf = 0.2; tp = 0.12; bob = Math.abs(Math.sin(t * 9)) * 0.08; hp = -0.1; }
+  else if (state === 'bow') { const b = Math.sin(t * 2.5); tp = 0.7 + b * 0.12; hp = 0.4 + b * 0.08; la = ra = 0.5 + b * 0.1; laf = raf = 0.3; ll = rl = 0.1; llf = rlf = 0.15; }
+  else if (state === 'cheer') { const c = Math.sin(t * 10); la = ra = -Math.PI + 0.35 + c * 0.25; bob = Math.abs(c) * 0.35; laf = raf = 0.4; llf = rlf = 0.3; ll = rl = Math.abs(c) * 0.25; hp = -0.18; tp = -0.08; }
+  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.12; hp = -0.12 + s * 0.08; la = ra = -0.7; laf = raf = 0.85; ll = rl = 0.18; llf = rlf = 0.3; bob = Math.abs(s) * 0.06; }
+  else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; laf = -1.6; raf = 0.2; llf = rlf = 0.2; bob = Math.abs(Math.sin(t * 8)) * 0.1; }
+  else if (state === 'rock') { const s = Math.sin(t * 12); la = -0.8; laz = 0.6; laf = 0.9; ra = -0.5 + s * 0.45; raf = 0.7; hp = 0.2 + Math.sin(t * 6) * 0.18; tp = 0.15 + Math.sin(t * 6) * 0.1; bob = Math.abs(Math.sin(t * 6)) * 0.14; ll = 0.2; rl = -0.2; llf = rlf = 0.25; }
   else if (state === 'crouch') { ll = rl = -1.1; tp = 0.4; la = ra = 0.3; llf = rlf = 1.1; laf = raf = 0.4; }
-  else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.1; raf = -2.1; }
-  else if (state === 'shrug') { la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; laf = raf = 0.7; }
+  else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.05; raf = -2.1; hp = -0.06; tp = -0.04; }
+  else if (state === 'shrug') { const s = Math.sin(t * 6); la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; laf = raf = 0.7; hp = s * 0.18; bob = Math.abs(s) * 0.05; }
   else { la = Math.sin(t * 2) * 0.05; ra = -Math.sin(t * 2) * 0.05; } // idle: a gentle sway so characters feel alive, not statue-still
   const k = Math.min(1, dt * 15);
   L.larm.rotation.x += (la - L.larm.rotation.x) * k;
