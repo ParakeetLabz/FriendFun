@@ -1,7 +1,7 @@
-import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=fb1c626d';
+import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=c7d9c2ae';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=20fd6e41';
-import { THEME_IDS, themesPage } from './themes.js?v=b364ac9e';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=eb8c8773';
+import { THEME_IDS, themesPage } from './themes.js?v=1172e396';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=88be70a5');
+  const m = await import('./lobby.js?v=0c3816b6');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -737,7 +737,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=42c6152e');
+  const { Game } = await import('./game.js?v=f0611804');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1342,7 +1342,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=42c6152e');
+      const { Game: GameClass } = await import('./game.js?v=f0611804');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1529,11 +1529,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=bb94a5df');
+  const m = await import('./admin.js?v=93214b37');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=bb94a5df');
+  const m = await import('./admin.js?v=93214b37');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1653,7 +1653,7 @@ async function route() {
       case 'catalog': return await catalogPage(seg[1]);
       case 'ugc': { const m = await import('./ugc-studio.js?v=90440012'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
-      case 'family': { const m = await import('./family.js?v=985258af'); return m.familyPage(familyDeps); }
+      case 'family': { const m = await import('./family.js?v=6c4ec6b8'); return m.familyPage(familyDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
