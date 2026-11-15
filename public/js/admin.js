@@ -1,5 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=00f72729';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=aa2d7d24';
 import { refreshVerified } from './verified.js?v=4e9b72be';
 export async function adminPage(D, q = '', gq = '') {
   const { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN } = D;

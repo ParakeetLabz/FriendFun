@@ -1,7 +1,7 @@
-import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=f35f8472';
+import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=36e85650';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=00f72729';
-import { THEME_IDS, themesPage } from './themes.js?v=4e24e1f7';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=aa2d7d24';
+import { THEME_IDS, themesPage } from './themes.js?v=f1fbe57b';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -120,6 +120,7 @@ function applyTheme() {
   } else {
     applyPepperBranding(false); stopPepperCracks();
   }
+  window.__setLobbyStage?.(); // recolor the live 3D stage if the lobby is up
 }
 
 export function toast(msg, err = false) {
@@ -534,7 +535,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=b5629b20');
+  const m = await import('./lobby.js?v=60146535');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -1296,7 +1297,7 @@ async function createPage() {
   mount('create', `
     <h1>Create</h1>
     <div class="av-tabs"><button class="active"><span class="ic">${icons.gamepad}</span> Experiences</button><button data-goto="#/ugc"><span class="ic">${icons.palette}</span> UGC Studio</button><button data-goto="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</button></div>
-    <a href="#/funai" style="display:block;text-decoration:none;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:0 0 24px rgba(124,58,237,.35)"><span style="font-weight:900;font-size:18px"><span class="ic">${icons.sparkles}</span> Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
+    <a href="#/funai" style="display:block;text-decoration:none;background:var(--grad);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:var(--glow)"><span style="font-weight:900;font-size:18px"><span class="ic">${icons.sparkles}</span> Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>Load a .fun file</h2></div>
@@ -1514,11 +1515,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=7670b852');
+  const m = await import('./admin.js?v=e228d0ac');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=7670b852');
+  const m = await import('./admin.js?v=e228d0ac');
   return m.ownerPage(adminDeps, q);
 }
 

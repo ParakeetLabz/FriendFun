@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=185b257d';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { LOGO } from './ui.js?v=f35f8472';
-import { PEPPER_CAN } from './pepper.js?v=00f72729';
+import { LOGO } from './ui.js?v=36e85650';
+import { PEPPER_CAN } from './pepper.js?v=aa2d7d24';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -166,27 +166,46 @@ export async function lobbyPage(D) {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   holder.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(hasPepper ? 0x140505 : 0x0a0a14, 14, 30);
+  // stage theme: each app theme (Club) + Dr. Pepper restyles the whole 3D stage
+  const STAGE_THEMES = {
+    default: { fog: 0x0a0a14, rimR: 0xe8112d, rimV: 0x7c4dff, a: 0x7c4dff, b: 0x22d3ee, c: 0xb388ff },
+    pepper: { fog: 0x140505, rimR: 0xe8112d, rimV: 0xffb347, a: 0xffb347, b: 0xe8112d, c: 0xff5a5a },
+    roblox: { fog: 0xf2f2f2, rimR: 0x0057a8, rimV: 0xe2231a, a: 0xe2231a, b: 0x0057a8, c: 0xff6b00 },
+    rock: { fog: 0x0a0a0a, rimR: 0xff6b00, rimV: 0xc8102e, a: 0xc8102e, b: 0xff6b00, c: 0xff2e2e },
+    ocean: { fog: 0x062a3a, rimR: 0x2dd4bf, rimV: 0x0284c7, a: 0x0284c7, b: 0x22d3ee, c: 0x2dd4bf },
+    forest: { fog: 0x0d1f0d, rimR: 0x86efac, rimV: 0x16a34a, a: 0x16a34a, b: 0x4ade80, c: 0x86efac },
+    sunset: { fog: 0x2a0f1e, rimR: 0xfb923c, rimV: 0xec4899, a: 0xec4899, b: 0xfb923c, c: 0xf472b6 },
+    midnight: { fog: 0x0b0f1a, rimR: 0xa78bfa, rimV: 0x3b82f6, a: 0x3b82f6, b: 0x60a5fa, c: 0xa78bfa },
+  };
+  const currentStageTheme = () => {
+    let saved = '';
+    try { saved = localStorage.getItem('ff_theme') || ''; } catch {}
+    if (me?.club && STAGE_THEMES[saved]) return STAGE_THEMES[saved];
+    if (hasPepper) return STAGE_THEMES.pepper;
+    return STAGE_THEMES.default;
+  };
+  // accent materials, registered by role so a theme change recolors the stage live
+  const stageMats = [];
+  const regAccent = (mat, role) => { stageMats.push({ mat, role }); return mat; };
+  let STAGE = currentStageTheme();
+  scene.fog = new THREE.Fog(STAGE.fog, 14, 30);
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 4.1, 13.8);
   camera.lookAt(0, 2.1, 0);
   scene.add(new THREE.HemisphereLight(0x9db4ff, 0x2a0f14, 0.85));
   const key = new THREE.DirectionalLight(0xfff1d6, 1.6); key.position.set(4, 9, 7); scene.add(key);
-  const rimR = new THREE.PointLight(0xe8112d, 60, 30); rimR.position.set(-7, 3.5, -4); scene.add(rimR);
-  const rimV = new THREE.PointLight(hasPepper ? 0xffb347 : 0x7c4dff, 55, 30); rimV.position.set(7, 2.5, -5); scene.add(rimV);
+  const rimR = new THREE.PointLight(STAGE.rimR, 60, 30); rimR.position.set(-7, 3.5, -4); scene.add(rimR);
+  const rimV = new THREE.PointLight(STAGE.rimV, 55, 30); rimV.position.set(7, 2.5, -5); scene.add(rimV);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(26, 48), new THREE.MeshStandardMaterial({ color: 0x101017, roughness: 0.35, metalness: 0.35 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; scene.add(floor);
-  // accent colors: warm for Dr. Pepper themed players, violet/cyan otherwise
-  const ACCENT = hasPepper ? 0xffb347 : 0x7c4dff;
-  const ACCENT2 = hasPepper ? 0xe8112d : 0x22d3ee;
-  const ACCENT3 = hasPepper ? 0xff5a5a : 0xb388ff;
   // glowing rings flat on the floor
-  const floorRing = (r, color, op) => {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.06, 8, 64), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.2, transparent: true, opacity: op }));
+  const floorRing = (r, role, op) => {
+    const c = STAGE[role];
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.06, 8, 64), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2, transparent: true, opacity: op }), role));
     m.rotation.x = Math.PI / 2; m.position.y = -0.48; scene.add(m); return m;
   };
-  floorRing(8, ACCENT, 0.8);
-  floorRing(12, ACCENT2, 0.4);
+  floorRing(8, 'a', 0.8);
+  floorRing(12, 'b', 0.4);
   // top spotlight washing the stage
   const spot = new THREE.SpotLight(0xfff1d6, 60, 30, 0.55, 0.6, 1);
   spot.position.set(0, 12, 4); spot.target.position.set(0, 0, 0); scene.add(spot); scene.add(spot.target);
@@ -197,38 +216,42 @@ export async function lobbyPage(D) {
   tier1.position.y = -0.75; stage.add(tier1);
   const tier2 = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.7, 0.5, 48), tierMat);
   tier2.position.y = -0.25; stage.add(tier2);
-  const glowRing = (r, y, color) => {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 10, 64), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.8 }));
+  const glowRing = (r, y, role) => {
+    const c = STAGE[role];
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 10, 64), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.8 }), role));
     m.rotation.x = Math.PI / 2; m.position.y = y; stage.add(m); return m;
   };
-  glowRing(3.4, -0.48, ACCENT);
-  glowRing(2.5, 0.02, ACCENT3);
-  const podium = (x, z, r, ringColor) => {
+  glowRing(3.4, -0.48, 'a');
+  glowRing(2.5, 0.02, 'c');
+  const podium = (x, z, r, role) => {
     const g = new THREE.Group();
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.15, 0.5, 40), new THREE.MeshStandardMaterial({ color: 0x1c1e28, roughness: 0.4, metalness: 0.5 }));
     disc.position.y = -0.25; g.add(disc);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.98, 0.055, 10, 48), new THREE.MeshStandardMaterial({ color: ringColor, emissive: ringColor, emissiveIntensity: 1.6 }));
+    const c = STAGE[role];
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.98, 0.055, 10, 48), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.6 }), role));
     ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; g.add(ring);
     g.position.set(x, 0, z); stage.add(g); return g;
   };
-  podium(-5.7, -0.9, 1.7, ACCENT); podium(5.7, -0.9, 1.7, ACCENT);
+  podium(-5.7, -0.9, 1.7, 'a'); podium(5.7, -0.9, 1.7, 'a');
   // floating halos + crystals (decor, rotates with the stage)
   const floaters = [];
-  const halo = (x, y, z, r, color) => {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 8, 48), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.4, transparent: true, opacity: 0.9 }));
+  const halo = (x, y, z, r, role) => {
+    const c = STAGE[role];
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 8, 48), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.4, transparent: true, opacity: 0.9 }), role));
     m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.5 + Math.random() * 0.4, phase: Math.random() * 6.28, spin: 0.3 }); return m;
   };
-  halo(-4.2, 3.2, -2.5, 0.9, ACCENT);
-  halo(4.2, 3.8, -2.5, 0.9, ACCENT2);
-  halo(0, 5.2, -4, 1.2, ACCENT3);
-  const crystal = (x, y, z, s, color) => {
-    const m = new THREE.Mesh(new THREE.OctahedronGeometry(s), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.6 }));
+  halo(-4.2, 3.2, -2.5, 0.9, 'a');
+  halo(4.2, 3.8, -2.5, 0.9, 'b');
+  halo(0, 5.2, -4, 1.2, 'c');
+  const crystal = (x, y, z, s, role) => {
+    const c = STAGE[role];
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(s), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.6 }), role));
     m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.6 + Math.random() * 0.5, phase: Math.random() * 6.28, spin: 0.5 }); return m;
   };
-  crystal(-3.4, 2.2, 1.8, 0.35, ACCENT);
-  crystal(3.4, 2.6, 1.8, 0.35, ACCENT2);
-  crystal(-6.5, 3.0, -3.5, 0.28, ACCENT3);
-  crystal(6.5, 2.4, -3.5, 0.28, ACCENT);
+  crystal(-3.4, 2.2, 1.8, 0.35, 'a');
+  crystal(3.4, 2.6, 1.8, 0.35, 'b');
+  crystal(-6.5, 3.0, -3.5, 0.28, 'c');
+  crystal(6.5, 2.4, -3.5, 0.28, 'a');
   // floating dust / stars
   const pGeo = new THREE.BufferGeometry();
   const pCount = 220;
@@ -239,16 +262,28 @@ export async function lobbyPage(D) {
     pPos[i * 3 + 2] = (Math.random() - 0.5) * 30;
   }
   pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-  const stars = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: ACCENT3, size: 0.09, transparent: true, opacity: 0.8 }));
+  const stars = new THREE.Points(pGeo, regAccent(new THREE.PointsMaterial({ color: STAGE.c, size: 0.09, transparent: true, opacity: 0.8 }), 'c'));
   scene.add(stars);
   // light beams from above
-  const beam = (x, z, color) => {
-    const m = new THREE.Mesh(new THREE.ConeGeometry(1.6, 9, 24, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const beam = (x, z, role) => {
+    const c = STAGE[role];
+    const m = new THREE.Mesh(new THREE.ConeGeometry(1.6, 9, 24, 1, true), regAccent(new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), role));
     m.position.set(x, 4.5, z); scene.add(m); return m;
   };
-  beam(0, 0, ACCENT);
-  beam(-5.7, -0.9, ACCENT2);
-  beam(5.7, -0.9, ACCENT2);
+  beam(0, 0, 'a');
+  beam(-5.7, -0.9, 'b');
+  beam(5.7, -0.9, 'b');
+  // live stage recolor — called when a theme is picked (themes page / applyTheme)
+  window.__setLobbyStage = () => {
+    STAGE = currentStageTheme();
+    scene.fog.color.setHex(STAGE.fog);
+    rimR.color.setHex(STAGE.rimR);
+    rimV.color.setHex(STAGE.rimV);
+    for (const { mat, role } of stageMats) {
+      mat.color.setHex(STAGE[role]);
+      if (mat.emissive) mat.emissive.setHex(STAGE[role]);
+    }
+  };
   const chars = [];
   const addChar = (avatar, name, x, z, s) => {
     try {
@@ -293,6 +328,7 @@ export async function lobbyPage(D) {
   D.setCleanup(() => {
     cancelAnimationFrame(raf);
     removeEventListener('resize', resize);
+    if (window.__setLobbyStage) delete window.__setLobbyStage;
     renderer.dispose();
     holder.innerHTML = '';
   });
