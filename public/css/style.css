@@ -4,9 +4,15 @@
 body.theme-drpepper { --bg: #160808; --bg2: #220c0c; --card: #331010; --card2: #421414; --line: #6e2222; --text: #fff3e0; --muted: #d9a49a; --blue: #ffb347; --blue2: #c8102e; --pink: #ff5a5a; --green: #2ed573; --red: #ff2e2e; --gold: #f5c518; --grad: linear-gradient(135deg, #c8102e, #7a0e1e); --shadow: 0 8px 32px rgba(0,0,0,.5); --glow: 0 0 18px rgba(200,16,46,.45); background: radial-gradient(1200px 600px at 80% -10%, #c8102e33 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #f5c51822 0%, transparent 55%), var(--bg); }
 body.theme-drpepper .lb-bg { background: radial-gradient(ellipse at 50% 120%, #2a0a0a 0%, #0a0505 70%); }
 /* Dr. Pepper can cracks: pixelated cracked-can bursts that pop up for themed players */
-.pepper-crack { position: fixed; pointer-events: none; z-index: 100; animation: pepperPop .22s ease-out, pepperFade 1s ease-in 4.2s forwards; }
+.pepper-crack { position: fixed; pointer-events: none; z-index: 100; filter: drop-shadow(0 0 10px rgba(255,46,46,.55)); animation: pepperPop .22s ease-out, pepperFade 1s ease-in 4.2s forwards; }
+.pepper-crack .crack-arm { animation: crackDraw .35s ease-out forwards; }
+.pepper-flash { position: absolute; left: 50%; top: 50%; width: 60%; height: 60%; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,46,46,.5) 40%, transparent 70%); pointer-events: none; animation: pepperFlash .45s ease-out forwards; }
+.pepper-bubble { position: absolute; border-radius: 50%; background: rgba(255,243,224,.85); border: 1px solid rgba(255,46,46,.6); pointer-events: none; animation: pepperBubble .9s ease-out forwards; }
 @keyframes pepperPop { from { transform: scale(.45) rotate(var(--r, 0deg)); opacity: 0; } to { transform: scale(1) rotate(var(--r, 0deg)); opacity: 1; } }
 @keyframes pepperFade { to { opacity: 0; } }
+@keyframes crackDraw { to { stroke-dashoffset: 0; } }
+@keyframes pepperFlash { from { opacity: .9; transform: translate(-50%,-50%) scale(.25); } to { opacity: 0; transform: translate(-50%,-50%) scale(1.5); } }
+@keyframes pepperBubble { from { opacity: .95; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-44px) scale(.35); } }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: radial-gradient(1200px 600px at 80% -10%, #7c3aed33 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #06b6d433 0%, transparent 55%), var(--bg); color: var(--text); font-family: 'Builder Sans', 'Nunito Sans', 'Segoe UI', Arial, sans-serif; }
 a { color: inherit; text-decoration: none; }
@@ -690,6 +696,7 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 .lb-logo-mark { width: 42px; height: 42px; display: inline-flex; flex: none; filter: drop-shadow(0 4px 12px rgba(124,58,237,.45)); }
 .lb-logo-mark svg { width: 100%; height: 100%; }
 .lb-logo-word { background: linear-gradient(135deg, #fff, #c4b5fd, #22d3ee, #fff); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-slide 5s ease infinite; }
+.lb-logo-word.lb-logo-pepper { background: none; -webkit-background-clip: unset; background-clip: unset; color: #ffffff; -webkit-text-fill-color: #ffffff; font-family: 'Lobster', 'Brush Script MT', 'Segoe Script', cursive; font-style: normal; font-weight: 400; letter-spacing: 0; font-size: 26px; animation: none; }
 .lb-top-right { display: flex; align-items: center; gap: 10px; }
 .lb-tix { background: rgba(0,0,0,.5); border: 1px solid rgba(255,215,0,.4); padding: 6px 12px; border-radius: 999px; font-weight: 700; color: #fff; text-decoration: none; }
 .lb-online { background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.15); padding: 6px 12px; border-radius: 999px; font-weight: 700; display: flex; align-items: center; gap: 6px; }

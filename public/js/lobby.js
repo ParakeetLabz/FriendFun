@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=a33502c9';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO } from './ui.js?v=f35f8472';
+import { PEPPER_CAN } from './pepper.js?v=00f72729';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -13,6 +14,7 @@ const CAV_LOGO = `<svg viewBox="0 0 150 48" xmlns="http://www.w3.org/2000/svg" r
 export async function lobbyPage(D) {
   const { api, esc, fmt, toast, avatarImgTag } = D;
   const me = D.me;
+  const hasPepper = (me.inventory || []).includes('theme_drpepper');
   const app = document.getElementById('app');
   app.className = 'fullscreen';
   let games = [], friends = [], party = { active: false };
@@ -36,9 +38,9 @@ export async function lobbyPage(D) {
     <div class="lb-bg"></div>
     <div class="lb-3d"></div>
     <header class="lb-top">
-      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span></a>
+      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${hasPepper ? PEPPER_CAN : LOGO}</span><span class="lb-logo-word${hasPepper ? ' lb-logo-pepper' : ''}">${hasPepper ? 'Dr Pepper' : 'FUNTOPIA'}</span></a>
       <div class="lb-top-right">
-        <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
+        <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${hasPepper ? PEPPER_CAN : icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
         <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>
         <div class="tb-user-wrap">
           <button class="lb-chip" title="Account menu">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(me.name)}</b><span>&#9662;</span></button>
@@ -163,7 +165,6 @@ export async function lobbyPage(D) {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   holder.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  const hasPepper = (me.inventory || []).includes('theme_drpepper');
   scene.fog = new THREE.Fog(hasPepper ? 0x140505 : 0x0a0a14, 14, 30);
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 4.1, 13.8);

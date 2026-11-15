@@ -1,4 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=00f72729';
 import { refreshVerified } from './verified.js?v=4e9b72be';
 export async function adminPage(D, q = '', gq = '') {
   const { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN } = D;
@@ -356,6 +357,8 @@ export async function ownerPage(D, q = '') {
           if (on && !inv.includes('theme_drpepper')) inv.push('theme_drpepper');
           if (!on) me.inventory = inv.filter(id => id !== 'theme_drpepper');
           document.body.classList.toggle('theme-drpepper', on);
+          applyPepperBranding(on);
+          if (on) startPepperCracks(); else stopPepperCracks();
         }
         ownerPage(D, q);
       } catch (e) { toast(e.message, true); }

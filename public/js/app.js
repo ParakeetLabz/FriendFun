@@ -1,5 +1,6 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=f35f8472';
 import { icons } from './icons.js?v=1aa0a4d3';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=00f72729';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -100,59 +101,10 @@ async function api(method, url, body) {
 function applyTheme() {
   const on = !!(me?.inventory || []).includes('theme_drpepper');
   document.body.classList.toggle('theme-drpepper', on);
+  applyPepperBranding(on);
   if (on) startPepperCracks(); else stopPepperCracks();
 }
-// Pixelated Dr. Pepper can cracks: a tiny pixel can + jagged cracks pop up at random
-// spots for themed players only. pointer-events none, so they never block clicks.
-let pepperCrackTimer = null;
-function pepperCrackSVG() {
-  const cx = 70, cy = 70, arms = [];
-  const n = 5 + Math.floor(Math.random() * 3);
-  for (let i = 0; i < n; i++) {
-    let ang = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-    let x = cx, y = cy;
-    const pts = [[x, y]];
-    const steps = 4 + Math.floor(Math.random() * 2);
-    for (let s = 0; s < steps; s++) {
-      ang += (Math.random() - 0.5) * 0.9;
-      x += Math.cos(ang) * (9 + Math.random() * 10);
-      y += Math.sin(ang) * (9 + Math.random() * 10);
-      pts.push([Math.round(x / 4) * 4, Math.round(y / 4) * 4]);
-    }
-    arms.push(pts.map(p => p.join(',')).join(' '));
-  }
-  const armPolys = arms.map(a => `<polyline points="${a}" fill="none" stroke="#5a0a12" stroke-width="6" stroke-linejoin="miter" stroke-linecap="square"/><polyline points="${a}" fill="none" stroke="#ff2e2e" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>`).join('');
-  return `<svg viewBox="0 0 140 140" shape-rendering="crispEdges" style="image-rendering:pixelated;display:block;width:100%;height:100%">${armPolys}<g><rect x="60" y="55" width="20" height="4" fill="#d7d7d7"/><rect x="59" y="59" width="22" height="30" fill="#c8102e" stroke="#5a0a12" stroke-width="1.5"/><rect x="59" y="68" width="22" height="9" fill="#fff3e0"/><rect x="59" y="89" width="22" height="3" fill="#5a0a12"/></g></svg>`;
-}
-function spawnPepperCrack() {
-  if (!document.body.classList.contains('theme-drpepper')) return;
-  if (document.querySelectorAll('.pepper-crack').length >= 3) return;
-  const el = document.createElement('div');
-  el.className = 'pepper-crack';
-  el.innerHTML = pepperCrackSVG();
-  const size = 120 + Math.random() * 80;
-  const deg = Math.floor(Math.random() * 360);
-  el.style.width = size + 'px';
-  el.style.height = size + 'px';
-  el.style.left = (4 + Math.random() * 82) + 'vw';
-  el.style.top = (8 + Math.random() * 72) + 'vh';
-  el.style.setProperty('--r', deg + 'deg');
-  el.style.transform = 'rotate(' + deg + 'deg)';
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 5200);
-}
-function startPepperCracks() {
-  if (pepperCrackTimer) return;
-  const tick = () => {
-    spawnPepperCrack();
-    pepperCrackTimer = setTimeout(tick, 6000 + Math.random() * 8000);
-  };
-  pepperCrackTimer = setTimeout(tick, 2500 + Math.random() * 4000);
-}
-function stopPepperCracks() {
-  if (pepperCrackTimer) { clearTimeout(pepperCrackTimer); pepperCrackTimer = null; }
-  document.querySelectorAll('.pepper-crack').forEach(el => el.remove());
-}
+
 export function toast(msg, err = false) {
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
   document.getElementById('toasts').appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3000);
@@ -565,7 +517,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=2ce8a696');
+  const m = await import('./lobby.js?v=46be423c');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -1544,11 +1496,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=2e3ed14e');
+  const m = await import('./admin.js?v=7670b852');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=2e3ed14e');
+  const m = await import('./admin.js?v=7670b852');
   return m.ownerPage(adminDeps, q);
 }
 
