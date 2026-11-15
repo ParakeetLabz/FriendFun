@@ -5,6 +5,7 @@ const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) :
 import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=185b257d';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
+import { displayNameOf } from './ui.js?v=fb1c626d';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
 const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
 const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };
@@ -787,7 +788,7 @@ export class Game {
   }
   renderEscPlayers() {
     const list = [this.me, ...this.players.values()];
-    this.c.querySelector('.esc-players').innerHTML = list.map(p => `<div class="esc-player"><img src="${avatarImage(p.avatar)}"><span>${badgeIcon(p.badge)}${esc(p.name)}</span></div>`).join('');
+    this.c.querySelector('.esc-players').innerHTML = list.map(p => `<div class="esc-player"><img src="${avatarImage(p.avatar)}"><span>${badgeIcon(p.badge)}${esc(displayNameOf(p))}</span></div>`).join('');
   }
   isStaff() { return ['owner', 'admin', 'moderator'].includes(this.me.role); }
   async fpApi(method, path, body) {
@@ -808,7 +809,7 @@ export class Game {
     const box = this.c.querySelector('.fp-players');
     if (!box) return;
     const list = [...this.players.values()];
-    box.innerHTML = list.length ? list.map(p => `<div class="fp-player"><img src="${avatarImage(p.avatar)}"><span class="fp-name">${esc(p.name)}</span>
+    box.innerHTML = list.length ? list.map(p => `<div class="fp-player"><img src="${avatarImage(p.avatar)}"><span class="fp-name">${esc(displayNameOf(p))}</span>
       <button class="btn-secondary" data-fp="tp" data-id="${p.id}" title="Teleport to them">TP</button>
       <button class="btn-secondary" data-fp="bring" data-id="${p.id}" title="Teleport them to you">Bring</button>
       <button class="btn-secondary" data-fp="freeze" data-id="${p.id}" title="Freeze/unfreeze them">${this.frozenIds?.has(p.id) ? 'Unfreeze' : 'Freeze'}</button>
@@ -871,7 +872,7 @@ export class Game {
     if (jm) { this.doJam((jm[1] || '').toLowerCase()); return; }
     const em = text.match(/^\/e\s+(\w+)/i);
     if (em) { const e = em[1].toLowerCase(); if (EMOTE_TIMES[e]) { this.doEmote(e); } else { this.sys('Emotes: ' + EMOTES.map(x => '/e ' + x.id).join(', ')); } return; }
-    if (this.o.test || !this.ws) { this.onChat({ id: 0, name: this.me.name, text, badge: this.me.badge }); return; }
+    if (this.o.test || !this.ws) { this.onChat({ id: 0, name: this.me.name, displayName: this.me.displayName || '', text, badge: this.me.badge }); return; }
     this.send({ t: 'chat', text });
   }
   doEmote(e) {
@@ -899,8 +900,8 @@ export class Game {
     if (m.system) return this.sys(m.text);
     const color = nameColor(m.name);
     const time = (() => { try { return localStorage.getItem('ff_chat_time') === '1' ? `<span class="chat-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> ` : ''; } catch { return ''; } })();
-    if (m.text.startsWith('/me ')) { this.addChat(`${time}<i>* ${esc(m.name)} ${esc(m.text.slice(4))}</i>`); return; }
-    this.addChat(`${time}${chatTag(m)}<b style="color:${color}">${badgeIcon(m.badge)}${esc(m.name)}${vtag(m.name)}:</b> ${esc(m.text)}`);
+    if (m.text.startsWith('/me ')) { this.addChat(`${time}<i>* ${esc(displayNameOf(m))} ${esc(m.text.slice(4))}</i>`); return; }
+    this.addChat(`${time}${chatTag(m)}<b style="color:${color}">${badgeIcon(m.badge)}${esc(displayNameOf(m))}${vtag(m.name)}:</b> ${esc(m.text)}`);
     sfx.chat();
     const ch = m.id === this.myId || m.id === 0 ? this.char : this.players.get(m.id)?.char;
     if (ch) this.bubble(ch, m.text);
@@ -1425,7 +1426,7 @@ export class Game {
   hideLoading() { const l = this.c.querySelector('.loading'); if (l) { l.classList.add('fade'); setTimeout(() => l.remove(), 500); } }
   addPlayer(p) {
     if (this.players.has(p.id)) return;
-    const char = buildChar(p.avatar, { pet: false, gear: false }); const tag = makeNameTag(p.name, p.badge); tag.userData.isTag = true; char.add(tag);
+    const char = buildChar(p.avatar, { pet: false, gear: false }); const tag = makeNameTag(displayNameOf(p), p.badge); tag.userData.isTag = true; char.add(tag);
     this.scene.add(char);
     const pet = buildPet(p.avatar?.pet);
     if (pet) { pet.position.copy(char.position); this.scene.add(pet); }

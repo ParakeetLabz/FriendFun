@@ -9,6 +9,7 @@ import { createFunAI } from './funai.js';
 import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
+import { createFamily } from './family.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -222,7 +223,7 @@ async function publicUser(u) {
   const badge = u.badge === 'none' ? null : (badges.includes(u.badge) ? u.badge : badges[0] || null);
 
   return {
-    name: u.name, club: isClub(u), admin: isAdmin(u), moderator: isMod(u), owner: isOwner(u), role: roleOf(u), badges, badge,
+    name: u.name, displayName: u.display_name || '', club: isClub(u), admin: isAdmin(u), moderator: isMod(u), owner: isOwner(u), role: roleOf(u), badges, badge,
     funpanel: hasFunpanel(u),
     avatar: u.avatar, created: u.created, bio: u.bio || '', friends: list(u, 'friends').length,
     ...(await statusOf(u.name))
@@ -1765,6 +1766,7 @@ createFunAI({ app, auth });
 createSuggestions({ app, auth, modOnly, isMod, supabase, filter, logMod });
 createCalling({ app, auth, supabase, notify });
 createVerify({ app, auth, supabase, isOwner, logMod });
+createFamily({ app, auth, supabase, filter, notify, key });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;
@@ -1806,9 +1808,9 @@ wss.on('connection', (ws) => {
       });
 
       touch(u.name, g.id);
-      send(ws, { t: 'welcome', id: player.id, players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, avatar: p.avatar, s: p.s, club: isClub(p.user), badge: badgeOf(p.user), role: roleOf(p.user) })), ...money(u), club: isClub(u), badge: badgeOf(u) });
+      send(ws, { t: 'welcome', id: player.id, players: [...room.players.values()].map(p => ({ id: p.id, name: p.name, displayName: p.user.display_name || '', avatar: p.avatar, s: p.s, club: isClub(p.user), badge: badgeOf(p.user), role: roleOf(p.user) })), ...money(u), club: isClub(u), badge: badgeOf(u) });
       room.players.set(player.id, player);
-      broadcast(room, { t: 'joined', id: player.id, name: player.name, avatar: player.avatar, club: isClub(u), badge: badgeOf(u), role: roleOf(u) }, ws);
+      broadcast(room, { t: 'joined', id: player.id, name: player.name, displayName: u.display_name || '', avatar: player.avatar, club: isClub(u), badge: badgeOf(u), role: roleOf(u) }, ws);
       broadcast(room, { t: 'chat', system: true, text: `${player.name} has joined the game.` });
       return;
     }
@@ -1819,7 +1821,7 @@ wss.on('connection', (ws) => {
       const mi = muteState(player.user);
       if (mi) return send(ws, { t: 'error', error: `You are muted${mi.reason ? ': ' + mi.reason : ''}` });
       const text = filter(m.text.trim());
-      broadcast(room, { t: 'chat', id: player.id, name: player.name, text, club: isClub(player.user), badge: badgeOf(player.user), role: roleOf(player.user) });
+      broadcast(room, { t: 'chat', id: player.id, name: player.name, displayName: player.user.display_name || '', text, club: isClub(player.user), badge: badgeOf(player.user), role: roleOf(player.user) });
     }
     else if (m.t === 'ping') send(ws, { t: 'pong', id: m.id });
     else if (m.t === 'coin' && typeof m.part === 'string') {

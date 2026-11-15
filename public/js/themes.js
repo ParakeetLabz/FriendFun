@@ -1,5 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
-import { CLUB } from './ui.js?v=36e85650';
+import { CLUB } from './ui.js?v=fb1c626d';
 // App themes — FriendClub exclusive. 'funtopia' is the default (no body class).
 // A theme only applies when the user is a FriendClub member (enforced in applyTheme).
 export const THEMES = [

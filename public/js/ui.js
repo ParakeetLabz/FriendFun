@@ -14,6 +14,8 @@ const chatIcon = '<svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><p
 
 export const LOGO = '<svg class="ff-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fflg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="ff-lg-a" stop-color="#7c3aed"/><stop offset="1" class="ff-lg-b" stop-color="#06b6d4"/></linearGradient></defs><rect x="3" y="3" width="42" height="42" rx="12" fill="url(#fflg)"/><rect x="14" y="17" width="7" height="9" rx="2" fill="#fff"/><rect x="27" y="17" width="7" height="9" rx="2" fill="#fff"/><path d="M16 31q8 6 16 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path class="ff-spark" d="M41 2l1.7 4.6L47 8.3l-4.3 1.7L41 14.6 39.3 10 35 8.3l4.3-1.7z" fill="#22d3ee"/></svg>';
 
+// Display name: the friendly name a player chose (falls back to their username).
+export const displayNameOf = u => (u && (u.displayName || u.display_name)) || (u && u.name) || '';
 export const CLUB = `<svg class="club-badge" viewBox="0 0 24 24" width="18" height="18"><title>FriendClub member</title><path fill="#ffd400" d="${CLUB_PATH}"/></svg>`;
 
 export const tix = '<svg class="tix" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 5h18a1 1 0 0 1 1 1v2.2a2.8 2.8 0 0 0 0 5.6V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2.2a2.8 2.8 0 0 0 0-5.6V6a1 1 0 0 1 1-1z"/><line x1="8" y1="5" x2="8" y2="17" stroke="#1b1d1f" stroke-width="1.4" stroke-dasharray="2 1.6" opacity=".55"/><circle cx="15" cy="11" r="2.2" fill="#1b1d1f" opacity=".65"/></svg>';

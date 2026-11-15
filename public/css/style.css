@@ -11,6 +11,28 @@ body.theme-forest { --bg: #0d1f0d; --bg2: #142a14; --card: #1a3a1a; --card2: #22
 body.theme-sunset { --bg: #2a0f1e; --bg2: #3a1428; --card: #4a1a32; --card2: #5a2240; --line: #7a2f55; --text: #fff0f5; --muted: #d9a8c0; --blue: #fb923c; --blue2: #ec4899; --pink: #f472b6; --green: #2ed573; --red: #f87171; --gold: #fbbf24; --grad: linear-gradient(135deg, #ec4899, #fb923c); --shadow: 0 8px 32px rgba(0,0,0,.45); --glow: 0 0 18px rgba(236,72,153,.4); background: radial-gradient(1200px 600px at 80% -10%, #ec489933 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #fb923c22 0%, transparent 55%), var(--bg); }
 body.theme-midnight { --bg: #0b0f1a; --bg2: #111827; --card: #1e293b; --card2: #273449; --line: #334155; --text: #f1f5f9; --muted: #94a3b8; --blue: #60a5fa; --blue2: #3b82f6; --pink: #a78bfa; --green: #34d399; --red: #f87171; --gold: #fbbf24; --grad: linear-gradient(135deg, #3b82f6, #60a5fa); --shadow: 0 8px 32px rgba(0,0,0,.45); --glow: 0 0 18px rgba(59,130,246,.4); background: radial-gradient(1200px 600px at 80% -10%, #3b82f633 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #60a5fa22 0%, transparent 55%), var(--bg); }
 
+/* ---------- FunTopia Family ---------- */
+.fam-hero { display: flex; align-items: center; gap: 16px; background: var(--card); border: 1px solid var(--line); border-left: 6px solid var(--fam-color, var(--blue2)); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+.fam-hero-icon { font-size: 44px; line-height: 1; }
+.fam-hero h1 { margin: 0; }
+.fam-picks { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0; }
+.fam-swatch { width: 32px; height: 32px; border-radius: 999px; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.fam-swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--blue2); }
+.fam-ico { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card2); font-size: 20px; cursor: pointer; }
+.fam-ico.on { border-color: var(--blue2); box-shadow: var(--glow); }
+.fam-members { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.fam-member { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+.fam-member .ut-img { width: 40px; height: 40px; flex: none; }
+.fam-member .ut-img img { width: 100%; height: 100%; border-radius: 8px; }
+.fam-member > div:nth-child(2) { flex: 1; min-width: 0; overflow: hidden; }
+.fam-chat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; max-height: 320px; overflow-y: auto; margin-bottom: 10px; }
+.fam-msg { margin-bottom: 10px; }
+.fam-msg.mine { text-align: right; }
+.fam-msg.mine > div { background: var(--blue2); color: #fff; display: inline-block; padding: 6px 12px; border-radius: 12px; margin-top: 2px; }
+.fam-msg:not(.mine) > div { background: var(--card2); padding: 6px 12px; border-radius: 12px; margin-top: 2px; display: inline-block; }
+.fam-chat-send { display: flex; gap: 8px; }
+.fam-chat-send input { flex: 1; background: var(--card); border: 1px solid var(--line); color: var(--text); padding: 12px 14px; border-radius: 12px; font-size: 15px; font-family: inherit; min-width: 0; }
+
 /* ---------- themes picker ---------- */
 .th-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-top: 16px; }
 .th-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; cursor: pointer; text-align: left; color: var(--text); font: inherit; position: relative; }

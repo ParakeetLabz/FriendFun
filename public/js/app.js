@@ -1,7 +1,7 @@
-import { nameColor, tix, LOGO, CLUB, badgeIcon } from './ui.js?v=36e85650';
+import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=fb1c626d';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=aa2d7d24';
-import { THEME_IDS, themesPage } from './themes.js?v=f1fbe57b';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=20fd6e41';
+import { THEME_IDS, themesPage } from './themes.js?v=b364ac9e';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -164,7 +164,7 @@ function gameCard(g) {
 function userTile(u) {
   const st = u.gameId ? 'ingame' : u.online ? 'online' : '';
   return `<a class="user-tile" href="#/users/${encodeURIComponent(u.name)}" title="${u.gameName ? 'Playing ' + esc(u.gameName) : ''}">
-    <div class="ut-img ${st}">${avatarImgTag(u.avatar)}</div><div class="ut-name">${esc(u.name)}${u.moderator ? ` <span class="ic" title="Moderator">${icons.shield}</span>` : ''}</div>
+    <div class="ut-img ${st}">${avatarImgTag(u.avatar)}</div><div class="ut-name">${esc(displayNameOf(u))}${u.moderator ? ` <span class="ic" title="Moderator">${icons.shield}</span>` : ''}</div>
     ${u.gameName ? `<div class="ut-game">${esc(u.gameName)}</div>` : ''}</a>`;
 }
 
@@ -293,6 +293,11 @@ function settingsPage() {
       <label class="set-row"><span>Reduce motion</span><input type="checkbox" class="set-rm" ${rmOn ? 'checked' : ''}></label>
       <label class="set-row"><span>Chat timestamps</span><input type="checkbox" class="set-ct" ${ctOn ? 'checked' : ''}></label>
     </section>
+    <section class="admin-section"><h3><span class="ic">${icons.profile}</span> Display name</h3>
+      <p class="muted small">Shown instead of your username in the lobby, chat and on your profile. 2–24 characters — leave it empty to use your username.</p>
+      <input type="text" class="set-dname" placeholder="Display name" maxlength="24" value="${esc(me.displayName || '')}">
+      <button class="btn-primary set-dname-btn">Save display name</button>
+    </section>
     <section class="admin-section"><h3><span class="ic">${icons.shield}</span> Account</h3>
       <div class="set-row"><span>Change password</span></div>
       <input type="password" class="set-curpw" placeholder="Current password" maxlength="64" autocomplete="current-password">
@@ -324,6 +329,14 @@ function settingsPage() {
       toast(b.dataset.gfx === 'advanced' ? 'Advanced graphics on — rejoin a game to see it' : 'Classic graphics on');
       settingsPage();
     });
+    app.querySelector('.set-dname-btn').onclick = async () => {
+      const v = app.querySelector('.set-dname').value.trim();
+      try {
+        const r = await api('POST', '/api/me/display-name', { displayName: v });
+        me.displayName = r.displayName || '';
+        toast(v ? 'Display name set to ' + v : 'Display name cleared — using your username');
+      } catch (e) { toast(e.message, true); }
+    };
     app.querySelector('.set-pw-btn').onclick = async () => {
       const cur = app.querySelector('.set-curpw').value, nw = app.querySelector('.set-newpw').value;
       if (!cur || !nw) { toast('Fill in both password fields', true); return; }
@@ -535,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=60146535');
+  const m = await import('./lobby.js?v=88be70a5');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -724,7 +737,7 @@ async function playPage(id, server, autoVoice) {
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=7bf46196');
+  const { Game } = await import('./game.js?v=42c6152e');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1237,7 +1250,7 @@ async function profilePage(name) {
   mount('users', `
     <div class="profile-head">
       <div class="ph-img ${u.gameId ? 'ingame' : u.online ? 'online' : ''}">${avatarImgTag(u.avatar)}</div>
-      <div class="ph-info"><h1>${esc(u.name)}${vtag(u.name)}${badgeIcon2(u.badge)}</h1><div class="muted">@${esc(u.name)}</div>
+      <div class="ph-info"><h1>${esc(displayNameOf(u))}${vtag(u.name)}${badgeIcon2(u.badge)}</h1><div class="muted">@${esc(u.name)}</div>
         ${soc?.status ? `<div class="ph-status"><span class="ic">${icons.chat}</span> ${esc(soc.status)}</div>` : ''}
         <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${soc?.followers ?? 0}</b> Followers</div><div><b>${soc?.following ?? 0}</b> Following</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
       </div>
@@ -1329,7 +1342,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=7bf46196');
+      const { Game: GameClass } = await import('./game.js?v=42c6152e');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1510,16 +1523,17 @@ const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CL
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
 const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
+const familyDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
 const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMoney, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=e228d0ac');
+  const m = await import('./admin.js?v=bb94a5df');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=e228d0ac');
+  const m = await import('./admin.js?v=bb94a5df');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1617,7 +1631,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -1639,6 +1653,7 @@ async function route() {
       case 'catalog': return await catalogPage(seg[1]);
       case 'ugc': { const m = await import('./ugc-studio.js?v=90440012'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
+      case 'family': { const m = await import('./family.js?v=985258af'); return m.familyPage(familyDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();

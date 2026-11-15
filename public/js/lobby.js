@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=185b257d';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { LOGO } from './ui.js?v=36e85650';
-import { PEPPER_CAN } from './pepper.js?v=aa2d7d24';
+import { LOGO, displayNameOf } from './ui.js?v=fb1c626d';
+import { PEPPER_CAN } from './pepper.js?v=20fd6e41';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -43,7 +43,7 @@ export async function lobbyPage(D) {
         <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${hasPepper ? PEPPER_CAN : icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
         <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>
         <div class="tb-user-wrap">
-          <button class="lb-chip" title="Account menu">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(me.name)}</b><span>&#9662;</span></button>
+          <button class="lb-chip" title="Account menu">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(displayNameOf(me))}</b><span>&#9662;</span></button>
           <div class="tb-menu lb-menu hidden">
             <a href="#/users/${encodeURIComponent(me.name)}" class="tb-menu-item"><span class="sb-ico">${icons.profile}</span>View Profile</a>
             <div class="tb-menu-sep"></div>
@@ -66,6 +66,7 @@ export async function lobbyPage(D) {
       <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
       <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
       <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
+      <a class="lb-item" href="#/family"><span class="ic">${icons.groups}</span>FAMILY</a>
       <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
       <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
       ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
@@ -93,7 +94,7 @@ export async function lobbyPage(D) {
         </div>
       </div>
     </aside>
-    <div class="lb-nameplate"><b>${esc(me.name)}</b><span><span class="ic">${icons.award}</span> ${(me.badges || []).length} badges · <span class="ic">${icons.zap}</span> ${me.streak || 0} day streak</span></div>
+    <div class="lb-nameplate"><b>${esc(displayNameOf(me))}</b>${me.displayName && me.displayName !== me.name ? `<span class="muted small">@${esc(me.name)}</span>` : ''}<span><span class="ic">${icons.award}</span> ${(me.badges || []).length} badges · <span class="ic">${icons.zap}</span> ${me.streak || 0} day streak</span></div>
     <div class="lb-emotes">${[['wave', '👋'], ['dance', '💃'], ['floss', '🕺'], ['spin', '🌀'], ['bow', '🙇'], ['cheer', '🎉'], ['laugh', '😂'], ['dab', '😎'], ['sit', '🪑'], ['salute', '🫡'], ['rock', '🎸'], ['shrug', '🤷']].map(([n, e]) => `<button data-e="${n}" title="${n}">${e}</button>`).join('')}</div>
     <footer class="lb-tiles">
       ${recent ? `<a class="lb-tile" href="#/play/${recent.id}"><span>⏩</span><b>Continue</b><i>${esc(recent.name)}</i></a>` : ''}
