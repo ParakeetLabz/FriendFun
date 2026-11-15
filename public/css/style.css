@@ -1069,3 +1069,50 @@ body.party-glitching #app { animation: pt-shake .12s infinite; }
   .part-pick button { min-height: 44px; }
   .av-tabs button, .cat-filters a, .group-tabs button { min-height: 44px; }
 }
+
+/* ---------- 2UI: GUI-only games ---------- */
+.gc-2ui { position: absolute; top: 8px; left: 8px; background: linear-gradient(135deg, #ec4899, #7c3aed); color: #fff; font-size: 11px; font-weight: 900; letter-spacing: 1px; padding: 3px 8px; border-radius: 999px; z-index: 2; }
+.two-ui-play { position: relative; display: flex; flex-direction: column; min-height: 100%; border-radius: 16px; overflow: hidden; }
+.two-ui-play-wrap { display: flex; }
+.two-ui-play-wrap .two-ui-play { flex: 1; }
+.two-ui-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: rgba(0,0,0,.25); }
+.two-ui-score { font-weight: 900; font-size: 18px; color: #fff; white-space: nowrap; }
+.two-ui-bar { flex: 1; height: 12px; background: rgba(255,255,255,.18); border-radius: 999px; overflow: hidden; }
+.two-ui-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f5cd30, #7c3aed); border-radius: 999px; transition: width .25s; }
+.two-ui-exit { margin-left: auto; margin-right: 44px; }
+.two-ui-area { position: relative; width: 100%; max-width: 760px; margin: 0 auto; aspect-ratio: 4 / 3; background: inherit; overflow: hidden; border-radius: 0 0 16px 16px; }
+.two-ui-el { position: absolute; display: flex; align-items: center; justify-content: center; text-align: center; border: none; border-radius: 12px; font-weight: 800; font-size: 15px; padding: 4px 8px; overflow: hidden; cursor: default; user-select: none; touch-action: none; }
+button.two-ui-el { cursor: pointer; }
+.two-ui-el.two-ui-coin { border-radius: 50%; font-size: 22px; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+.two-ui-el.two-ui-button { box-shadow: 0 4px 0 rgba(0,0,0,.3); }
+.two-ui-el.two-ui-button:active, .two-ui-el.two-ui-coin:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.two-ui-el.two-ui-label { background: transparent !important; box-shadow: none; font-weight: 900; }
+.two-ui-el.two-ui-panel { cursor: default; }
+.two-ui-cd { opacity: .45; filter: saturate(.5); }
+.two-ui-float { position: absolute; left: 50%; top: 0; transform: translateX(-50%); font-weight: 900; color: #f5cd30; text-shadow: 0 2px 6px rgba(0,0,0,.6); pointer-events: none; animation: twoUiFloat .9s ease-out forwards; z-index: 5; }
+@keyframes twoUiFloat { from { opacity: 1; transform: translate(-50%, 0); } to { opacity: 0; transform: translate(-50%, -34px); } }
+.two-ui-win { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); z-index: 10; }
+.two-ui-win-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px 28px; text-align: center; max-width: 340px; }
+.two-ui-win-card h2 { margin: 0 0 8px; }
+.two-ui-win-card p { margin: 0 0 16px; color: var(--muted); }
+/* studio */
+.two-ui-studio { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.two-ui-side { flex: 1 1 300px; min-width: 280px; }
+.two-ui-canvas-wrap { flex: 2 1 420px; min-width: 320px; }
+.two-ui-canvas-wrap .two-ui-area { border: 2px dashed var(--line); border-radius: 16px; }
+.two-ui-lbl { display: block; font-weight: 700; font-size: 13px; margin-bottom: 10px; }
+.two-ui-lbl input { display: block; width: 100%; margin-top: 4px; }
+.two-ui-add { flex-wrap: wrap; }
+.two-ui-insp { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.two-ui-insp .row { gap: 8px; }
+.two-ui-insp .two-ui-lbl { flex: 1; min-width: 0; }
+.two-ui-actions { flex-wrap: wrap; gap: 8px; }
+.two-ui-el.two-ui-sel { outline: 3px solid #22d3ee; outline-offset: 1px; z-index: 3; }
+.two-ui-edit .two-ui-el { cursor: grab; }
+.two-ui-testov { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.7); align-items: center; justify-content: center; padding: 16px; }
+.two-ui-testov .two-ui-play { width: 100%; max-width: 760px; }
+@media (max-width: 767px) {
+  .two-ui-head { flex-wrap: wrap; }
+  .two-ui-score { font-size: 16px; }
+  .two-ui-area { aspect-ratio: 3 / 4; }
+}

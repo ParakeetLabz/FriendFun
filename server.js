@@ -232,7 +232,7 @@ async function publicUser(u) {
 }
 function gameSummary(g) {
   let playing = 0; for (const [k, r] of rooms) if (k === g.id || k.startsWith(g.id + ':')) playing += r.players.size;
-  return { id: g.id, name: g.name, creator: g.creator, visits: g.visits, likes: g.likes, dislikes: g.dislikes, playing, thumbnail: g.thumbnail, updated: g.updated, sky: g.world?.sky, maxPlayers: g.max_players || 30, featured: !!g.featured || featuredGames.has(g.id) };
+  return { id: g.id, name: g.name, creator: g.creator, visits: g.visits, likes: g.likes, dislikes: g.dislikes, playing, thumbnail: g.thumbnail, updated: g.updated, sky: g.world?.sky, maxPlayers: g.max_players || 30, featured: !!g.featured || featuredGames.has(g.id), is2ui: !!g.world?.twoUi };
 }
 const BAD = ['damn', 'hell', 'stupid', 'idiot', 'dumb', 'crap', 'shut up', 'loser'];
 function filter(text) {
@@ -1535,6 +1535,15 @@ app.post('/api/games/:id/thumbnail', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/games/:id/visit', auth, async (req, res) => {
+  const { data: g, error: gErr } = await supabase.from('games').select('id, visits').eq('id', req.params.id).single();
+  if (gErr || !g) return res.status(404).json({ error: 'Game not found' });
+  await supabase.from('games').update({ visits: (g.visits || 0) + 1 }).eq('id', g.id);
+  const updatedRecent = [g.id, ...(req.user.recent || []).filter(x => x !== g.id)].slice(0, 12);
+  await supabase.from('users').update({ recent: updatedRecent }).eq('name', req.user.name);
+  res.json({ ok: true });
+});
+
 function validIcon(s) {
   const v = String(s || '').trim();
   if (!v) return '';
@@ -1561,6 +1570,32 @@ function sanitizeScript(s) {
     out.onTouch.z = Math.max(-2000, Math.min(2000, num(onTouch.z)));
   }
   return out;
+}
+function sanitizeTwoUi(t) {
+  if (!t || typeof t !== 'object') return null;
+  const num = v => (Number.isFinite(+v) ? +v : 0);
+  const hex = v => (/^#[0-9a-fA-F]{6}$/.test(v) ? v : null);
+  const els = (Array.isArray(t.elements) ? t.elements : []).slice(0, 100).map((e, i) => {
+    const kind = ['button', 'label', 'coin', 'panel'].includes(e.kind) ? e.kind : 'button';
+    return {
+      id: String(e.id || 'e' + i).slice(0, 20),
+      kind,
+      x: Math.max(0, Math.min(92, num(e.x))),
+      y: Math.max(0, Math.min(92, num(e.y))),
+      w: Math.max(2, Math.min(100, num(e.w) || 20)),
+      h: Math.max(2, Math.min(100, num(e.h) || 10)),
+      text: filter(String(e.text || '')).slice(0, 60),
+      color: hex(e.color) || '#ffffff',
+      bg: hex(e.bg) || (kind === 'button' ? '#7c3aed' : kind === 'coin' ? '#f5cd30' : '#2a2a40'),
+      points: (kind === 'button' || kind === 'coin') ? Math.max(0, Math.min(1000, Math.round(num(e.points) || 0))) : 0,
+      cooldown: (kind === 'button' || kind === 'coin') ? Math.max(0, Math.min(60, num(e.cooldown) || 0)) : 0,
+    };
+  });
+  return {
+    goal: Math.max(10, Math.min(10000, Math.round(num(t.goal) || 100))),
+    bg: hex(t.bg) || '#17172a',
+    elements: els,
+  };
 }
 function sanitizeWorld(w) {
   const num = v => (Number.isFinite(+v) ? +v : 0);
@@ -1599,13 +1634,15 @@ function sanitizeWorld(w) {
   const gears = Array.isArray(w?.gears) ? [...new Set(w.gears.filter(id => typeof id === 'string' && /^gear_[a-z0-9_]+$/.test(id)))].slice(0, 10) : [];
   const lw = w?.light || {};
   const light = { tod: Math.max(0, Math.min(24, +lw.tod || 0)), ambient: Math.max(0, Math.min(2, lw.ambient ?? 1)), fog: Math.max(0, Math.min(1, lw.fog ?? 0.35)) };
+  const twoUi = sanitizeTwoUi(w?.twoUi);
   return { sky: /^#[0-9a-fA-F]{6}$/.test(w?.sky) ? w.sky : '#8fc8ff', parts,
     ...(w?.shooter === true ? { shooter: true } : {}),
     ...(gears.length ? { gears } : {}),
     ...(((light.tod !== 12 || light.ambient !== 1 || light.fog !== 0.35)) ? { light } : {}),
     ...(htmlScripts.length ? { htmlScripts } : {}),
     ...(folders.length ? { folders } : {}),
-    ...(scripts.length ? { scripts } : {}) };
+    ...(scripts.length ? { scripts } : {}),
+    ...(twoUi ? { twoUi } : {}) };
 }
 
 function winBadges(game) {

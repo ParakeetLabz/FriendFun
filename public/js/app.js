@@ -156,7 +156,7 @@ async function fillThumbs(root = app) {
 const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><rect width="16" height="9" fill="#393b3d"/></svg>');
 function gameCard(g) {
   return `<a class="game-card" href="#/games/${g.id}">
-    <div class="gc-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`} alt="">${g.icon ? `<span class="gc-icon">${esc(g.icon)}</span>` : ''}</div>
+    <div class="gc-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`} alt="">${g.icon ? `<span class="gc-icon">${esc(g.icon)}</span>` : ''}${g.is2ui ? `<span class="gc-2ui">2UI</span>` : ''}</div>
     <div class="gc-name">${esc(g.name || "Untitled Game")}</div>
     <div class="gc-stats"><span>${icons.thumb} ${rating(g)}</span><span>${icons.people} ${fmt(g.playing)}</span></div>
   </a>`;
@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=1c6b596b');
+  const m = await import('./lobby.js?v=f8091986');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -736,6 +736,17 @@ async function playPage(id, server, autoVoice) {
   me = await api('GET', '/api/me');
   const wasOverlay = overlayMode;
   if (wasOverlay) app.classList.add('fullscreen'); else app.className = 'fullscreen';
+  // 2UI game: GUI-only, no 3D world — play it in the interface itself.
+  if (g.world?.twoUi) {
+    api('POST', `/api/games/${id}/visit`).catch(() => {});
+    app.innerHTML = '<div class="play-container two-ui-play-wrap"></div>';
+    const { renderTwoUi } = await import('./two-ui.js?v=7579cbac');
+    const player = renderTwoUi(app.querySelector('.play-container'), g.world.twoUi, {
+      onExit: () => { player.destroy(); cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
+    });
+    cleanup = () => player.destroy();
+    return;
+  }
   app.innerHTML = '<div class="play-container"></div>';
   const { Game } = await import('./game.js?v=ee9258c2');
   const game = new Game(app.querySelector('.play-container'), {
@@ -1311,6 +1322,7 @@ async function createPage() {
     <h1>Create</h1>
     <div class="av-tabs"><button class="active"><span class="ic">${icons.gamepad}</span> Experiences</button><button data-goto="#/ugc"><span class="ic">${icons.palette}</span> UGC Studio</button><button data-goto="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</button></div>
     <a href="#/funai" style="display:block;text-decoration:none;background:var(--grad);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:var(--glow)"><span style="font-weight:900;font-size:18px"><span class="ic">${icons.sparkles}</span> Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
+    <a href="#/2ui/new" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ec4899,#7c3aed);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px"><span style="font-weight:900;font-size:18px">🖥️ Make a 2UI Game</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">A GUI-only game — buttons, coins and labels, no 3D world. Players build their own and everyone can play them →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>Load a .fun file</h2></div>
@@ -1318,7 +1330,7 @@ async function createPage() {
       <div class="row"><button class="btn-secondary" id="funImportBtn"><span class="ic">${icons.upload}</span> Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
     <section><div class="sec-h"><h2>My Experiences (${mine.length})</h2></div>
       <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${g.icon ? esc(g.icon) + ' ' : ''}${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
-        <a class="btn-secondary" href="#/studio/${g.id}">Edit</a><a class="btn-secondary" href="#/games/${g.id}">View</a><button class="btn-danger" data-del="${g.id}">Delete</button></div>`).join('') || '<p class="muted">You haven\'t made anything yet. Pick a template above to open Funtopia Studio!</p>'}</div></section>`, () => {
+        <a class="btn-secondary" href="#/${g.is2ui ? '2ui' : 'studio'}/${g.id}">Edit</a><a class="btn-secondary" href="#/games/${g.id}">View</a><button class="btn-danger" data-del="${g.id}">Delete</button></div>`).join('') || '<p class="muted">You haven\'t made anything yet. Pick a template above to open Funtopia Studio!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => location.hash = b.dataset.goto);
     setTimeout(() => app.querySelectorAll('img[data-tpl]').forEach(img => { img.src = tplThumb(img.dataset.tpl); }), 30);
     app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => confirmModal('Delete Experience', 'This cannot be undone. Delete it?', 'Delete', async () => { await api('DELETE', '/api/games/' + b.dataset.del); createPage(); }));
@@ -1525,6 +1537,7 @@ const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
 const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
 const familyDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
+const twoUiDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMoney, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
@@ -1631,7 +1644,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', '2ui']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -1654,6 +1667,7 @@ async function route() {
       case 'ugc': { const m = await import('./ugc-studio.js?v=90440012'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
+      case '2ui': { const m = await import('./two-ui.js?v=7579cbac'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
