@@ -175,7 +175,33 @@ export async function lobbyPage(D) {
   const rimV = new THREE.PointLight(hasPepper ? 0xffb347 : 0x7c4dff, 55, 30); rimV.position.set(7, 2.5, -5); scene.add(rimV);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(26, 48), new THREE.MeshStandardMaterial({ color: 0x101017, roughness: 0.35, metalness: 0.35 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; scene.add(floor);
+  // accent colors: warm for Dr. Pepper themed players, violet/cyan otherwise
+  const ACCENT = hasPepper ? 0xffb347 : 0x7c4dff;
+  const ACCENT2 = hasPepper ? 0xe8112d : 0x22d3ee;
+  const ACCENT3 = hasPepper ? 0xff5a5a : 0xb388ff;
+  // glowing rings flat on the floor
+  const floorRing = (r, color, op) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.06, 8, 64), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.2, transparent: true, opacity: op }));
+    m.rotation.x = Math.PI / 2; m.position.y = -0.48; scene.add(m); return m;
+  };
+  floorRing(8, ACCENT, 0.8);
+  floorRing(12, ACCENT2, 0.4);
+  // top spotlight washing the stage
+  const spot = new THREE.SpotLight(0xfff1d6, 60, 30, 0.55, 0.6, 1);
+  spot.position.set(0, 12, 4); spot.target.position.set(0, 0, 0); scene.add(spot); scene.add(spot.target);
   const stage = new THREE.Group(); scene.add(stage);
+  // center stage: two tiers, top tier surface at y=0 so the character stands on it
+  const tierMat = new THREE.MeshStandardMaterial({ color: 0x1c1e28, roughness: 0.4, metalness: 0.5 });
+  const tier1 = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.7, 0.5, 48), tierMat);
+  tier1.position.y = -0.75; stage.add(tier1);
+  const tier2 = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.7, 0.5, 48), tierMat);
+  tier2.position.y = -0.25; stage.add(tier2);
+  const glowRing = (r, y, color) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 10, 64), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.8 }));
+    m.rotation.x = Math.PI / 2; m.position.y = y; stage.add(m); return m;
+  };
+  glowRing(3.4, -0.48, ACCENT);
+  glowRing(2.5, 0.02, ACCENT3);
   const podium = (x, z, r, ringColor) => {
     const g = new THREE.Group();
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.15, 0.5, 40), new THREE.MeshStandardMaterial({ color: 0x1c1e28, roughness: 0.4, metalness: 0.5 }));
@@ -184,8 +210,44 @@ export async function lobbyPage(D) {
     ring.rotation.x = Math.PI / 2; ring.position.y = 0.02; g.add(ring);
     g.position.set(x, 0, z); stage.add(g); return g;
   };
-  podium(0, 0, 2.3, 0xb388ff);
-  podium(-5.7, -0.9, 1.7, 0x39415e); podium(5.7, -0.9, 1.7, 0x39415e);
+  podium(-5.7, -0.9, 1.7, ACCENT); podium(5.7, -0.9, 1.7, ACCENT);
+  // floating halos + crystals (decor, rotates with the stage)
+  const floaters = [];
+  const halo = (x, y, z, r, color) => {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 8, 48), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.4, transparent: true, opacity: 0.9 }));
+    m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.5 + Math.random() * 0.4, phase: Math.random() * 6.28, spin: 0.3 }); return m;
+  };
+  halo(-4.2, 3.2, -2.5, 0.9, ACCENT);
+  halo(4.2, 3.8, -2.5, 0.9, ACCENT2);
+  halo(0, 5.2, -4, 1.2, ACCENT3);
+  const crystal = (x, y, z, s, color) => {
+    const m = new THREE.Mesh(new THREE.OctahedronGeometry(s), new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.6 }));
+    m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.6 + Math.random() * 0.5, phase: Math.random() * 6.28, spin: 0.5 }); return m;
+  };
+  crystal(-3.4, 2.2, 1.8, 0.35, ACCENT);
+  crystal(3.4, 2.6, 1.8, 0.35, ACCENT2);
+  crystal(-6.5, 3.0, -3.5, 0.28, ACCENT3);
+  crystal(6.5, 2.4, -3.5, 0.28, ACCENT);
+  // floating dust / stars
+  const pGeo = new THREE.BufferGeometry();
+  const pCount = 220;
+  const pPos = new Float32Array(pCount * 3);
+  for (let i = 0; i < pCount; i++) {
+    pPos[i * 3] = (Math.random() - 0.5) * 30;
+    pPos[i * 3 + 1] = Math.random() * 9;
+    pPos[i * 3 + 2] = (Math.random() - 0.5) * 30;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const stars = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: ACCENT3, size: 0.09, transparent: true, opacity: 0.8 }));
+  scene.add(stars);
+  // light beams from above
+  const beam = (x, z, color) => {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(1.6, 9, 24, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    m.position.set(x, 4.5, z); scene.add(m); return m;
+  };
+  beam(0, 0, ACCENT);
+  beam(-5.7, -0.9, ACCENT2);
+  beam(5.7, -0.9, ACCENT2);
   const chars = [];
   const addChar = (avatar, name, x, z, s) => {
     try {
@@ -220,6 +282,8 @@ export async function lobbyPage(D) {
     if (!dragging && !rm) targetSpin += dt * 0.12;
     spin += (targetSpin - spin) * Math.min(1, dt * 6);
     stage.rotation.y = spin;
+    floaters.forEach(f => { f.m.position.y = f.baseY + Math.sin(t * f.speed + f.phase) * 0.35; f.m.rotation.y += dt * f.spin; f.m.rotation.x += dt * f.spin * 0.5; });
+    stars.rotation.y = t * 0.02;
     if (myEmote !== 'idle' && t >= emoteEnd) { myEmote = 'idle'; app.querySelectorAll('.lb-emotes button').forEach(x => x.classList.remove('on')); }
     chars.forEach((c, i) => animateCharacter(c, i === 0 ? myEmote : 'idle', t + i * 1.7, dt));
     renderer.render(scene, camera);
