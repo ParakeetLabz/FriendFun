@@ -1,5 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
-import { displayNameOf, FAMILY_LOGO } from './ui.js?v=c7d9c2ae';
+import { displayNameOf, FAMILY_LOGO } from './ui.js?v=a89886d1';
 // 👨‍👩‍👧‍👦 FunTopia Family page (#/family): create or join a family, family-only
 // chat, and the shared family account (name, color, icon, motto).
 const FAMILY_COLORS = ['#7c3aed', '#e2231a', '#0284c7', '#16a34a', '#ec4899', '#f59e0b', '#06b6d4', '#ef4444'];

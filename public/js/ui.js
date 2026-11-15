@@ -18,9 +18,9 @@ export const LOGO = '<svg class="ff-logo" viewBox="0 0 48 48" xmlns="http://www.
 export const displayNameOf = u => (u && (u.displayName || u.display_name)) || (u && u.name) || '';
 
 // Play logo: a bold rounded play triangle (inherits the button/rail color).
-export const PLAY_LOGO = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-label="Play"><path d="M8 5.2c0-1.2 1.3-2 2.4-1.3l10 6.3c1 .6 1 2 0 2.6l-10 6.3c-1.1.7-2.4-.1-2.4-1.3z"/></svg>';
+export const PLAY_LOGO = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-label="Play"><path fill-rule="evenodd" d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3z M9.5 8v8l6.5-4z"/></svg>';
 // Family logo: a house with a heart cut out of it (original, drawn in code).
-export const FAMILY_LOGO = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-label="Family"><path fill-rule="evenodd" d="M12 2.5 22 10.5V22H2V10.5L12 2.5z M12 17.8c-2.2-1.6-3.6-2.7-3.6-4.1 0-1.1.9-1.9 1.9-1.9.7 0 1.3.4 1.7.9.4-.5 1-.9 1.7-.9 1 0 1.9.8 1.9 1.9 0 1.4-1.4 2.5-3.6 4.1z"/></svg>';
+export const FAMILY_LOGO = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-label="Family"><path fill-rule="evenodd" d="M12 2.5 22 10.5V22H2V10.5L12 2.5z M12 19.5c-3-2.2-5-3.7-5-5.8 0-1.5 1.2-2.7 2.6-2.7 1 0 1.8.5 2.4 1.3.6-.8 1.4-1.3 2.4-1.3 1.4 0 2.6 1.2 2.6 2.7 0 2.1-2 3.6-5 5.8z"/></svg>';
 export const CLUB = `<svg class="club-badge" viewBox="0 0 24 24" width="18" height="18"><title>FriendClub member</title><path fill="#ffd400" d="${CLUB_PATH}"/></svg>`;
 
 export const tix = '<svg class="tix" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M3 5h18a1 1 0 0 1 1 1v2.2a2.8 2.8 0 0 0 0 5.6V16a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-2.2a2.8 2.8 0 0 0 0-5.6V6a1 1 0 0 1 1-1z"/><line x1="8" y1="5" x2="8" y2="17" stroke="#1b1d1f" stroke-width="1.4" stroke-dasharray="2 1.6" opacity=".55"/><circle cx="15" cy="11" r="2.2" fill="#1b1d1f" opacity=".65"/></svg>';

@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=185b257d';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=c7d9c2ae';
-import { PEPPER_CAN } from './pepper.js?v=eb8c8773';
+import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=a89886d1';
+import { PEPPER_CAN } from './pepper.js?v=57beac3a';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

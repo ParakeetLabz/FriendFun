@@ -1,7 +1,7 @@
 // Dr. Pepper branding for themed players — original pixel art drawn in code
 // (Dr. Pepper colors/style; no official logo file or can photo is used).
 // A detailed pixel can, the crack bursts, and the header branding swap.
-import { LOGO } from './ui.js?v=c7d9c2ae';
+import { LOGO } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
 
 // Detailed pixel Dr. Pepper can, drawn in a 48x72 space: silver top, red body
