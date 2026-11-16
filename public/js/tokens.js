@@ -5,9 +5,28 @@
 // the pumpkin shop for exactly one purchase.
 import { CATALOG, ITEM } from './catalog.js?v=3253bf8f';
 import { avatarImage } from './avatar3d.js?v=32a86ecf';
+import { PEPPER_CAN } from './pepper.js?v=57beac3a';
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
 let lastResult = '';
+// Original soda-ad jingle, synthesized live (a bouncy original melody —
+// the real Dr. Pepper jingle is copyrighted, so this one is made in code).
+function playPepperJingle() {
+  try {
+    if (localStorage.getItem('ff_sfx') === '0') return;
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [[523.25, 0, .16], [659.25, .16, .16], [783.99, .32, .16], [659.25, .48, .16], [880, .64, .22], [783.99, .88, .16], [659.25, 1.04, .16], [523.25, 1.2, .16], [587.33, 1.36, .16], [659.25, 1.52, .16], [783.99, 1.68, .3], [1046.5, 2.0, .5]];
+    for (const [f, t, d] of notes) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(.22, ctx.currentTime + t + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, ctx.currentTime + t + d);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + d + .05);
+    }
+  } catch (e) { /* audio unavailable — the ad still plays silently */ }
+}
 const PUMPY_SVG = `<svg viewBox="0 0 200 200" width="150" height="150" aria-label="Pumpy the pumpkin shopkeeper"><ellipse cx="100" cy="118" rx="76" ry="64" fill="#ff6d00"/><path d="M100 54 Q64 118 100 182 M100 54 Q136 118 100 182 M100 54 Q82 118 100 182 M100 54 Q118 118 100 182" stroke="#e65100" stroke-width="4" fill="none" opacity=".7"/><rect x="91" y="34" width="18" height="26" rx="6" fill="#558b2f"/><path d="M109 44 Q132 30 138 52 Q120 58 109 44" fill="#66bb6a"/><circle cx="74" cy="104" r="12" fill="#fff"/><circle cx="74" cy="104" r="6" fill="#212121"/><circle cx="126" cy="104" r="12" fill="#fff"/><circle cx="126" cy="104" r="6" fill="#212121"/><path d="M68 132 Q100 156 132 132" stroke="#212121" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M100 160 L88 176 L100 170 L112 176 Z" fill="#c8102e"/><circle cx="100" cy="163" r="4" fill="#ffd700"/></svg>`;
 const ABILITY_LABEL = { speed: '⚡ +50% run speed', doublejump: '☁️ Double jump', magnet: '🧲 Coins fly to you', shield: '🛡️ Block kill parts', fly: '🪽 Hold Space to glide', star: '🌟 Speed + coin magnet', universal: '🌠 Speed + double jump + magnet', tornado: '🌪️ Tornado dash (Q) + speed' };
 
@@ -36,11 +55,25 @@ export async function tokensPage(D) {
     <div class="token-reveal-overlay" id="tokenReveal" hidden>
       <div class="token-reveal-card">
         <div class="token-reveal-title">🎉 YOU WON! 🎉</div>
+        <img class="token-reveal-dancer" id="tokenRevealDancer" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar dancing" />
         <div class="token-reveal-emoji" id="tokenRevealEmoji">✨</div>
         <div class="token-reveal-name" id="tokenRevealName"></div>
         <div class="token-reveal-ability" id="tokenRevealAbility"></div>
         <div class="token-reveal-jackpot" id="tokenRevealJackpot"></div>
         <button class="btn-primary token-reveal-close" id="tokenRevealClose">Awesome!</button>
+      </div>
+    </div>
+    <div class="pepper-ad" id="pepperAd" hidden>
+      <div class="pepper-ad-fizz" id="pepperAdFizz"></div>
+      <div class="pepper-ad-can">${PEPPER_CAN}</div>
+      <div class="pepper-ad-word">Dr Pepper</div>
+      <div class="pepper-ad-tag">Est. 1885 &bull; 23 flavors &bull; It's a pepper thing!</div>
+      <div class="pepper-ad-card" id="pepperAdCard" hidden>
+        <div class="token-reveal-title">🎉 YOU WON! 🎉</div>
+        <div class="token-reveal-emoji" id="pepperAdEmoji">🥤</div>
+        <div class="token-reveal-name" id="pepperAdName"></div>
+        <div class="token-reveal-ability" id="pepperAdAbility"></div>
+        <button class="btn-primary token-reveal-close" id="pepperAdClose">Awesome!</button>
       </div>
     </div>
     <div class="pumpkin-ceremony" id="pumpkinCeremony" hidden>
@@ -129,6 +162,30 @@ export async function tokensPage(D) {
       setTimeout(() => { burst.innerHTML = ''; }, 1000);
     };
     app.querySelector('#tokenRevealClose').onclick = () => { reveal.hidden = true; refresh(); };
+    app.querySelector('#pepperAdClose').onclick = () => { app.querySelector('#pepperAd').hidden = true; refresh(); };
+    const runPepperAd = (item) => {
+      const ad = app.querySelector('#pepperAd');
+      const card = app.querySelector('#pepperAdCard');
+      const fizz = app.querySelector('#pepperAdFizz');
+      playPepperJingle();
+      ad.hidden = false;
+      card.hidden = true;
+      fizz.innerHTML = '';
+      for (let i = 0; i < 24; i++) {
+        const b = document.createElement('i');
+        b.style.left = `${4 + Math.random() * 92}%`;
+        b.style.setProperty('--rise', `${120 + Math.random() * 260}px`);
+        b.style.animationDelay = `${Math.random() * 1.6}s`;
+        b.style.width = b.style.height = `${6 + Math.random() * 12}px`;
+        fizz.appendChild(b);
+      }
+      setTimeout(() => {
+        app.querySelector('#pepperAdEmoji').textContent = item?.emoji || '🥤';
+        app.querySelector('#pepperAdName').textContent = item?.name || '';
+        app.querySelector('#pepperAdAbility').textContent = ABILITY_LABEL[item?.ability] || '';
+        card.hidden = false;
+      }, 2200);
+    };
     app.querySelector('#pumpkinShopClose').onclick = () => { app.querySelector('#pumpkinShopGrand').hidden = true; refresh(); };
     const runPumpkinCeremony = () => {
       const ceremony = app.querySelector('#pumpkinCeremony');
@@ -167,14 +224,15 @@ export async function tokensPage(D) {
       b.disabled = true;
       result.textContent = 'Spinning…';
       wheel.classList.remove('spinning'); void wheel.offsetWidth; wheel.classList.add('spinning');
-      orbit.classList.add('on');
+      orbit.classList.add('on', 'dancing');
       try {
         const r = await api('POST', '/api/tokens/spin', { token: b.dataset.token });
         me.inventory = r.inventory;
         const item = ITEM[r.item];
         setTimeout(() => {
           wheel.classList.remove('spinning');
-          orbit.classList.remove('on');
+          orbit.classList.remove('on', 'dancing');
+          if (b.dataset.token === 'token_drpepper') { runPepperAd(item); return; }
           explode(item?.color);
           lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}${r.jackpot ? '<br>🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : ''}`;
           result.innerHTML = lastResult;
@@ -185,7 +243,7 @@ export async function tokensPage(D) {
           app.querySelector('#tokenRevealJackpot').innerHTML = '';
           reveal.hidden = false;
         }, 1400);
-      } catch (e) { wheel.classList.remove('spinning'); orbit.classList.remove('on'); result.textContent = ''; toast(e.message || 'Spin failed', true); b.disabled = false; }
+      } catch (e) { wheel.classList.remove('spinning'); orbit.classList.remove('on', 'dancing'); result.textContent = ''; toast(e.message || 'Spin failed', true); b.disabled = false; }
     });
     app.querySelectorAll('.token-buy').forEach(b => b.onclick = async () => {
       try {

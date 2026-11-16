@@ -1243,3 +1243,22 @@ body.pumpkin-boom-shake { animation: pumpkinBoomShake .09s linear infinite; }
 .pumpkin-shop-sub { font-size: 15px; color: #ffe0b2; margin-bottom: 16px; }
 .pumpkin-shop-grid { margin-bottom: 16px; }
 .pumpkin-shop-close { margin-top: 4px; }
+
+/* Dancing avatar: bounces and sways while it orbits the token, and keeps
+   dancing in the reveal card next to the prize. */
+.token-orbit.dancing .token-avatar { animation: tokenAvatarBob .5s ease-in-out infinite alternate, avatarDance .7s ease-in-out infinite; }
+@keyframes avatarDance { 0%, 100% { rotate: -14deg; } 50% { rotate: 14deg; } }
+.token-reveal-dancer { width: 110px; height: 110px; border-radius: 50%; background: rgba(255,255,255,.1); margin: 4px auto; display: block; animation: avatarDance .7s ease-in-out infinite, tokenBob 1.4s ease-in-out infinite; box-shadow: 0 0 20px rgba(255, 215, 0, .6); }
+/* Dr. Pepper ad: the whole screen becomes a Dr. Pepper ad, then the prize
+   card pops up. The can + wordmark are drawn in code (pepper.js). */
+.pepper-ad { position: fixed; inset: 0; background: radial-gradient(ellipse at center, #e02340 0%, #8a0d1f 65%, #4a060d 100%); z-index: 320; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; overflow: hidden; }
+.pepper-ad[hidden] { display: none; }
+.pepper-ad-fizz { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.pepper-ad-fizz i { position: absolute; bottom: -20px; border-radius: 50%; background: rgba(255, 255, 255, .55); border: 1px solid rgba(255,255,255,.8); animation: pepperFizzRise 2.4s linear infinite; }
+@keyframes pepperFizzRise { from { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(calc(-1 * var(--rise, 200px))); opacity: 0; } }
+.pepper-ad-can { width: 150px; filter: drop-shadow(0 0 28px rgba(255,255,255,.55)); animation: tokenBob 2s ease-in-out infinite; }
+.pepper-ad-can svg { width: 150px; height: 225px; }
+.pepper-ad-word { font-family: Lobster, 'Brush Script MT', cursive; font-size: 58px; color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,.25), 0 0 30px rgba(255,255,255,.5); line-height: 1; }
+.pepper-ad-tag { font-size: 15px; font-weight: 700; color: #ffe0e0; letter-spacing: 1px; text-align: center; }
+.pepper-ad-card { margin-top: 14px; text-align: center; background: rgba(20, 0, 5, .88); border: 3px solid #ffd700; border-radius: 22px; padding: 20px 22px; max-width: 360px; width: 100%; box-shadow: 0 0 50px rgba(255, 215, 0, .6); animation: revealPop .55s cubic-bezier(.2, 1.6, .4, 1) both; }
+.pepper-ad-card[hidden] { display: none; }
