@@ -3,7 +3,7 @@
 // rarity. Ability items equip in Gear and grant a real in-game ability.
 // The Pumpkin Shop Token is a 1-in-100,000,000 wheel jackpot — it unlocks
 // the pumpkin shop for exactly one purchase.
-import { CATALOG, ITEM } from './catalog.js?v=f2361012';
+import { CATALOG, ITEM } from './catalog.js?v=3253bf8f';
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
 let lastResult = '';
@@ -41,7 +41,7 @@ export async function tokensPage(D) {
         <span class="muted small">${RARITY_LABEL[t.rarity] || t.rarity} · You have <b>${n}</b></span>
         <span class="muted small">${prizeLine}</span>
         <button class="btn-primary token-spin" data-token="${t.id}" ${n < 1 ? 'disabled' : ''}>🎡 Spin (${n})</button>
-        ${t.buyable ? `<button class="btn-secondary token-buy" data-token="${t.id}">${t.price} FunTix</button>` : '<span class="muted small">Granted by admins only</span>'}
+        <span class="muted small">Granted by admins only</span>
       </div>`;
     }).join('')}</div>
     <h2>Ability items you own</h2>

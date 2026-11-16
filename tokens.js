@@ -27,18 +27,9 @@ export function createTokens(D) {
   const { app, auth, supabase, key } = D;
   const inv = u => Array.isArray(u.inventory) ? u.inventory : [];
 
-  // Buy a token with FunTix (pumpkin/scout/skull are grant/jackpot-only).
+  // Tokens are never purchasable — they are granted by admins (or won as a jackpot).
   app.post('/api/tokens/buy', auth, async (req, res) => {
-    const tokenId = String(req.body?.token || '').trim();
-    const tok = ITEM[tokenId];
-    if (!tok || tok.type !== 'token') return res.status(400).json({ error: 'No such token' });
-    if (NOT_BUYABLE.has(tokenId)) return res.status(403).json({ error: 'That token cannot be bought — it is granted by admins or won as a jackpot' });
-    const price = tok.price || 0;
-    if ((Number(req.user.funtix) || 0) < price) return res.status(400).json({ error: 'Not enough FunTix' });
-    const updatedInv = [...inv(req.user), tokenId];
-    const { data, error } = await supabase.from('users').update({ funtix: (Number(req.user.funtix) || 0) - price, inventory: updatedInv }).eq('name', req.user.name).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json({ ok: true, funtix: data.funtix, inventory: data.inventory, token: tokenId });
+    return res.status(403).json({ error: 'Tokens cannot be bought — they are granted by admins' });
   });
 
   // Spin the wheel with a token. Wins a random prize for that token.

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=f2361012';
+import { ITEM, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=3253bf8f';
 import { icons } from './icons.js?v=1aa0a4d3';
 
 // Transform editor spec: [key, label, min, max, step, default]
