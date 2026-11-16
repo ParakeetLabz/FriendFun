@@ -430,7 +430,7 @@ function eggConfetti(n = 120) {
 }
 // ============ NEWS BROADCAST ============
 async function showNewsBroadcast(b) {
-  const m = await import('./news-player.js?v=00b6573e');
+  const m = await import('./news-player.js?v=60138d7b');
   return m.showNewsBroadcast({ esc, me, ensureAvatar3d }, b);
 }
 async function checkNews() {
@@ -761,7 +761,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=f5b1b923');
+  const { Game } = await import('./game.js?v=0444ae56');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1370,7 +1370,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=f5b1b923');
+      const { Game: GameClass } = await import('./game.js?v=0444ae56');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1560,11 +1560,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=4c3dc9b3');
+  const m = await import('./admin.js?v=20a5b267');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=4c3dc9b3');
+  const m = await import('./admin.js?v=20a5b267');
   return m.ownerPage(adminDeps, q);
 }
 

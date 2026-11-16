@@ -1,7 +1,7 @@
-// 📡 News studio: 3D newsboy anchor + studio set.
+// 📡 News studio: robot news anchor (clearly not a player — silver metal, red jacket, headphones, shades).
 export const NEWSBOY_AVATAR = {
-  colors: { head: '#f1c27d', torso: '#ffffff', larm: '#f1c27d', rarm: '#f1c27d', lleg: '#1a1a2e', rleg: '#1a1a2e' },
-  hat: 'hat_tophat', face: 'face_smile', shirt: 'shirt_suit', head: 'head_classic', pet: 'pet_none', gear: 'gear_none',
+  colors: { head: '#b0bec5', torso: '#e53935', larm: '#b0bec5', rarm: '#b0bec5', lleg: '#37474f', rleg: '#37474f' },
+  hat: 'hat_headphones', face: 'face_cool', shirt: 'shirt_none', head: 'head_classic', pet: 'pet_none', gear: 'gear_none',
 };
 
 export function buildNewsStudio(THREE) {

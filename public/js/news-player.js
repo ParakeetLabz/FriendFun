@@ -1,5 +1,5 @@
 // 📡 News broadcast player (glitch + live anchor / video). Lazy-loaded on broadcast.
-import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=9285cfef';
+import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 export function showNewsBroadcast(D, b) {
   const { esc, me, ensureAvatar3d } = D;
 
@@ -97,7 +97,7 @@ export function showNewsBroadcast(D, b) {
         const A3 = await ensureAvatar3d().catch(() => null);
         if (A3 && ov.isConnected) {
           const canvas = ov.querySelector('.news-anchor-canvas');
-          const av = { skin: '#c0c0c0', shirt: '#1a1a2e', pants: '#0f0f1a', hat: 'hat_tophat' };
+          const av = NEWSBOY_AVATAR;
           const THREE = await import('three');
           const r = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
           const sc = new THREE.Scene();
