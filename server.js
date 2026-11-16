@@ -112,11 +112,11 @@ async function setFeatured(id, on) {
 // until then, fall back gracefully so a missing column never breaks a page.
 async function creatorGames(name) {
   try {
-    const { data, error } = await supabase.from('games').select('id, visits').eq('creator', key(name)).eq('unpublished', false);
+    const { data, error } = await supabase.from('games').select('id, visits').ilike('creator', key(name)).eq('unpublished', false);
     if (error) throw error;
     return data || [];
   } catch {
-    const { data } = await supabase.from('games').select('id, visits').eq('creator', key(name));
+    const { data } = await supabase.from('games').select('id, visits').ilike('creator', key(name));
     return data || [];
   }
 }
@@ -163,12 +163,12 @@ async function seed() {
     ({ id, name, creator, description: desc, world: templates[tpl](), visits, likes, dislikes, max_players, created: now, updated: now, thumbnail: null });
 
   const games = [
-    g('g1', 'Mega Fun Obby', 'Funtopia', 'Jump, dodge and bounce through 10 stages of obstacles!', 'obby', 1543210, 8912, 412),
-    g('g2', 'Hangout Town', 'Funtopia', 'Chill with friends in a little town.', 'hangout', 987654, 5321, 210),
-    g('g3', 'Sky Tower Climb', 'Funtopia', 'Climb the spiral around the giant tower.', 'tower', 654321, 4210, 380),
-    g('g4', 'Coin Rush Islands', 'Funtopia', 'Hop between floating islands and grab every coin!', 'coinRush', 432100, 3999, 155),
-    g('g5', 'Classic Baseplate', 'Funtopia', 'The classic. A big grey baseplate.', 'baseplate', 210987, 1500, 90),
-    g('g_voicelounge', '🎤 Voice Lounge', 'Funtopia', 'Call your friends and hang out — voice chat lives here.', 'voiceLounge', 0, 0, 0, 50),
+    g('g1', 'Mega Fun Obby', 'funtopia', 'Jump, dodge and bounce through 10 stages of obstacles!', 'obby', 1543210, 8912, 412),
+    g('g2', 'Hangout Town', 'funtopia', 'Chill with friends in a little town.', 'hangout', 987654, 5321, 210),
+    g('g3', 'Sky Tower Climb', 'funtopia', 'Climb the spiral around the giant tower.', 'tower', 654321, 4210, 380),
+    g('g4', 'Coin Rush Islands', 'funtopia', 'Hop between floating islands and grab every coin!', 'coinRush', 432100, 3999, 155),
+    g('g5', 'Classic Baseplate', 'funtopia', 'The classic. A big grey baseplate.', 'baseplate', 210987, 1500, 90),
+    g('g_voicelounge', '🎤 Voice Lounge', 'funtopia', 'Call your friends and hang out — voice chat lives here.', 'voiceLounge', 0, 0, 0, 50),
   ];
 
   for (const game of games) {
@@ -182,7 +182,7 @@ async function seed() {
   for (const gg of GEN_GAMES) {
     if (have.has(gg.id)) continue;
     await supabase.from('games').insert({
-      id: gg.id, name: gg.name, creator: 'Funtopia', description: gg.desc,
+      id: gg.id, name: gg.name, creator: 'funtopia', description: gg.desc,
       world: templates[gg.key](), visits: 50 + (gg.seed % 900), likes: 5 + (gg.seed % 80),
       dislikes: 0, max_players: 30, created: now, updated: now, thumbnail: null,
     });
@@ -624,7 +624,7 @@ app.get('/api/users/:name', auth, async (req, res) => {
   const { data: u, error: uErr } = await q.single();
   if (uErr || !u) return res.status(404).json({ error: 'User not found' });
 
-  const { data: gamesData } = await supabase.from('games').select('*').eq('creator', key(u.name));
+  const { data: gamesData } = await supabase.from('games').select('*').ilike('creator', key(u.name));
   const games = (gamesData || []).map(gameSummary);
 
   const { data: friendsData } = await supabase.from('users').select('*').in('name', u.friends || []);
@@ -846,7 +846,7 @@ app.post('/api/admin/users/:name/command', auth, adminOnly, async (req, res) => 
     updates = {}; message = `Sent system DM to ${user.name}`;
   } else if (command === 'wipe_games') {
     if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
-    await supabase.from('games').delete().eq('creator', key(user.name));
+    await supabase.from('games').delete().ilike('creator', key(user.name));
     updates = {}; message = `Deleted all games by ${user.name}`;
   } else if (command === 'clear_friends') {
     if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
@@ -1452,7 +1452,7 @@ app.get('/api/games', auth, async (req, res) => {
 });
 
 app.get('/api/mygames', auth, async (req, res) => {
-  const { data: games } = await supabase.from('games').select('*').eq('creator', key(req.user.name));
+  const { data: games } = await supabase.from('games').select('*').ilike('creator', key(req.user.name));
   res.json((games || []).map(g => ({ ...gameSummary(g), unpublished: !!g.unpublished })));
 });
 
@@ -2553,7 +2553,7 @@ async function seedShooterGames() {
     for (const cfg of SHOOTER_GAMES) {
       if (have.has(cfg.id)) continue;
       const world = cfg.build();
-      const { error } = await supabase.from('games').insert({ id: cfg.id, name: cfg.name, creator: 'Funtopia',
+      const { error } = await supabase.from('games').insert({ id: cfg.id, name: cfg.name, creator: 'funtopia',
         description: cfg.desc, world: sanitizeWorld(world), event: 'shooter',
         visits: 0, likes: 0, dislikes: 0, max_players: cfg.maxPlayers || 24, created: Date.now(), updated: Date.now(), thumbnail: '', unpublished: false });
       if (error) console.warn('shooter fail', cfg.id, error.message); else created++;
