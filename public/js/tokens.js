@@ -54,7 +54,7 @@ export async function tokensPage(D) {
     </div>
     <div class="token-reveal-overlay" id="tokenReveal" hidden>
       <div class="token-reveal-card">
-        <div class="token-reveal-title">🎉 YOU WON! 🎉</div>
+        <div class="token-reveal-title" id="tokenRevealTitle">🎉 YOU WON! 🎉</div>
         <img class="token-reveal-dancer" id="tokenRevealDancer" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar dancing" />
         <div class="token-reveal-emoji" id="tokenRevealEmoji">✨</div>
         <div class="token-reveal-name" id="tokenRevealName"></div>
@@ -69,12 +69,32 @@ export async function tokensPage(D) {
       <div class="pepper-ad-word">Dr Pepper</div>
       <div class="pepper-ad-tag">Est. 1885 &bull; 23 flavors &bull; It's a pepper thing!</div>
       <div class="pepper-ad-card" id="pepperAdCard" hidden>
-        <div class="token-reveal-title">🎉 YOU WON! 🎉</div>
+        <div class="token-reveal-title" id="pepperAdTitle">🎉 YOU WON! 🎉</div>
         <div class="token-reveal-emoji" id="pepperAdEmoji">🥤</div>
         <div class="token-reveal-name" id="pepperAdName"></div>
         <div class="token-reveal-ability" id="pepperAdAbility"></div>
         <button class="btn-primary token-reveal-close" id="pepperAdClose">Awesome!</button>
       </div>
+    </div>
+    <div class="cine-cutscene" id="cineCutscene" hidden>
+      <div class="cine-bar cine-bar-top"></div>
+      <div class="cine-bar cine-bar-bottom"></div>
+      <div class="cine-stage" id="cineStage">
+        <div class="cine-spotlight"></div>
+        <div class="cine-motif" id="cineMotif">✨</div>
+        <img class="cine-avatar" id="cineAvatar" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar" />
+        <div class="cine-token" id="cineToken">🪙</div>
+        <div class="cine-burst" id="cineBurst"></div>
+        <div class="cine-caption" id="cineCaption">A gift arrives…</div>
+      </div>
+      <div class="cine-titlecard" id="cineTitlecard" hidden>
+        <div class="cine-title" id="cineTitle">YOU GOT A TOKEN!</div>
+        <div class="cine-token-big" id="cineTokenBig">🪙</div>
+        <div class="cine-token-name" id="cineTokenName"></div>
+        <div class="cine-token-sub" id="cineTokenSub"></div>
+        <button class="btn-primary cine-continue" id="cineContinue">Continue</button>
+      </div>
+      <button class="cine-skip" id="cineSkip">Skip ▸</button>
     </div>
     <div class="pumpkin-ceremony" id="pumpkinCeremony" hidden>
       <div class="pumpkin-ceremony-text" id="pumpkinCeremonyText">SOMETHING IS HAPPENING…</div>
@@ -163,11 +183,12 @@ export async function tokensPage(D) {
     };
     app.querySelector('#tokenRevealClose').onclick = () => { reveal.hidden = true; refresh(); };
     app.querySelector('#pepperAdClose').onclick = () => { app.querySelector('#pepperAd').hidden = true; refresh(); };
-    const runPepperAd = (item) => {
+    const runPepperAd = (item, title, sub) => {
       const ad = app.querySelector('#pepperAd');
       const card = app.querySelector('#pepperAdCard');
       const fizz = app.querySelector('#pepperAdFizz');
       playPepperJingle();
+      app.querySelector('#pepperAdTitle').textContent = title || '🎉 YOU WON! 🎉';
       ad.hidden = false;
       card.hidden = true;
       fizz.innerHTML = '';
@@ -182,11 +203,112 @@ export async function tokensPage(D) {
       setTimeout(() => {
         app.querySelector('#pepperAdEmoji').textContent = item?.emoji || '🥤';
         app.querySelector('#pepperAdName').textContent = item?.name || '';
-        app.querySelector('#pepperAdAbility').textContent = ABILITY_LABEL[item?.ability] || '';
+        app.querySelector('#pepperAdAbility').textContent = sub || (ABILITY_LABEL[item?.ability] || '');
         card.hidden = false;
       }, 2200);
     };
     app.querySelector('#pumpkinShopClose').onclick = () => { app.querySelector('#pumpkinShopGrand').hidden = true; refresh(); };
+    // ---- New-token cutscenes: when a token lands in your inventory, the
+    // first time you open the Tokens page you get the cutscene for it.
+    const seenKey = 'ff_tokens_seen';
+    const getSeen = () => { try { return new Set(JSON.parse(localStorage.getItem(seenKey) || '[]')); } catch (e) { return new Set(); } };
+    const markSeen = (id) => { const seen = getSeen(); seen.add(id); try { localStorage.setItem(seenKey, JSON.stringify([...seen])); } catch (e) {} };
+    // One unique cutscene per token: its own colors, caption, motif + vibe.
+    const TOKEN_CUTSCENE = {
+      token_common:    { accent: '#ffd700', glow: 'rgba(255, 215, 0, .55)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 215, 0, .22), transparent 70%)', motif: '☀️', caption: 'A warm little gift…', sub: 'Spin it on the wheel to win a prize!' },
+      token_uncommon:  { accent: '#76ff03', glow: 'rgba(118, 255, 3, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(118, 255, 3, .2), transparent 70%)', motif: '🍃', caption: 'Something fresh is growing…', sub: 'Spin it on the wheel to win a prize!' },
+      token_rare:      { accent: '#00e5ff', glow: 'rgba(0, 229, 255, .55)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), transparent 70%)', motif: '❄️', caption: 'Something cool is coming…', sub: 'Spin it on the wheel to win a prize!' },
+      token_superrare: { accent: '#b388ff', glow: 'rgba(179, 136, 255, .55)', bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(123, 47, 247, .3), transparent 70%)', motif: '⚡', caption: 'The air is crackling…', sub: 'Spin it on the wheel to win a prize!' },
+      token_king:      { accent: '#ffca28', glow: 'rgba(255, 202, 40, .6)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 202, 40, .25), rgba(123, 47, 247, .2) 60%, transparent 75%)', motif: '👑', caption: 'All hail… a royal gift!', sub: 'Spin it on the wheel to win a prize!' },
+      token_galactic:  { accent: '#7c4dff', glow: 'rgba(124, 77, 255, .6)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124, 77, 255, .35), rgba(0, 229, 255, .15) 60%, transparent 75%)', motif: '🌌', caption: 'From the far edge of the galaxy…', sub: 'Spin it on the wheel to win a prize!' },
+      token_universal: { accent: '#ff2d95', glow: 'rgba(255, 45, 149, .55)', bg: 'linear-gradient(160deg, rgba(255, 45, 149, .22), rgba(0, 229, 255, .2) 45%, rgba(118, 255, 3, .18) 70%, transparent)', motif: '🌈', caption: 'Every color. Every power. One token.', sub: 'Spin it on the wheel to win a prize!' },
+      token_scout:     { accent: '#00e5ff', glow: 'rgba(0, 229, 255, .6)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), rgba(0, 0, 0, .4) 75%)', motif: '🌀', caption: 'A whirlwind is coming for @scout…', sub: 'Only @scout can spin it — Blob Twirly Hat + Austee inside!' },
+      token_skull:     { accent: '#aeea00', glow: 'rgba(174, 234, 0, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(174, 234, 0, .16), rgba(0, 0, 0, .55) 75%)', motif: '💀', caption: 'Something is watching from the dark…', sub: '💀 Mystery roll — spin it to win ANY item in FunTopia!' },
+    };
+    const playCineCutscene = (tokenId) => {
+      const tok = ITEM[tokenId];
+      const cfg = TOKEN_CUTSCENE[tokenId] || TOKEN_CUTSCENE.token_common;
+      const cine = app.querySelector('#cineCutscene');
+      const stage = app.querySelector('#cineStage');
+      const tokenEl = app.querySelector('#cineToken');
+      const burst = app.querySelector('#cineBurst');
+      const cap = app.querySelector('#cineCaption');
+      const card = app.querySelector('#cineTitlecard');
+      stage.style.setProperty('--cine-bg', cfg.bg);
+      stage.style.setProperty('--cine-glow', cfg.glow);
+      stage.style.setProperty('--cine-accent', cfg.accent);
+      app.querySelector('#cineMotif').textContent = cfg.motif;
+      tokenEl.textContent = tok?.emoji || '🪙';
+      tokenEl.classList.remove('drop', 'burst');
+      burst.innerHTML = '';
+      card.hidden = true;
+      cap.style.display = '';
+      cap.textContent = cfg.caption;
+      cine.hidden = false;
+      let done = false;
+      const finish = () => { if (done) return; done = true; cine.hidden = true; closeAndAdvance(() => {}); };
+      app.querySelector('#cineSkip').onclick = finish;
+      app.querySelector('#cineContinue').onclick = finish;
+      // Beat 1: token drops in.
+      setTimeout(() => { if (done) return; tokenEl.classList.add('drop'); cap.textContent = `The ${tok?.name || 'Token'}!`; }, 1200);
+      // Beat 2: token explodes in the token's colors.
+      setTimeout(() => {
+        if (done) return;
+        tokenEl.classList.remove('drop'); tokenEl.classList.add('burst');
+        burst.innerHTML = '';
+        const colors = [cfg.accent, '#ffffff', '#ffd700', '#ff2d95', '#7b2ff7', '#00e5ff'];
+        for (let i = 0; i < 40; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const d = 120 + Math.random() * 220;
+          const pt = document.createElement('i');
+          pt.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+          pt.style.setProperty('--dy', `${Math.sin(a) * d}px`);
+          pt.style.background = colors[i % colors.length];
+          pt.style.width = pt.style.height = `${8 + Math.random() * 10}px`;
+          burst.appendChild(pt);
+        }
+        const flash = document.createElement('b');
+        burst.appendChild(flash);
+        setTimeout(() => { burst.innerHTML = ''; }, 1000);
+      }, 2600);
+      // Beat 3: the grand title card.
+      setTimeout(() => {
+        if (done) return;
+        cap.style.display = 'none';
+        app.querySelector('#cineTokenBig').textContent = tok?.emoji || '🪙';
+        app.querySelector('#cineTokenName').textContent = tok?.name || '';
+        app.querySelector('#cineTokenSub').textContent = cfg.sub;
+        card.hidden = false;
+      }, 3300);
+    };
+    const playTokenCutscene = (tokenId) => {
+      const tok = ITEM[tokenId];
+      if (!tok) return;
+      markSeen(tokenId);
+      // Pumpkin and Dr. Pepper keep their own big ceremonies.
+      if (tokenId === 'token_pumpkin') { runPumpkinCeremony(); return; }
+      if (tokenId === 'token_drpepper') { runPepperAd(tok, '🎉 YOU GOT A TOKEN! 🎉', 'Spin it on the wheel to win Dr. Pepper stuff!'); return; }
+      // Every other token gets its own cinematic cutscene.
+      playCineCutscene(tokenId);
+    };
+    const checkNewTokens = () => {
+      const seen = getSeen();
+      const fresh = (me.inventory || []).filter(id => ITEM[id]?.type === 'token' && !seen.has(id));
+      if (!fresh.length) return;
+      setTimeout(() => playTokenCutscene(fresh[0]), 600);
+    };
+    // Closing a reveal/ad: if another unseen token is waiting, play its
+    // cutscene next; otherwise refresh so counts and items update.
+    const closeAndAdvance = (hide) => {
+      hide();
+      const seen = getSeen();
+      const fresh = (me.inventory || []).filter(id => ITEM[id]?.type === 'token' && !seen.has(id));
+      if (fresh.length) setTimeout(() => playTokenCutscene(fresh[0]), 400);
+      else refresh();
+    };
+    app.querySelector('#tokenRevealClose').onclick = () => closeAndAdvance(() => { reveal.hidden = true; });
+    app.querySelector('#pepperAdClose').onclick = () => closeAndAdvance(() => { app.querySelector('#pepperAd').hidden = true; });
+    setTimeout(checkNewTokens, 800);
     const runPumpkinCeremony = () => {
       const ceremony = app.querySelector('#pumpkinCeremony');
       const boom = app.querySelector('#pumpkinBoom');
@@ -236,7 +358,7 @@ export async function tokensPage(D) {
           explode(item?.color);
           lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}${r.jackpot ? '<br>🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : ''}`;
           result.innerHTML = lastResult;
-          if (r.jackpot) { runPumpkinCeremony(); return; }
+          if (r.jackpot) { markSeen('token_pumpkin'); runPumpkinCeremony(); return; }
           app.querySelector('#tokenRevealEmoji').textContent = item?.emoji || '✨';
           app.querySelector('#tokenRevealName').textContent = item?.name || r.item;
           app.querySelector('#tokenRevealAbility').textContent = ABILITY_LABEL[item?.ability] || '';
