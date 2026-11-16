@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=471922b1');
+  const m = await import('./lobby.js?v=5f4be592');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -603,6 +603,7 @@ function loginPage() {
   <div class="landing-inner">
     <div class="landing-hero"><div class="logo big"><span class="logo-icon">${LOGO}</span><span class="logo-text">Funtopia</span></div>
       <h1>Play, build, and hang out with friends.</h1><p>Jump into adventure games, explore wild worlds, dress your blocky avatar, and build your own games in Funtopia Studio — then call your friends and play together. 🎉</p>
+      <p class="landing-made">Made by <b>BoldPStudios</b></p>
       <div class="landing-chips"><a href="#/discover"><span class="ic">${icons.gamepad}</span> Adventure games</a><a href="#/friends"><span class="ic">${icons.phone}</span> Call friends</a><a href="#/suggest"><span class="ic">${icons.bulb}</span> Suggestion Box</a></div>
       </div>
     <div class="auth-card">
@@ -767,7 +768,7 @@ async function avatarPage(tab = 'body') {
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
-        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'vehicle', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles', rig: 'Rig' }[t]}</button>`).join('')}</div>
+        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'gear', 'vehicle', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', gear: 'Gears', vehicle: 'Vehicles', rig: 'Rig' }[t]}</button>`).join('')}</div>
         <div class="av-body"></div>
       </div>
     </div>`, () => {

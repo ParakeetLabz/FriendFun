@@ -106,6 +106,7 @@ export async function lobbyPage(D) {
       ${party.active ? `<a class="lb-tile" href="#/play/g_party100"><span>🎉</span><b>100 Players Party</b><i>Disco floor, DJ & free hat</i></a>` : ''}
       <a class="lb-tile" href="#/create"><span class="ic">${icons.alert}</span><b>Horror Gauntlet</b><i>Remix the 250-part course</i></a>
     </footer>
+    <div class="lb-credit">Made by <b>BoldPStudios</b></div>
     <div class="lb-overlay" id="lb-overlay">
       <button class="lb-ov-close" title="Back to lobby">✕</button>
       <div class="lb-ov-body"></div>
