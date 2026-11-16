@@ -1,6 +1,6 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding } from './pepper.js?v=57beac3a';
+import { startPepperCracks, stopPepperCracks, applyPepperBranding, PEPPER_CAN } from './pepper.js?v=57beac3a';
 import { THEME_IDS, themesPage } from './themes.js?v=3780b96a';
 
 // Badge definitions
@@ -1649,15 +1649,50 @@ async function addonsPage() {
 
 // ---------- router ----------
 let routing = 0;
+// ---------- splash intro ----------
+// Full-screen FunTopia intro on first load each session: the logo pops in,
+// the wordmark + Beta tag + "Made by BoldPStudios" slide up, then it fades
+// out to reveal the site. Tap anywhere to skip. Themed users (Dr. Pepper)
+// see the pepper can + wordmark, matching their lobby. Plays once per tab
+// session (sessionStorage).
+let introShown = false;
+function showIntro() {
+  if (introShown) return;
+  introShown = true;
+  try { if (sessionStorage.getItem('ff_intro_seen')) return; sessionStorage.setItem('ff_intro_seen', '1'); } catch {}
+  const hasPepper = (me?.inventory || []).includes('theme_drpepper');
+  const el = document.createElement('div');
+  el.id = 'ff-intro';
+  el.innerHTML = `<div class="ff-intro-inner">
+    <div class="ff-intro-logo">${hasPepper ? PEPPER_CAN : LOGO}</div>
+    <div class="ff-intro-word${hasPepper ? ' ff-intro-pepper' : ''}">${hasPepper ? 'Dr Pepper' : 'FUNTOPIA'}</div>
+    <div class="ff-intro-beta">Beta <span class="ff-intro-ver">…</span></div>
+    <div class="ff-intro-credit">Made by <b>BoldPStudios</b></div>
+    <div class="ff-intro-skip">Tap to skip</div>
+  </div>`;
+  document.body.appendChild(el);
+  let done = false;
+  const close = () => {
+    if (done) return;
+    done = true;
+    el.classList.add('ff-intro-out');
+    setTimeout(() => el.remove(), 550);
+  };
+  el.addEventListener('click', close);
+  setTimeout(close, 2600);
+  api('GET', '/api/version').then(v => { const s = el.querySelector('.ff-intro-ver'); if (s && v?.version) s.textContent = v.version; }).catch(() => {});
+}
+
 async function route() {
   const my = ++routing;
   if (cleanup) { const c = cleanup; cleanup = null; c(); }
   const [path, query] = location.hash.slice(1).split('?');
   const seg = (path || '/home').split('/').filter(Boolean);
-  if (!token && seg[0] !== 'horror') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); return loginPage(); }
+  if (!token && seg[0] !== 'horror') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); showIntro(); return loginPage(); }
   try {
     if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
     applyTheme();
+    showIntro();
     if (my !== routing) return;
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page

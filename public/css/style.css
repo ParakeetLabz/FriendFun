@@ -1151,3 +1151,19 @@ button.two-ui-el { cursor: pointer; }
 .two-ui-hazard:active { transform: translateY(2px); box-shadow: none; }
 .two-ui-scores { width: 100%; margin: 8px 0; }
 .two-ui-scores .row { padding: 4px 0; border-bottom: 1px solid var(--line); }
+
+/* ---------- FunTopia splash intro ---------- */
+#ff-intro { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: var(--bg); cursor: pointer; animation: ffIntroIn .4s ease both; }
+#ff-intro.ff-intro-out { opacity: 0; transition: opacity .5s ease; pointer-events: none; }
+.ff-intro-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 20px; }
+.ff-intro-logo { width: 110px; height: 110px; animation: ffIntroPop .7s cubic-bezier(.2, 1.6, .4, 1) both .1s; filter: drop-shadow(0 8px 24px rgba(124, 77, 255, .45)); }
+.ff-intro-logo svg { width: 100%; height: 100%; }
+.ff-intro-word { font-size: 44px; font-weight: 900; letter-spacing: 4px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; animation: ffIntroUp .6s ease both .45s; }
+.ff-intro-word.ff-intro-pepper { font-family: Lobster, cursive; letter-spacing: 1px; background: none; -webkit-background-clip: unset; background-clip: unset; color: #fff; font-size: 46px; }
+.ff-intro-beta { font-size: 15px; font-weight: 900; letter-spacing: 1px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; animation: ffIntroUp .6s ease both .65s; }
+.ff-intro-credit { color: var(--muted); font-size: 15px; animation: ffIntroUp .6s ease both .8s; }
+.ff-intro-credit b { color: var(--text); }
+.ff-intro-skip { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; color: var(--muted); font-size: 13px; animation: ffIntroUp .6s ease both 1s; }
+@keyframes ffIntroPop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes ffIntroUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes ffIntroIn { from { opacity: 0; } to { opacity: 1; } }
