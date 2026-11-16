@@ -284,6 +284,34 @@ export const CATALOG = [
   { id: 'shirt_jacket_camo', type: 'shirt', name: 'Camo Jacket', price: 375, emoji: '🧥', color: '#558b2f' },
   { id: 'pet_owl', type: 'pet', name: 'Owl', price: 425, emoji: '🦉', color: '#795548' },
   { id: 'gear_microphone', type: 'gear', name: 'Microphone', price: 275, emoji: '🎤', color: '#90a4ae' },
+  // ---- Tokens (spin the prize wheel) ----
+  { id: 'token_common', type: 'token', name: 'Common Token', price: 100, emoji: '🪙', color: '#9e9e9e', rarity: 'common' },
+  { id: 'token_uncommon', type: 'token', name: 'Uncommon Token', price: 250, emoji: '🎟️', color: '#4caf50', rarity: 'uncommon' },
+  { id: 'token_rare', type: 'token', name: 'Rare Token', price: 500, emoji: '🎫', color: '#2196f3', rarity: 'rare' },
+  { id: 'token_superrare', type: 'token', name: 'Super Rare Token', price: 1000, emoji: '✨', color: '#9c27b0', rarity: 'superrare' },
+  { id: 'token_king', type: 'token', name: 'King Token', price: 2500, emoji: '👑', color: '#ffd700', rarity: 'king' },
+  { id: 'token_galactic', type: 'token', name: 'Galactic Token', price: 5000, emoji: '🌌', color: '#7b2ff7', rarity: 'galactic' },
+  { id: 'token_universal', type: 'token', name: 'Universal Token', price: 10000, emoji: '🌠', color: '#ff2d95', rarity: 'universal' },
+  { id: 'token_pumpkin', type: 'token', name: 'Pumpkin Shop Token', price: 0, limited: true, emoji: '🎃', color: '#ff6d00', rarity: 'pumpkin' },
+  // ---- Ability items (won from the wheel; equip in Gear — each grants an ability) ----
+  { id: 'gear_swiftboots', type: 'gear', name: 'Swift Boots', price: 0, limited: true, emoji: '👟', color: '#4caf50', ability: 'speed', rarity: 'common' },
+  { id: 'gear_dashsneakers', type: 'gear', name: 'Dash Sneakers', price: 0, limited: true, emoji: '👟', color: '#66bb6a', ability: 'speed', rarity: 'common' },
+  { id: 'gear_cloudjumper', type: 'gear', name: 'Cloud Jumper', price: 0, limited: true, emoji: '☁️', color: '#81d4fa', ability: 'doublejump', rarity: 'uncommon' },
+  { id: 'gear_bounceboots', type: 'gear', name: 'Bounce Boots', price: 0, limited: true, emoji: '🦘', color: '#4fc3f7', ability: 'doublejump', rarity: 'uncommon' },
+  { id: 'gear_coinmagnet', type: 'gear', name: 'Coin Magnet', price: 0, limited: true, emoji: '🧲', color: '#2196f3', ability: 'magnet', rarity: 'rare' },
+  { id: 'gear_luckycharm', type: 'gear', name: 'Lucky Charm', price: 0, limited: true, emoji: '🍀', color: '#42a5f5', ability: 'magnet', rarity: 'rare' },
+  { id: 'gear_aegis', type: 'gear', name: 'Aegis Shield', price: 0, limited: true, emoji: '🛡️', color: '#9c27b0', ability: 'shield', rarity: 'superrare' },
+  { id: 'gear_guardianring', type: 'gear', name: 'Guardian Ring', price: 0, limited: true, emoji: '💍', color: '#ab47bc', ability: 'shield', rarity: 'superrare' },
+  { id: 'gear_skywings', type: 'gear', name: 'Sky Wings', price: 0, limited: true, emoji: '🪽', color: '#ffd700', ability: 'fly', rarity: 'king' },
+  { id: 'gear_phoenixfeather', type: 'gear', name: 'Phoenix Feather', price: 0, limited: true, emoji: '🔥', color: '#ffb300', ability: 'fly', rarity: 'king' },
+  { id: 'gear_starmantle', type: 'gear', name: 'Star Mantle', price: 0, limited: true, emoji: '🌟', color: '#7b2ff7', ability: 'star', rarity: 'galactic' },
+  { id: 'gear_nebulacloak', type: 'gear', name: 'Nebula Cloak', price: 0, limited: true, emoji: '🌌', color: '#9575cd', ability: 'star', rarity: 'galactic' },
+  { id: 'gear_universalcore', type: 'gear', name: 'Universal Core', price: 0, limited: true, emoji: '🌠', color: '#ff2d95', ability: 'universal', rarity: 'universal' },
+  // ---- Pumpkin shop (one purchase per Pumpkin Shop Token) ----
+  { id: 'hat_pumpkin', type: 'hat', name: 'Pumpkin Head', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
+  { id: 'gear_pumpkinsword', type: 'gear', name: 'Pumpkin Sword', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
+  { id: 'pet_pumpkin', type: 'pet', name: 'Pumpkin Pup', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
+  { id: 'shirt_pumpkin', type: 'shirt', name: 'Pumpkin Tee', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
 ];
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at ground, faces +z.
 // ---------- pet voxel models (shared by game.js 3D pets and app.js 2D previews) ----------

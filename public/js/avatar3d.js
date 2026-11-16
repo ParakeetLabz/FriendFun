@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=35b15df8';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=de8d42de';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
 import { isVerified } from './verified.js?v=6fb5be32';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';

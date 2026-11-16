@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=5c7589e6';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=a9fd952f';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -13,7 +13,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=35b15df8';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=de8d42de';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -108,7 +108,7 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
-    this.usedAirJump = false; this.dashT = 0; this.dashCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
+    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
@@ -383,7 +383,7 @@ export class Game {
       this.moveAxis(0, mx * sdt, 2.2); this.moveAxis(2, mz * sdt, 2.2);
       this.moveAxis(1, this.vel.y * sdt);
     }
-    if (this.onGround) { this.coyote = 0.12; this.jumping = false; this.usedAirJump = false; }
+    if (this.onGround) { this.coyote = 0.12; this.jumping = false; this.usedAirJump = false; this.usedAirJump2 = false; }
     if (this.vehicleMesh) for (const w of this.vehicleMesh.userData.wheels || []) w.rotation.x += this.carSpeed * dt * 0.8;
     this.anim = 'idle';
     if (this.pos.y < -300) this.die();
@@ -430,6 +430,10 @@ export class Game {
     this.sys(`🎃 Rivals vs <b>${esc(m.opponent)}</b> — first to ${this.rivals.roundsToWin} rounds!`);
   }
   rivalsWeapon() { return RIVALS_WEAPONS[this.rivals.weapon]; }
+  // Ability from the equipped gear item (tokens wheel prizes). Returns the
+  // ability id ('speed' | 'doublejump' | 'magnet' | 'shield' | 'fly' | 'star' | 'universal') or ''.
+  ability() { const it = ITEM[this.me?.avatar?.gear]; return (it && it.ability) || ''; }
+  hasAbility(a) { const ab = this.ability(); return ab === a || (a === 'speed' && (ab === 'star' || ab === 'universal')) || (a === 'magnet' && (ab === 'star' || ab === 'universal')) || (a === 'doublejump' && ab === 'universal'); }
   updateRivalsHUD() {
     const el = this.c.querySelector('.rivals-hud'); if (!el || !this.rivals) return;
     const r = this.rivals, me = this.me.name;
@@ -1510,6 +1514,8 @@ export class Game {
   physics(dt) {
     if (this.frozen) { this.vel.set(0, 0, 0); this.carSpeed = 0; this.anim = 'idle'; return; }
     if (this.vehicleId && !this.dead) { this.drivePhysics(dt); return; }
+    if (this.hasAbility('magnet')) this.magnetT = Math.max(this.magnetT, 1); // coin-magnet ability: coins always in range
+    if (this.hasAbility('shield')) this.shield = true; // aegis ability: kill parts always blocked
     const k = this.keys;
     const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - this.joy.y;
     const s = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + this.joy.x;
@@ -1519,7 +1525,7 @@ export class Game {
     const move = fwd.multiplyScalar(f).add(right.multiplyScalar(s));
     if (move.lengthSq() > 1) move.normalize();
     const crouch = !!k.KeyC && !this.fly && !this.noclip && !this.vehicleId;
-    const speed = (this.speedTimer > 0 ? WALK * 2 : WALK) * (this.speedBoost ? 2.5 : 1) * (this.sprinting && f > 0 ? 1.45 : 1) * (this.inWater ? 0.55 : 1) * (crouch ? 0.6 : 1);
+    const speed = (this.speedTimer > 0 ? WALK * 2 : WALK) * (this.speedBoost ? 2.5 : 1) * (this.hasAbility('speed') ? 1.5 : 1) * (this.sprinting && f > 0 ? 1.45 : 1) * (this.inWater ? 0.55 : 1) * (crouch ? 0.6 : 1);
     const tX = move.x * speed, tZ = move.z * speed;
     if (this.onGround && this.ground?.p?.k === 'ice') { const bl = Math.min(1, dt * 2.2); this.vel.x += (tX - this.vel.x) * bl; this.vel.z += (tZ - this.vel.z) * bl; }
     else { this.vel.x = tX; this.vel.z = tZ; }
@@ -1538,9 +1544,12 @@ export class Game {
         this.vel.y = JUMP; this.onGround = false; this.coyote = 0; this.jumpBuf = 0; this.jumping = true; sfx.jump();
       } else if (this.jumpBuf > 0 && !this.usedAirJump && !this.onGround) {
         this.vel.y = JUMP * 0.92; this.usedAirJump = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+      } else if (this.jumpBuf > 0 && this.usedAirJump && !this.usedAirJump2 && !this.onGround && this.hasAbility('doublejump')) {
+        this.vel.y = JUMP * 0.92; this.usedAirJump2 = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
       }
       const grav = this.inLowg ? GRAVITY * 0.4 : this.inWater ? GRAVITY * 0.35 : GRAVITY;
       this.vel.y = Math.max(this.vel.y - grav * dt, -160);
+      if (this.hasAbility('fly') && this.vel.y < 0 && k.Space) this.vel.y = Math.max(this.vel.y, -8); // glide
       if (this.inWater) { if (k.Space) this.vel.y = 22; this.vel.y = Math.max(this.vel.y, -12); }
     }
     this.wasGround = this.onGround; this.onGround = false; this.ground = null;

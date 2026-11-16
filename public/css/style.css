@@ -1167,3 +1167,12 @@ button.two-ui-el { cursor: pointer; }
 @keyframes ffIntroPop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes ffIntroUp { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes ffIntroIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Tokens prize wheel */
+.token-wheel-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 18px 0; }
+.token-wheel { position: relative; width: 180px; height: 180px; border-radius: 50%; background: conic-gradient(#9e9e9e 0 14%, #4caf50 14% 28%, #2196f3 28% 43%, #9c27b0 43% 57%, #ffd700 57% 71%, #7b2ff7 71% 86%, #ff2d95 86% 100%); display: flex; align-items: center; justify-content: center; border: 6px solid var(--card); box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+.token-wheel-face { width: 110px; height: 110px; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 56px; }
+.token-wheel-pointer { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 26px; color: var(--text); z-index: 2; }
+.token-wheel.spinning { animation: tokenSpin 1.3s cubic-bezier(.2,.7,.3,1) 1; }
+@keyframes tokenSpin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
+.token-wheel-result { min-height: 24px; font-size: 17px; text-align: center; }

@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=5c7589e6';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=a9fd952f';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=a89886d1';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
@@ -71,6 +71,7 @@ export async function lobbyPage(D) {
       <a class="lb-item" href="#/2ui"><span class="ic">${icons.grid}</span>2UI</a>
       <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
       <a class="lb-item" href="#/pets"><span class="ic">${icons.heart}</span>PETS</a>
+      <a class="lb-item" href="#/tokens"><span class="ic">${icons.zap}</span>TOKENS</a>
       <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
       <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
       ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}

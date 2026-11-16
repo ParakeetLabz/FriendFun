@@ -13,6 +13,7 @@ import { createFamily } from './family.js';
 import { createVersion } from './version.js';
 import { createTrade } from './trade.js';
 import { createTwoUi } from './twoui.js';
+import { createTokens } from './tokens.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -356,7 +357,9 @@ app.get('/api/me', auth, async (req, res) => {
   }
   u.inventory = list(u, 'inventory'); u.requests = list(u, 'requests'); u.friends = list(u, 'friends'); u.favorites = list(u, 'favorites'); u.recent = list(u, 'recent');
   if (isClub(u)) {
-    const entitledItems = isAdmin(u) ? CATALOG : CATALOG.filter(it => it.club);
+    // Admins get every NON-limited item; limited/grant-only items (Dr. Pepper
+    // theme, party hat, etc.) are never auto-granted — the owner gives those.
+    const entitledItems = isAdmin(u) ? CATALOG.filter(it => !it.limited) : CATALOG.filter(it => it.club);
     const miss = entitledItems.filter(it => !u.inventory.includes(it.id));
     if (miss.length) {
       const updatedInv = [...u.inventory, ...miss.map(it => it.id)];
@@ -716,7 +719,8 @@ app.post('/api/admin/users/:name/command', auth, adminOnly, async (req, res) => 
     updates = { funtix: (Number(user.funtix) || 0) + amount };
     message = `Gave ${amount} FunTix to ${user.name}`;
   } else if (command === 'give_all_items') {
-    updates = { inventory: CATALOG.map(item => item.id) };
+    // Every NON-limited item; limited/grant-only items stay owner-granted only.
+    updates = { inventory: CATALOG.filter(item => !item.limited).map(item => item.id) };
     message = `Gave every marketplace item to ${user.name}`;
   } else if (command === 'reset_daily') {
     updates = { tixDay: null };
@@ -867,6 +871,24 @@ app.post('/api/admin/users/:name/command', auth, adminOnly, async (req, res) => 
   }
   const isBanned = !!updated.banned && (!updated.bannedUntil || updated.bannedUntil > Date.now());
   res.json({ ok: true, message, user: { ...await publicUser(updated), funtix: updated.funtix, clubForever: isAdmin(updated) || !!updated.clubForever, aiAccess: isOwner(updated) || isAdmin(updated) || !!updated.aiAccess, banned: isBanned, banReason: updated.banReason || '', bannedUntil: updated.bannedUntil || 0, admin: isAdmin(updated), owner: isOwner(updated) } });
+});
+
+// One-time cleanup (owner only): strip the grant-only Dr. Pepper theme from
+// everyone except the owner, so it is grant-only again. Idempotent.
+app.post('/api/admin/strip-pepper', auth, async (req, res) => {
+  if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
+  const { data: users, error } = await supabase.from('users').select('name, inventory');
+  if (error) return res.status(500).json({ error: error.message });
+  let stripped = 0;
+  for (const u of users || []) {
+    if (String(u.name || '').toLowerCase() === 'fun') continue;
+    const inv = Array.isArray(u.inventory) ? u.inventory : [];
+    if (inv.includes('theme_drpepper')) {
+      await supabase.from('users').update({ inventory: inv.filter(id => id !== 'theme_drpepper') }).eq('name', u.name);
+      stripped++;
+    }
+  }
+  res.json({ ok: true, stripped });
 });
 
 // View a player's inventory (owner only).
@@ -1833,6 +1855,7 @@ createFamily({ app, auth, supabase, filter, notify, key });
 createVersion({ app, auth, supabase, isOwner });
 createTrade({ app, auth, supabase, notify, key });
 createTwoUi({ app, auth, supabase, key });
+createTokens({ app, auth, supabase, key });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;
