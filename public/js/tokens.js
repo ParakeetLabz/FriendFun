@@ -8,6 +8,7 @@ import { avatarImage } from './avatar3d.js?v=32a86ecf';
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
 let lastResult = '';
+const PUMPY_SVG = `<svg viewBox="0 0 200 200" width="150" height="150" aria-label="Pumpy the pumpkin shopkeeper"><ellipse cx="100" cy="118" rx="76" ry="64" fill="#ff6d00"/><path d="M100 54 Q64 118 100 182 M100 54 Q136 118 100 182 M100 54 Q82 118 100 182 M100 54 Q118 118 100 182" stroke="#e65100" stroke-width="4" fill="none" opacity=".7"/><rect x="91" y="34" width="18" height="26" rx="6" fill="#558b2f"/><path d="M109 44 Q132 30 138 52 Q120 58 109 44" fill="#66bb6a"/><circle cx="74" cy="104" r="12" fill="#fff"/><circle cx="74" cy="104" r="6" fill="#212121"/><circle cx="126" cy="104" r="12" fill="#fff"/><circle cx="126" cy="104" r="6" fill="#212121"/><path d="M68 132 Q100 156 132 132" stroke="#212121" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M100 160 L88 176 L100 170 L112 176 Z" fill="#c8102e"/><circle cx="100" cy="163" r="4" fill="#ffd700"/></svg>`;
 const ABILITY_LABEL = { speed: '⚡ +50% run speed', doublejump: '☁️ Double jump', magnet: '🧲 Coins fly to you', shield: '🛡️ Block kill parts', fly: '🪽 Hold Space to glide', star: '🌟 Speed + coin magnet', universal: '🌠 Speed + double jump + magnet', tornado: '🌪️ Tornado dash (Q) + speed' };
 
 export async function tokensPage(D) {
@@ -40,6 +41,31 @@ export async function tokensPage(D) {
         <div class="token-reveal-ability" id="tokenRevealAbility"></div>
         <div class="token-reveal-jackpot" id="tokenRevealJackpot"></div>
         <button class="btn-primary token-reveal-close" id="tokenRevealClose">Awesome!</button>
+      </div>
+    </div>
+    <div class="pumpkin-ceremony" id="pumpkinCeremony" hidden>
+      <div class="pumpkin-ceremony-text" id="pumpkinCeremonyText">SOMETHING IS HAPPENING…</div>
+      <div class="pumpkin-glitch-stage">
+        <img class="pumpkin-glitch-avatar" id="pumpkinGlitchAvatar" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar glitching" />
+        <div class="pumpkin-static-token" id="pumpkinStaticToken">🎃</div>
+      </div>
+      <div class="pumpkin-boom" id="pumpkinBoom"></div>
+    </div>
+    <div class="pumpkin-shop-grand" id="pumpkinShopGrand" hidden>
+      <div class="pumpkin-shop-grand-card">
+        <div class="pumpkin-pumpy">${PUMPY_SVG}</div>
+        <div class="pumpkin-shop-title">🎃 PUMPY'S PUMPKIN SHOP 🎃</div>
+        <div class="pumpkin-shop-sub">Welcome, lucky one! One token, one treasure. Choose wisely…</div>
+        <div class="item-grid pumpkin-shop-grid">${info.pumpkin.map(pp => {
+          const has = owned.has(pp.id);
+          return `<div class="item pumpkin-shop-item">
+            <span class="pet-emoji-big">${pp.emoji || '🎃'}</span>
+            <b>${esc(pp.name)}</b>
+            <span class="muted small">${has ? 'Owned' : '1 🎃 Pumpkin Shop Token'}</span>
+            ${has ? '<button class="btn-owned" disabled>Owned</button>' : `<button class="btn-primary pumpkin-buy" data-id="${pp.id}">Buy with 🎃 token</button>`}
+          </div>`;
+        }).join('')}</div>
+        <button class="btn-secondary pumpkin-shop-close" id="pumpkinShopClose">Close shop</button>
       </div>
     </div>
     <h2>Your tokens</h2>
@@ -103,6 +129,40 @@ export async function tokensPage(D) {
       setTimeout(() => { burst.innerHTML = ''; }, 1000);
     };
     app.querySelector('#tokenRevealClose').onclick = () => { reveal.hidden = true; refresh(); };
+    app.querySelector('#pumpkinShopClose').onclick = () => { app.querySelector('#pumpkinShopGrand').hidden = true; refresh(); };
+    const runPumpkinCeremony = () => {
+      const ceremony = app.querySelector('#pumpkinCeremony');
+      const boom = app.querySelector('#pumpkinBoom');
+      const text = app.querySelector('#pumpkinCeremonyText');
+      ceremony.hidden = false;
+      document.body.classList.add('pumpkin-shake');
+      text.textContent = 'SOMETHING IS HAPPENING…';
+      setTimeout(() => { text.textContent = 'THE PUMPKIN TOKEN IS BREAKING REALITY…'; }, 900);
+      setTimeout(() => {
+        document.body.classList.remove('pumpkin-shake');
+        document.body.classList.add('pumpkin-boom-shake');
+        boom.innerHTML = '';
+        for (let i = 0; i < 70; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const d = 140 + Math.random() * 420;
+          const pt = document.createElement('i');
+          pt.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+          pt.style.setProperty('--dy', `${Math.sin(a) * d}px`);
+          pt.style.background = ['#ff6d00', '#ffd700', '#ff2d95', '#76ff03', '#ff5722'][i % 5];
+          pt.style.width = pt.style.height = `${8 + Math.random() * 16}px`;
+          boom.appendChild(pt);
+        }
+        const flash = document.createElement('b');
+        flash.className = 'pumpkin-flash';
+        boom.appendChild(flash);
+        setTimeout(() => {
+          ceremony.hidden = true;
+          document.body.classList.remove('pumpkin-boom-shake');
+          boom.innerHTML = '';
+          app.querySelector('#pumpkinShopGrand').hidden = false;
+        }, 1100);
+      }, 2400);
+    };
     app.querySelectorAll('.token-spin').forEach(b => b.onclick = async () => {
       b.disabled = true;
       result.textContent = 'Spinning…';
@@ -118,10 +178,11 @@ export async function tokensPage(D) {
           explode(item?.color);
           lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}${r.jackpot ? '<br>🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : ''}`;
           result.innerHTML = lastResult;
+          if (r.jackpot) { runPumpkinCeremony(); return; }
           app.querySelector('#tokenRevealEmoji').textContent = item?.emoji || '✨';
           app.querySelector('#tokenRevealName').textContent = item?.name || r.item;
           app.querySelector('#tokenRevealAbility').textContent = ABILITY_LABEL[item?.ability] || '';
-          app.querySelector('#tokenRevealJackpot').innerHTML = r.jackpot ? '🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : '';
+          app.querySelector('#tokenRevealJackpot').innerHTML = '';
           reveal.hidden = false;
         }, 1400);
       } catch (e) { wheel.classList.remove('spinning'); orbit.classList.remove('on'); result.textContent = ''; toast(e.message || 'Spin failed', true); b.disabled = false; }
