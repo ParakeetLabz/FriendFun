@@ -259,6 +259,7 @@ export async function ownerPage(D, q = '') {
         <div class="admin-controls owner-controls"><span class="owner-label"><span class="ic">${icons.crown}</span> Owner</span>
           <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-primary tix-give" data-name="${esc(u.name)}" title="Add FunTix">Add FunTix</button><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
           <span class="admin-inline"><button class="btn-primary theme-give" data-name="${esc(u.name)}" title="Give them the Dr. Pepper theme">🥤 Give Dr. Pepper Theme</button><button class="btn-secondary theme-revoke" data-name="${esc(u.name)}" title="Take back the Dr. Pepper theme">Remove Theme</button></span>
+          <span class="admin-inline"><select class="token-pick" data-name="${esc(u.name)}" title="Token to give"><option value="token_common">🪙 Common Token</option><option value="token_uncommon">🎟️ Uncommon Token</option><option value="token_rare">🎫 Rare Token</option><option value="token_superrare">✨ Super Rare Token</option><option value="token_king">👑 King Token</option><option value="token_galactic">🌌 Galactic Token</option><option value="token_universal">🌠 Universal Token</option></select><button class="btn-primary token-give" data-name="${esc(u.name)}" title="Give them a wheel token">🪙 Give Token</button></span>
           <button class="btn-secondary mod-toggle" data-name="${esc(u.name)}" data-on="${u.role === 'moderator' ? '0' : '1'}" title="Toggle moderator">${u.role === 'moderator' ? 'Remove Mod' : 'Make Mod'}</button>
           ${['fun', 'funtopia'].includes(u.name.toLowerCase()) ? '<span class="muted small">✓ Verified</span>' : verifiedSet.has(u.name.toLowerCase()) ? `<button class="btn-secondary verify-toggle" data-name="${esc(u.name)}" data-on="0" title="Remove the blue verified check">Unverify</button>` : `<button class="btn-primary verify-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the blue verified check">✓ Verify</button>`}
           ${u.funpanel ? `<button class="btn-secondary funpanel-toggle" data-name="${esc(u.name)}" data-on="0" title="Take back their FunPanel">Revoke FunPanel</button>` : (u.admin || u.owner || u.role === 'moderator' ? '' : `<button class="btn-primary funpanel-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the in-game FunPanel">🎁 Gift FunPanel</button>`)}
@@ -376,6 +377,11 @@ export async function ownerPage(D, q = '') {
       const on = b.dataset.on === '1';
       if (!on && !confirm(`Revoke FunPanel from ${b.dataset.name}?`)) return;
       cmd(b.dataset.name, on ? 'grant_funpanel' : 'revoke_funpanel', {});
+    });
+    ownerCmd('.token-give', 'grant_item', b => {
+      const sel = app.querySelector(`.token-pick[data-name="${CSS.escape(b.dataset.name)}"]`);
+      const item = sel?.value || 'token_common';
+      return { item };
     });
     ownerCmd('.item-grant', 'grant_item', b => {
       const inp = app.querySelector(`.item-id[data-name="${CSS.escape(b.dataset.name)}"]`);
