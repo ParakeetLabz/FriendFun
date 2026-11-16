@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=a9fd952f';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=31ce3578';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -13,7 +13,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=de8d42de';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=f2361012';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -432,8 +432,8 @@ export class Game {
   rivalsWeapon() { return RIVALS_WEAPONS[this.rivals.weapon]; }
   // Ability from the equipped gear item (tokens wheel prizes). Returns the
   // ability id ('speed' | 'doublejump' | 'magnet' | 'shield' | 'fly' | 'star' | 'universal') or ''.
-  ability() { const it = ITEM[this.me?.avatar?.gear]; return (it && it.ability) || ''; }
-  hasAbility(a) { const ab = this.ability(); return ab === a || (a === 'speed' && (ab === 'star' || ab === 'universal')) || (a === 'magnet' && (ab === 'star' || ab === 'universal')) || (a === 'doublejump' && ab === 'universal'); }
+  ability() { const av = this.me?.avatar || {}; for (const slot of ['gear', 'shirt', 'hat', 'head', 'face']) { const it = ITEM[av[slot]]; if (it && it.ability) return it.ability; } return ''; }
+  hasAbility(a) { const ab = this.ability(); return ab === a || (a === 'speed' && (ab === 'star' || ab === 'universal' || ab === 'tornado')) || (a === 'magnet' && (ab === 'star' || ab === 'universal')) || (a === 'doublejump' && ab === 'universal'); }
   updateRivalsHUD() {
     const el = this.c.querySelector('.rivals-hud'); if (!el || !this.rivals) return;
     const r = this.rivals, me = this.me.name;
@@ -1308,7 +1308,7 @@ export class Game {
       this.keys[e.code] = down;
       if (down && !e.repeat && e.code === 'KeyW') { const now = performance.now(); if (now - (this.lastW || 0) < 280) this.sprinting = true; this.lastW = now; }
       if (!down && e.code === 'KeyW') this.sprinting = false;
-      if (down && !e.repeat && e.code === 'KeyQ' && !this.dead && this.dashCd <= 0) { this.dashT = 0.18; this.dashCd = 2; this.dashDir.set(Math.sin(this.facing), 0, Math.cos(this.facing)); sfx.jump(); }
+      if (down && !e.repeat && e.code === 'KeyQ' && !this.dead && this.dashCd <= 0) { const tor = this.hasAbility('tornado'); this.dashT = tor ? 0.4 : 0.18; this.dashCd = tor ? 1.2 : 2; this.dashDir.set(Math.sin(this.facing), 0, Math.cos(this.facing)); this.tornadoSpin = tor; sfx.jump(); }
       if (e.code === 'Space') {
         if (down) { if (!e.repeat) this.jumpBuf = 0.15; e.preventDefault(); }
         else this.cutJump();
@@ -1529,7 +1529,7 @@ export class Game {
     const tX = move.x * speed, tZ = move.z * speed;
     if (this.onGround && this.ground?.p?.k === 'ice') { const bl = Math.min(1, dt * 2.2); this.vel.x += (tX - this.vel.x) * bl; this.vel.z += (tZ - this.vel.z) * bl; }
     else { this.vel.x = tX; this.vel.z = tZ; }
-    if (this.dashT > 0) { this.dashT -= dt; this.vel.x = this.dashDir.x * 55; this.vel.z = this.dashDir.z * 55; }
+    if (this.dashT > 0) { this.dashT -= dt; const sp = this.tornadoSpin ? 85 : 55; this.vel.x = this.dashDir.x * sp; this.vel.z = this.dashDir.z * sp; if (this.tornadoSpin) this.facing += dt * 14; if (this.dashT <= 0) this.tornadoSpin = false; }
     if (this.onGround) { this.coyote = 0.12; this.jumping = false; }
     else this.coyote = Math.max(0, (this.coyote || 0) - dt);
     this.jumpBuf = Math.max(0, (this.jumpBuf || 0) - dt);

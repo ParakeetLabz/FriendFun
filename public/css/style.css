@@ -1176,3 +1176,8 @@ button.two-ui-el { cursor: pointer; }
 .token-wheel.spinning { animation: tokenSpin 1.3s cubic-bezier(.2,.7,.3,1) 1; }
 @keyframes tokenSpin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
 .token-wheel-result { min-height: 24px; font-size: 17px; text-align: center; }
+
+/* Token animations: tokens bob and shimmer; the wheel slowly turns when idle */
+.token-anim { display: inline-block; animation: tokenBob 2.2s ease-in-out infinite; }
+@keyframes tokenBob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-7px) rotate(5deg); } }
+.token-wheel:not(.spinning) .token-wheel-face { animation: tokenBob 2.2s ease-in-out infinite; }

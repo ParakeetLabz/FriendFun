@@ -3,11 +3,11 @@
 // rarity. Ability items equip in Gear and grant a real in-game ability.
 // The Pumpkin Shop Token is a 1-in-100,000,000 wheel jackpot — it unlocks
 // the pumpkin shop for exactly one purchase.
-import { CATALOG, ITEM } from './catalog.js?v=de8d42de';
+import { CATALOG, ITEM } from './catalog.js?v=f2361012';
 
-const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal' };
+const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
 let lastResult = '';
-const ABILITY_LABEL = { speed: '⚡ +50% run speed', doublejump: '☁️ Double jump', magnet: '🧲 Coins fly to you', shield: '🛡️ Block kill parts', fly: '🪽 Hold Space to glide', star: '🌟 Speed + coin magnet', universal: '🌠 Speed + double jump + magnet' };
+const ABILITY_LABEL = { speed: '⚡ +50% run speed', doublejump: '☁️ Double jump', magnet: '🧲 Coins fly to you', shield: '🛡️ Block kill parts', fly: '🪽 Hold Space to glide', star: '🌟 Speed + coin magnet', universal: '🌠 Speed + double jump + magnet', tornado: '🌪️ Tornado dash (Q) + speed' };
 
 export async function tokensPage(D) {
   const { api, mount, esc, toast } = D;
@@ -33,23 +33,25 @@ export async function tokensPage(D) {
     <div class="item-grid">${info.tokens.map(t => {
       const it = ITEM[t.id];
       const n = countOf(t.id);
-      return `<div class="item">
-        <span class="pet-emoji-big">${it?.emoji || '🪙'}</span>
+      const prizes = info.prizes[t.rarity] || [];
+      const prizeLine = t.rarity === 'skull' ? (info.skullNote || 'Mystery roll — any item!') : prizes.map(p => p.emoji).join(' ');
+      return `<div class="item token-card">
+        <span class="pet-emoji-big token-anim">${it?.emoji || '🪙'}</span>
         <b>${esc(it?.name || t.id)}</b>
-        <span class="muted small">${RARITY_LABEL[t.rarity]} · You have <b>${n}</b></span>
-        <span class="muted small">${(info.prizes[t.rarity] || []).map(p => p.emoji).join(' ')}</span>
+        <span class="muted small">${RARITY_LABEL[t.rarity] || t.rarity} · You have <b>${n}</b></span>
+        <span class="muted small">${prizeLine}</span>
         <button class="btn-primary token-spin" data-token="${t.id}" ${n < 1 ? 'disabled' : ''}>🎡 Spin (${n})</button>
-        <button class="btn-secondary token-buy" data-token="${t.id}">${t.price} FunTix</button>
+        ${t.buyable ? `<button class="btn-secondary token-buy" data-token="${t.id}">${t.price} FunTix</button>` : '<span class="muted small">Granted by admins only</span>'}
       </div>`;
     }).join('')}</div>
     <h2>Ability items you own</h2>
     ${ownedAbilities.length ? `<div class="item-grid">${ownedAbilities.map(i => {
-      const isEq = me.avatar?.gear === i.id;
+      const isEq = me.avatar?.[i.type] === i.id;
       return `<div class="item">
         <span class="pet-emoji-big">${i.emoji || '✨'}</span>
         <b>${esc(i.name)}</b>
         <span class="muted small">${RARITY_LABEL[i.rarity]} · ${ABILITY_LABEL[i.ability] || i.ability}</span>
-        ${isEq ? '<button class="btn-owned" disabled>Equipped ✓</button>' : `<button class="btn-secondary token-equip" data-id="${i.id}">Equip in Gear</button>`}
+        ${isEq ? '<button class="btn-owned" disabled>Equipped ✓</button>' : `<button class="btn-secondary token-equip" data-id="${i.id}">Equip</button>`}
       </div>`;
     }).join('')}</div>` : '<p class="muted">No ability items yet — spin the wheel to win one!</p>'}
     <h2>🎃 Pumpkin Shop ${hasPumpkin ? '<span class="muted small">— unlocked! One purchase per token.</span>' : '<span class="muted small">— locked. Needs a Pumpkin Shop Token (1-in-100,000,000 wheel jackpot).</span>'}</h2>
@@ -93,7 +95,9 @@ export async function tokensPage(D) {
     });
     app.querySelectorAll('.token-equip').forEach(b => b.onclick = async () => {
       try {
-        me.avatar = await api('PUT', '/api/me/avatar', { ...me.avatar, gear: b.dataset.id });
+        const it = ITEM[b.dataset.id];
+        const slot = it?.type || 'gear';
+        me.avatar = await api('PUT', '/api/me/avatar', { ...me.avatar, [slot]: b.dataset.id });
         toast('Ability equipped! It works in games now.');
         refresh();
       } catch (e) { toast(e.message || 'Could not equip', true); }

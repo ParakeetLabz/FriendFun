@@ -293,6 +293,9 @@ export const CATALOG = [
   { id: 'token_galactic', type: 'token', name: 'Galactic Token', price: 5000, emoji: '🌌', color: '#7b2ff7', rarity: 'galactic' },
   { id: 'token_universal', type: 'token', name: 'Universal Token', price: 10000, emoji: '🌠', color: '#ff2d95', rarity: 'universal' },
   { id: 'token_pumpkin', type: 'token', name: 'Pumpkin Shop Token', price: 0, limited: true, emoji: '🎃', color: '#ff6d00', rarity: 'pumpkin' },
+  { id: 'token_scout', type: 'token', name: 'Scout Token', price: 0, limited: true, emoji: '🌀', color: '#7b2ff7', rarity: 'scout' },
+  { id: 'token_drpepper', type: 'token', name: 'Dr. Pepper Token', price: 750, emoji: '🥤', color: '#c8102e', rarity: 'drpepper' },
+  { id: 'token_skull', type: 'token', name: 'Skull Token', price: 0, limited: true, emoji: '💀', color: '#eceff1', rarity: 'skull' },
   // ---- Ability items (won from the wheel; equip in Gear — each grants an ability) ----
   { id: 'gear_swiftboots', type: 'gear', name: 'Swift Boots', price: 0, limited: true, emoji: '👟', color: '#4caf50', ability: 'speed', rarity: 'common' },
   { id: 'gear_dashsneakers', type: 'gear', name: 'Dash Sneakers', price: 0, limited: true, emoji: '👟', color: '#66bb6a', ability: 'speed', rarity: 'common' },
@@ -307,6 +310,13 @@ export const CATALOG = [
   { id: 'gear_starmantle', type: 'gear', name: 'Star Mantle', price: 0, limited: true, emoji: '🌟', color: '#7b2ff7', ability: 'star', rarity: 'galactic' },
   { id: 'gear_nebulacloak', type: 'gear', name: 'Nebula Cloak', price: 0, limited: true, emoji: '🌌', color: '#9575cd', ability: 'star', rarity: 'galactic' },
   { id: 'gear_universalcore', type: 'gear', name: 'Universal Core', price: 0, limited: true, emoji: '🌠', color: '#ff2d95', ability: 'universal', rarity: 'universal' },
+  // ---- Scout Token prizes (only @scout) ----
+  { id: 'hat_blobtwirly', type: 'hat', name: 'Blob Twirly Hat', price: 0, limited: true, emoji: '🌀', color: '#7b2ff7', rarity: 'scout' },
+  { id: 'shirt_austee', type: 'shirt', name: 'Austee', price: 0, limited: true, emoji: '🌪️', color: '#311b92', ability: 'tornado', rarity: 'scout' },
+  // ---- Dr. Pepper Token prizes ----
+  { id: 'hat_pepper', type: 'hat', name: 'Dr. Pepper Cap', price: 0, limited: true, emoji: '🧢', color: '#c8102e', rarity: 'drpepper' },
+  { id: 'shirt_pepper', type: 'shirt', name: 'Dr. Pepper Tee', price: 0, limited: true, emoji: '👕', color: '#c8102e', rarity: 'drpepper' },
+  { id: 'gear_peppercan', type: 'gear', name: 'Dr. Pepper Can', price: 0, limited: true, emoji: '🥤', color: '#c8102e', ability: 'speed', rarity: 'drpepper' },
   // ---- Pumpkin shop (one purchase per Pumpkin Shop Token) ----
   { id: 'hat_pumpkin', type: 'hat', name: 'Pumpkin Head', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
   { id: 'gear_pumpkinsword', type: 'gear', name: 'Pumpkin Sword', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
