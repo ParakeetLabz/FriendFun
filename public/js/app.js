@@ -68,7 +68,7 @@ function buildCharacter(avatar) {
   return _avatar3d.buildCharacter(avatar);
 }
 import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=35b15df8';
-import { templates } from './worlds.js?v=62531363';
+import { templates, GEN_GAMES } from './worlds.js?v=9daecf07';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
 import { sfx } from './sound.js?v=music27';
@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=f8091986');
+  const m = await import('./lobby.js?v=471922b1');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -1050,7 +1050,7 @@ async function friendsPage() {
       ${feed.playing.length ? `<p>${feed.playing.map(p => `<a href="#/play/${p.gameId}">${esc(p.name)} is playing ${esc(p.gameName)}</a>`).join(' · ')}</p>` : ''}
       <div class="game-row">${feed.games.map(gameCard).join('') || '<p class="muted">Nothing new from friends yet.</p>'}</div></section>
     <section><div class="sec-h"><h2>My Friends (${fr.friends.length})</h2></div>
-      <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-call="${esc(u.name)}"><span class="ic">${icons.phone}</span> Call</button><button class="btn-secondary btn-small" data-party="${esc(u.name)}" title="Start a party"><span class="ic">${icons.sparkles}</span></button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
+      <div class="friend-grid">${fr.friends.map(u => `<div class="friend-card">${userTile(u)}<div class="friend-card-actions"><a class="btn-secondary btn-small" href="#/messages/${encodeURIComponent(u.name)}">Message</a><button class="btn-secondary btn-small" data-call="${esc(u.name)}"><span class="ic">${icons.phone}</span> Call</button><a class="btn-secondary btn-small" href="#/trade/${encodeURIComponent(u.name)}">🔄 Trade</a><button class="btn-secondary btn-small" data-party="${esc(u.name)}" title="Start a party"><span class="ic">${icons.sparkles}</span></button>${u.gameId ? `<a class="btn-join" href="#/play/${u.gameId}">Join</a>` : `<span class="muted small">${u.online ? 'Online' : 'Offline'}</span>`}</div></div>`).join('') || '<p class="muted">No friends yet. Search for people above!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-accept]').forEach(b => b.onclick = async () => { await api('POST', '/api/friends/' + encodeURIComponent(b.dataset.accept)); toast('You are now friends with ' + b.dataset.accept); me = await api('GET', '/api/me'); friendsPage(); });
     app.querySelectorAll('[data-decline]').forEach(b => b.onclick = async () => { await api('DELETE', '/api/friends/' + encodeURIComponent(b.dataset.decline)); me = await api('GET', '/api/me'); friendsPage(); });
     app.querySelectorAll('[data-party]').forEach(b => b.onclick = async () => {
@@ -1265,7 +1265,7 @@ async function profilePage(name) {
         ${soc?.status ? `<div class="ph-status"><span class="ic">${icons.chat}</span> ${esc(soc.status)}</div>` : ''}
         <div class="ph-stats"><div><b>${u.friends}</b> Friends</div><div><b>${soc?.followers ?? 0}</b> Followers</div><div><b>${soc?.following ?? 0}</b> Following</div><div><b>${u.games.length}</b> Creations</div><div>${u.gameName ? `Playing <a href="#/games/${u.gameId}">${esc(u.gameName)}</a>` : u.online ? 'Online' : 'Offline'}</div></div>
       </div>
-      <div class="ph-actions">${isMe ? `<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status"><span class="ic">${icons.chat}</span> Set status</button>` : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
+      <div class="ph-actions">${isMe ? `<a class="btn-secondary" href="#/avatar">Edit Avatar</a><button class="btn-secondary edit-status"><span class="ic">${icons.chat}</span> Set status</button>` : u.isFriend ? `<a class="btn-secondary" href="#/messages/${encodeURIComponent(u.name)}">Message</a>${u.gameId ? `<a class="btn-primary" href="#/play/${u.gameId}">Join Game</a>` : ''}<button class="btn-secondary gift-btn">🎁 Gift</button><a class="btn-secondary" href="#/trade/${encodeURIComponent(u.name)}">🔄 Trade</a><button class="btn-secondary unfriend">Unfriend</button><button class="btn-secondary report-btn">Report</button>` : u.requested ? '<button class="btn-secondary" disabled>Request Sent</button>' : `<button class="btn-secondary follow-btn">${soc?.isFollowing ? 'Following ✓' : 'Follow'}</button><button class="btn-primary add-friend">Add Friend</button><input class="friend-note" placeholder="Note (optional)" maxlength="120"><button class="btn-secondary report-btn">Report</button>`}</div>
     </div>
     <section><div class="sec-h"><h2>About</h2>${isMe ? '<button class="link edit-bio">Edit</button>' : ''}</div><p class="bio">${esc(u.bio || (isMe ? 'Tell people about yourself!' : 'This user has no bio.'))}</p></section>
     <section><div class="sec-h"><h2>Badges (${u.badges.length})</h2></div>
@@ -1325,6 +1325,9 @@ async function createPage() {
     <a href="#/2ui/new" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ec4899,#7c3aed);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px"><span style="font-weight:900;font-size:18px">🖥️ Make a 2UI Game</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">A GUI-only game — buttons, coins and labels, no 3D world. Players build their own and everyone can play them →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
+    <section><div class="sec-h"><h2>Generated Worlds (${GEN_GAMES.length})</h2></div>
+      <p class="muted">216 ready-made worlds — obbies, coin rushes, towers, mazes, races and arenas across 12 themes. Tap one to open it in Studio and make it yours.</p>
+      <div class="gen-grid">${GEN_GAMES.map(g => `<a class="gen-tile" href="#/studio/new/${g.key}"><b>${esc(g.name)}</b><span class="muted small">${esc(g.desc)}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>Load a .fun file</h2></div>
       <p class="muted">Got a <b>.fun</b> game file? It holds the game's scripts and a JSON with its name — load it and it opens as a new experience you can edit in Studio.</p>
       <div class="row"><button class="btn-secondary" id="funImportBtn"><span class="ic">${icons.upload}</span> Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
@@ -1538,6 +1541,8 @@ const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
 const familyDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
 const twoUiDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
+const tradeDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
+const petsDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMoney, get me() { return me; } };
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
@@ -1644,7 +1649,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', '2ui']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', '2ui', 'trades', 'trade', 'pets']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -1668,6 +1673,9 @@ async function route() {
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=7579cbac'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
+      case 'trades': { const m = await import('./trade.js?v=0e0a5d7c'); return m.tradePage(tradeDeps); }
+      case 'trade': { const m = await import('./trade.js?v=0e0a5d7c'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
+      case 'pets': { const m = await import('./pets.js?v=30571727'); return m.petsPage(petsDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();

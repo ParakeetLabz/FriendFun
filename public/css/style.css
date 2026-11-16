@@ -1116,3 +1116,22 @@ button.two-ui-el { cursor: pointer; }
   .two-ui-score { font-size: 16px; }
   .two-ui-area { aspect-ratio: 3 / 4; }
 }
+
+/* ---------- Trading ---------- */
+.trade-cols { display: flex; gap: 18px; flex-wrap: wrap; }
+.trade-cols section { flex: 1 1 280px; min-width: 260px; }
+.trade-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.trade-chip { border: 1px solid var(--line); background: var(--card2); color: var(--text); border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 13px; cursor: pointer; }
+.trade-chip.sel { background: var(--grad); color: #fff; border-color: transparent; box-shadow: var(--glow); }
+.trade-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; background: var(--card); flex-wrap: wrap; }
+.trade-row .small { color: var(--muted); font-size: 13px; }
+
+/* ---------- Pets ---------- */
+.pet-emoji-big { font-size: 44px; display: block; margin-bottom: 6px; }
+.pet-card { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+
+/* ---------- Generated Worlds (Create) ---------- */
+.gen-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; max-height: 420px; overflow-y: auto; }
+.gen-tile { display: block; border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 10px 12px; text-decoration: none; color: var(--text); }
+.gen-tile b { display: block; font-size: 14px; }
+.gen-tile:hover { border-color: var(--blue2); }

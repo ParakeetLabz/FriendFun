@@ -1,3 +1,4 @@
+import { genTemplates, GEN_GAMES } from './gen-games.js?v=932604b0';
 // World generators shared by server (seeding) and client (studio templates).
 function rng(seed) {
   let s = seed >>> 0;
@@ -899,6 +900,8 @@ export function voiceLounge() {
   return w;
 }
 export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge };
+Object.assign(templates, genTemplates);
+export { GEN_GAMES };
 
 export function shooterArena() {
   const w = startWorld('#ff9e57');

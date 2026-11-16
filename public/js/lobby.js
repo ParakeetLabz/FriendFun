@@ -69,6 +69,8 @@ export async function lobbyPage(D) {
       <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
       <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
       <a class="lb-item" href="#/2ui"><span class="ic">${icons.grid}</span>2UI</a>
+      <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
+      <a class="lb-item" href="#/pets"><span class="ic">${icons.heart}</span>PETS</a>
       <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
       <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
       ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
@@ -290,7 +292,7 @@ export async function lobbyPage(D) {
   const chars = [];
   const addChar = (avatar, name, x, z, s) => {
     try {
-      const c = buildCharacter(avatar, { pet: false, gear: false });
+      const c = buildCharacter(avatar, { gear: false });
       c.position.set(x, 0, z); c.scale.setScalar(s);
       const tag = makeNameTag(name); tag.position.y = 5.7; tag.scale.multiplyScalar(0.5); c.add(tag);
       stage.add(c); chars.push(c); return c;
@@ -324,7 +326,7 @@ export async function lobbyPage(D) {
     floaters.forEach(f => { f.m.position.y = f.baseY + Math.sin(t * f.speed + f.phase) * 0.35; f.m.rotation.y += dt * f.spin; f.m.rotation.x += dt * f.spin * 0.5; });
     stars.rotation.y = t * 0.02;
     if (myEmote !== 'idle' && t >= emoteEnd) { myEmote = 'idle'; app.querySelectorAll('.lb-emotes button').forEach(x => x.classList.remove('on')); }
-    chars.forEach((c, i) => animateCharacter(c, i === 0 ? myEmote : 'idle', t + i * 1.7, dt));
+    chars.forEach((c, i) => { animateCharacter(c, i === 0 ? myEmote : 'idle', t + i * 1.7, dt); const p = c.userData.pet; if (p) p.position.y = Math.abs(Math.sin(t * 2.5 + i * 1.7)) * 0.18; });
     renderer.render(scene, camera);
   };
   tick();

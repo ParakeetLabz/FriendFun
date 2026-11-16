@@ -11,10 +11,11 @@ import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
 import { createFamily } from './family.js';
 import { createVersion } from './version.js';
+import { createTrade } from './trade.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { templates, shooterArena, shooterFort, shooterRooftop } from './public/js/worlds.js';
+import { templates, shooterArena, shooterFort, shooterRooftop, GEN_GAMES } from './public/js/worlds.js';
 import { PARTY_PRIZE, PARTY_GOAL, seedPartyGames, endPartyGames } from './party.js';
 import { ITEM, CATALOG, DEFAULT_AVATAR, ECON, BADGES, UGC_TEMPLATES, UGC_MAX_PRICE, UGC_CREATOR_CUT } from './public/js/catalog.js';
 
@@ -171,6 +172,19 @@ async function seed() {
 
   for (const game of games) {
     await supabase.from('games').upsert({ id: game.id, ...game });
+  }
+
+  // 200+ generated games (gen-games.js): only insert the ones that aren't
+  // already there, so a reboot doesn't rewrite 216 rows every time.
+  const { data: existing } = await supabase.from('games').select('id').like('id', 'g_gen_%');
+  const have = new Set((existing || []).map(r => r.id));
+  for (const gg of GEN_GAMES) {
+    if (have.has(gg.id)) continue;
+    await supabase.from('games').insert({
+      id: gg.id, name: gg.name, creator: 'Funtopia', description: gg.desc,
+      world: templates[gg.key](), visits: 50 + (gg.seed % 900), likes: 5 + (gg.seed % 80),
+      dislikes: 0, max_players: 30, created: now, updated: now, thumbnail: null,
+    });
   }
 }
 
@@ -1811,6 +1825,7 @@ createCalling({ app, auth, supabase, notify });
 createVerify({ app, auth, supabase, isOwner, logMod });
 createFamily({ app, auth, supabase, filter, notify, key });
 createVersion({ app, auth, supabase, isOwner });
+createTrade({ app, auth, supabase, notify, key });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;
