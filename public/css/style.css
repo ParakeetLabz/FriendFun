@@ -1141,3 +1141,13 @@ button.two-ui-el { cursor: pointer; }
 .lb-credit b { color: var(--text); }
 .landing-made { color: var(--muted); font-size: 14px; margin-top: 10px; }
 .landing-made b { color: var(--text); }
+
+/* ---------- Ultimate 2UI ---------- */
+.two-ui-time, .two-ui-lives { font-weight: 800; font-size: 15px; white-space: nowrap; }
+.two-ui-time { color: #fbbf24; }
+.two-ui-mover { background: #ec4899; color: #fff; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.25); transition: left .25s ease, top .25s ease; }
+.two-ui-mover:active { transform: translateY(2px); box-shadow: none; }
+.two-ui-hazard { background: #dc2626; color: #fff; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+.two-ui-hazard:active { transform: translateY(2px); box-shadow: none; }
+.two-ui-scores { width: 100%; margin: 8px 0; }
+.two-ui-scores .row { padding: 4px 0; border-bottom: 1px solid var(--line); }

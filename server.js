@@ -12,6 +12,7 @@ import { createVerify } from './verify.js';
 import { createFamily } from './family.js';
 import { createVersion } from './version.js';
 import { createTrade } from './trade.js';
+import { createTwoUi } from './twoui.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -1590,7 +1591,8 @@ function sanitizeTwoUi(t) {
   const num = v => (Number.isFinite(+v) ? +v : 0);
   const hex = v => (/^#[0-9a-fA-F]{6}$/.test(v) ? v : null);
   const els = (Array.isArray(t.elements) ? t.elements : []).slice(0, 100).map((e, i) => {
-    const kind = ['button', 'label', 'coin', 'panel'].includes(e.kind) ? e.kind : 'button';
+    const kind = ['button', 'label', 'coin', 'panel', 'mover', 'hazard'].includes(e.kind) ? e.kind : 'button';
+    const isClick = ['button', 'coin', 'mover'].includes(kind);
     return {
       id: String(e.id || 'e' + i).slice(0, 20),
       kind,
@@ -1600,14 +1602,18 @@ function sanitizeTwoUi(t) {
       h: Math.max(2, Math.min(100, num(e.h) || 10)),
       text: filter(String(e.text || '')).slice(0, 60),
       color: hex(e.color) || '#ffffff',
-      bg: hex(e.bg) || (kind === 'button' ? '#7c3aed' : kind === 'coin' ? '#f5cd30' : '#2a2a40'),
-      points: (kind === 'button' || kind === 'coin') ? Math.max(0, Math.min(1000, Math.round(num(e.points) || 0))) : 0,
-      cooldown: (kind === 'button' || kind === 'coin') ? Math.max(0, Math.min(60, num(e.cooldown) || 0)) : 0,
+      bg: hex(e.bg) || (kind === 'button' ? '#7c3aed' : kind === 'coin' ? '#f5cd30' : kind === 'hazard' ? '#dc2626' : kind === 'mover' ? '#ec4899' : '#2a2a40'),
+      points: isClick ? Math.max(0, Math.min(1000, Math.round(num(e.points) || 0))) : 0,
+      cooldown: isClick ? Math.max(0, Math.min(60, num(e.cooldown) || 0)) : 0,
+      moveEvery: kind === 'mover' ? Math.max(0, Math.min(30, num(e.moveEvery) || 0)) : 0,
+      damage: kind === 'hazard' ? Math.max(1, Math.min(5, Math.round(num(e.damage) || 1))) : 0,
     };
   });
   return {
     goal: Math.max(10, Math.min(10000, Math.round(num(t.goal) || 100))),
     bg: hex(t.bg) || '#17172a',
+    timeLimit: Math.max(0, Math.min(600, Math.round(num(t.timeLimit) || 0))),
+    lives: Math.max(0, Math.min(10, Math.round(num(t.lives) || 0))),
     elements: els,
   };
 }
@@ -1826,6 +1832,7 @@ createVerify({ app, auth, supabase, isOwner, logMod });
 createFamily({ app, auth, supabase, filter, notify, key });
 createVersion({ app, auth, supabase, isOwner });
 createTrade({ app, auth, supabase, notify, key });
+createTwoUi({ app, auth, supabase, key });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;

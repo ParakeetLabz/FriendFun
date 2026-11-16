@@ -741,9 +741,21 @@ async function playPage(id, server, autoVoice) {
   if (g.world?.twoUi) {
     api('POST', `/api/games/${id}/visit`).catch(() => {});
     app.innerHTML = '<div class="play-container two-ui-play-wrap"></div>';
-    const { renderTwoUi } = await import('./two-ui.js?v=7579cbac');
+    const { renderTwoUi } = await import('./two-ui.js?v=c35306d5');
     const player = renderTwoUi(app.querySelector('.play-container'), g.world.twoUi, {
       onExit: () => { player.destroy(); cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
+      onWin: async (score, won) => {
+        if (!won) return;
+        try {
+          const r = await api('POST', '/api/games/' + id + '/2ui-win', { score });
+          if (r.reward) { me.funtix = (me.funtix || 0) + r.reward; setMoney(me); toast('🏆 You won! +' + r.reward + ' FunTix (daily reward)'); }
+          const s = await api('GET', '/api/games/' + id + '/2ui-scores');
+          const el = player.scoresEl();
+          if (el && s.scores?.length) {
+            el.innerHTML = '<div class="sec-h"><h2>🏆 Top scores</h2></div>' + s.scores.map((x, i) => `<div class="row" style="justify-content:space-between"><span>${i + 1}. ${esc(x.username)}</span><b>${x.score}</b></div>`).join('');
+          }
+        } catch (e) { /* leaderboard not set up yet — the win still counts */ }
+      },
     });
     cleanup = () => player.destroy();
     return;
@@ -1673,7 +1685,7 @@ async function route() {
       case 'ugc': { const m = await import('./ugc-studio.js?v=90440012'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
-      case '2ui': { const m = await import('./two-ui.js?v=7579cbac'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
+      case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
       case 'trades': { const m = await import('./trade.js?v=0e0a5d7c'); return m.tradePage(tradeDeps); }
       case 'trade': { const m = await import('./trade.js?v=0e0a5d7c'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
       case 'pets': { const m = await import('./pets.js?v=30571727'); return m.petsPage(petsDeps); }
