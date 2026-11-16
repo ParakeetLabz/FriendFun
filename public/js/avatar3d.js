@@ -678,20 +678,46 @@ export function animateCharacter(ch, state, t, dt) {
   // Classic Roblox style: idle is statue-still, walk swings big, jump = arms straight up, fall = arms out
   // rotation.x > 0 swings a limb backwards (character faces +z); arms up ~ -PI
   if (L.torso.userData.baseY === undefined) L.torso.userData.baseY = L.torso.position.y;
-  let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0, tp = 0, hp = 0;
+  let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0, tp = 0, hp = 0, tr = 0; // tr = torso roll (side sway)
   // R15 joint angles: laf/raf = elbow bend, llf/rlf = knee bend.
   let laf = 0.15, raf = 0.15, llf = 0.08, rlf = 0.08;
   const spin = ch.userData.spin;
   if (state === 'walk') {
-    const s = Math.sin(t * 10);
-    la = s * 1.05; ra = -s * 1.05; ll = -s * 1.05; rl = s * 1.05;
-    laz = 0.14; raz = -0.14;
-    laf = 0.15 + Math.max(0, -s) * 0.4; raf = 0.15 + Math.max(0, s) * 0.4;
-    llf = Math.max(0, s) * 0.9; rlf = Math.max(0, -s) * 0.9;
-    bob = Math.abs(Math.cos(t * 10)) * 0.14;
+    const w = t * 10, s = Math.sin(w), c = Math.cos(w);
+    // legs swing opposite, arms counter-swing; elbows trail the arm swing
+    la = s * 1.15; ra = -s * 1.15; ll = -s * 1.1; rl = s * 1.1;
+    laz = 0.16 + Math.max(0, s) * 0.1; raz = -0.16 - Math.max(0, -s) * 0.1;
+    laf = 0.2 + Math.max(0, -s) * 0.55; raf = 0.2 + Math.max(0, s) * 0.55;
+    // knee bends sharpest as the leg lifts through the forward swing
+    llf = 0.08 + Math.pow(Math.max(0, Math.sin(w + 0.7)), 1.6) * 1.15;
+    rlf = 0.08 + Math.pow(Math.max(0, Math.sin(w + Math.PI + 0.7)), 1.6) * 1.15;
+    // two bobs per stride (one per footfall), torso leans in and sways
+    bob = Math.abs(c) * 0.16;
+    tp = 0.1 + Math.sin(w * 2) * 0.03;
+    tr = s * 0.07;
+    hp = -0.05;
   }
-  else if (state === 'jump') { la = ra = -Math.PI; laz = 0.15; raz = -0.15; laf = raf = 0.5; llf = rlf = 0.6; }
-  else if (state === 'fall') { laz = 1.45; raz = -1.45; ll = 0.15; rl = 0.15; laf = raf = 0.6; llf = rlf = 0.5; }
+  else if (state === 'jump') {
+    const j = Math.sin(t * 9);
+    la = ra = -Math.PI + 0.25 + j * 0.12; // arms up, pumping slightly
+    laz = 0.35 + j * 0.08; raz = -0.35 - j * 0.08;
+    laf = raf = 0.45;
+    // one leg tucks, the other kicks out — they swap as you rise
+    ll = -0.55 + j * 0.25; rl = 0.25 - j * 0.25;
+    llf = 0.9 + j * 0.25; rlf = 0.45 - j * 0.2;
+    tp = -0.12; hp = -0.15; bob = 0.08;
+  }
+  else if (state === 'fall') {
+    const f = Math.sin(t * 14), f2 = Math.sin(t * 14 + Math.PI);
+    // arms flail: one up, one out, swapping fast
+    la = -2.4 + f * 0.5; ra = -2.4 + f2 * 0.5;
+    laz = 0.9 + f * 0.45; raz = -0.9 - f2 * 0.45;
+    laf = raf = 0.5;
+    // legs kick and bicycle
+    ll = 0.35 + f * 0.4; rl = 0.35 + f2 * 0.4;
+    llf = 0.6 + Math.max(0, f) * 0.5; rlf = 0.6 + Math.max(0, f2) * 0.5;
+    tp = 0.18 + f * 0.06; tr = f * 0.08; hp = 0.25;
+  }
   else if (state === 'wave') { const w = Math.sin(t * 12); ra = -(Math.PI * 0.85 + w * 0.3); raf = -1.0 + w * 0.35; la = 0.25; laz = 0.3; hp = 0.18; tp = 0.06; bob = Math.abs(Math.sin(t * 6)) * 0.05; }
   else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s * 1.1; ra = -Math.PI * 0.5 + s * 1.1; ll = s * 0.5; rl = -s * 0.5; laf = raf = 0.5; llf = rlf = 0.3 + Math.abs(s) * 0.35; bob = Math.abs(Math.sin(t * 8)) * 0.2; tp = s * 0.12; hp = Math.sin(t * 8) * 0.1; }
   else if (state === 'floss') { const s = Math.sin(t * 10); la = -Math.PI * 0.35 + s * 0.9; ra = -Math.PI * 0.35 - s * 0.9; laz = 0.5 + s * 0.35; raz = -0.5 - s * 0.35; laf = raf = 0.4; tp = s * 0.18; hp = -s * 0.08; bob = Math.abs(Math.sin(t * 10)) * 0.12; ll = s * 0.25; rl = -s * 0.25; }
@@ -721,6 +747,7 @@ export function animateCharacter(ch, state, t, dt) {
   }
   L.torso.position.y += ((L.torso.userData.baseY + bob) - L.torso.position.y) * k;
   L.torso.rotation.x += (tp - L.torso.rotation.x) * k;
+  L.torso.rotation.z += (tr - L.torso.rotation.z) * k;
   if (L.head) L.head.rotation.x += (hp - L.head.rotation.x) * k;
   if (spin && state !== 'spin') {
     const twoPi = Math.PI * 2;
