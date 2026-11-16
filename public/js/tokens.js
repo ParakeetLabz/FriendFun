@@ -4,6 +4,7 @@
 // The Pumpkin Shop Token is a 1-in-100,000,000 wheel jackpot — it unlocks
 // the pumpkin shop for exactly one purchase.
 import { CATALOG, ITEM } from './catalog.js?v=3253bf8f';
+import { avatarImage } from './avatar3d.js?v=32a86ecf';
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
 let lastResult = '';
@@ -27,7 +28,19 @@ export async function tokensPage(D) {
     <p class="muted">Spend a token to spin the prize wheel. Every spin wins an avatar item — and every one grants a real ability in games when you equip it in Gear. Your FunTix: <b>${esc(String(me.funtix ?? 0))}</b></p>
     <div class="token-wheel-wrap">
       <div class="token-wheel" id="tokenWheel"><div class="token-wheel-pointer">▼</div><div class="token-wheel-face">🎡</div></div>
+      <div class="token-orbit" id="tokenOrbit"><img class="token-avatar" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar" /></div>
+      <div class="token-burst" id="tokenBurst"></div>
       <div class="token-wheel-result" id="tokenResult">${lastResult || 'Pick a token below, then spin!'}</div>
+    </div>
+    <div class="token-reveal-overlay" id="tokenReveal" hidden>
+      <div class="token-reveal-card">
+        <div class="token-reveal-title">🎉 YOU WON! 🎉</div>
+        <div class="token-reveal-emoji" id="tokenRevealEmoji">✨</div>
+        <div class="token-reveal-name" id="tokenRevealName"></div>
+        <div class="token-reveal-ability" id="tokenRevealAbility"></div>
+        <div class="token-reveal-jackpot" id="tokenRevealJackpot"></div>
+        <button class="btn-primary token-reveal-close" id="tokenRevealClose">Awesome!</button>
+      </div>
     </div>
     <h2>Your tokens</h2>
     <div class="item-grid">${info.tokens.map(t => {
@@ -68,22 +81,50 @@ export async function tokensPage(D) {
     const refresh = () => tokensPage(D);
     const wheel = app.querySelector('#tokenWheel');
     const result = app.querySelector('#tokenResult');
+    const orbit = app.querySelector('#tokenOrbit');
+    const burst = app.querySelector('#tokenBurst');
+    const reveal = app.querySelector('#tokenReveal');
+    const explode = (color) => {
+      burst.innerHTML = '';
+      const colors = [color || '#ffd700', '#ff2d95', '#7b2ff7', '#00e5ff', '#76ff03', '#ff6d00'];
+      for (let i = 0; i < 28; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const d = 90 + Math.random() * 130;
+        const p = document.createElement('i');
+        p.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+        p.style.setProperty('--dy', `${Math.sin(a) * d}px`);
+        p.style.background = colors[i % colors.length];
+        p.style.width = p.style.height = `${7 + Math.random() * 9}px`;
+        burst.appendChild(p);
+      }
+      const flash = document.createElement('b');
+      flash.className = 'token-flash';
+      burst.appendChild(flash);
+      setTimeout(() => { burst.innerHTML = ''; }, 1000);
+    };
+    app.querySelector('#tokenRevealClose').onclick = () => { reveal.hidden = true; refresh(); };
     app.querySelectorAll('.token-spin').forEach(b => b.onclick = async () => {
       b.disabled = true;
       result.textContent = 'Spinning…';
       wheel.classList.remove('spinning'); void wheel.offsetWidth; wheel.classList.add('spinning');
+      orbit.classList.add('on');
       try {
         const r = await api('POST', '/api/tokens/spin', { token: b.dataset.token });
         me.inventory = r.inventory;
         const item = ITEM[r.item];
         setTimeout(() => {
           wheel.classList.remove('spinning');
+          orbit.classList.remove('on');
+          explode(item?.color);
           lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}${r.jackpot ? '<br>🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : ''}`;
           result.innerHTML = lastResult;
-          toast(`You won ${item?.name || r.item}! Equip it in Gear for its ability.`);
-          refresh();
+          app.querySelector('#tokenRevealEmoji').textContent = item?.emoji || '✨';
+          app.querySelector('#tokenRevealName').textContent = item?.name || r.item;
+          app.querySelector('#tokenRevealAbility').textContent = ABILITY_LABEL[item?.ability] || '';
+          app.querySelector('#tokenRevealJackpot').innerHTML = r.jackpot ? '🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : '';
+          reveal.hidden = false;
         }, 1400);
-      } catch (e) { wheel.classList.remove('spinning'); result.textContent = ''; toast(e.message || 'Spin failed', true); b.disabled = false; }
+      } catch (e) { wheel.classList.remove('spinning'); orbit.classList.remove('on'); result.textContent = ''; toast(e.message || 'Spin failed', true); b.disabled = false; }
     });
     app.querySelectorAll('.token-buy').forEach(b => b.onclick = async () => {
       try {
