@@ -1286,6 +1286,19 @@ body.pumpkin-boom-shake { animation: pumpkinBoomShake .09s linear infinite; }
 .cine-continue { margin-top: 14px; font-size: 18px; padding: 12px 34px; }
 .cine-skip { position: absolute; z-index: 6; right: 18px; bottom: 13vh; background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
 
+/* ---------- Glitch Token: the whole screen breaks ---------- */
+.glitch-overlay { position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .82); overflow: hidden; animation: glitchFlicker .12s steps(2) infinite; }
+.glitch-static { position: absolute; inset: -20%; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E"); opacity: .5; mix-blend-mode: screen; animation: glitchStatic .18s steps(3) infinite; }
+@keyframes glitchStatic { 0% { transform: translate(0, 0); } 33% { transform: translate(-14px, 9px); } 66% { transform: translate(11px, -12px); } 100% { transform: translate(0, 0); } }
+@keyframes glitchFlicker { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.5) hue-rotate(40deg); } }
+.glitch-dread { position: relative; z-index: 2; text-align: center; animation: glitchDread .3s steps(2) infinite; }
+.glitch-dread img { width: min(52vmin, 300px); height: min(52vmin, 300px); object-fit: contain; filter: contrast(1.6) saturate(2) hue-rotate(-30deg) drop-shadow(4px 0 0 rgba(255, 0, 60, .8)) drop-shadow(-4px 0 0 rgba(0, 255, 65, .8)); }
+@keyframes glitchDread { 0% { transform: translate(0, 0) skewX(0); } 25% { transform: translate(-6px, 3px) skewX(-4deg); } 50% { transform: translate(5px, -4px) skewX(3deg); } 75% { transform: translate(-3px, -2px) skewX(-2deg); } 100% { transform: translate(0, 0) skewX(0); } }
+.glitch-name { font-size: clamp(18px, 4.5vmin, 30px); font-weight: 900; color: #00ff41; text-shadow: 3px 0 #ff003c, -3px 0 #00e5ff; letter-spacing: 1px; margin-top: 12px; }
+.glitch-sub { font-size: clamp(13px, 3vmin, 18px); color: #ff003c; font-weight: 700; letter-spacing: 3px; margin-top: 6px; text-shadow: 0 0 12px #ff003c; }
+body.glitching { animation: glitchShake .12s steps(2) infinite; }
+@keyframes glitchShake { 0% { transform: translate(0, 0); } 25% { transform: translate(-3px, 2px); } 50% { transform: translate(3px, -2px); } 75% { transform: translate(-2px, -3px); } 100% { transform: translate(0, 0); } }
+
 /* ---------- Per-token cinematic FX layers ---------- */
 .cine-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 .cine-fx[hidden] { display: none; }

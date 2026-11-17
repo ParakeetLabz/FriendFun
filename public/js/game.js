@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=bbc65898';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=3b8e954d';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -13,7 +13,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=44f5fe93';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=843f2486';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -108,7 +108,7 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
-    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
+    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
@@ -361,7 +361,7 @@ export class Game {
     }
   }
   drivePhysics(dt) {
-    this.dashCd = Math.max(0, this.dashCd - dt); this.magnetT = Math.max(0, this.magnetT - dt); this.tpCd = Math.max(0, this.tpCd - dt);
+    this.dashCd = Math.max(0, this.dashCd - dt); this.magnetT = Math.max(0, this.magnetT - dt); this.tpCd = Math.max(0, this.tpCd - dt); this.hackTpCd = Math.max(0, this.hackTpCd - dt);
     const k = this.keys;
     const spec = ITEM[this.vehicleId] || {};
     const maxSpeed = spec.speed || 32, turnRate = spec.turn || 2.4;
@@ -871,6 +871,19 @@ export class Game {
     this.bigMsg.textContent = text; this.bigMsg.classList.add('show');
     clearTimeout(this.bigT); this.bigT = setTimeout(() => this.bigMsg.classList.remove('show'), ms);
   }
+  // A Glitch Token spin hacks every game: the whole screen glitches and a
+  // dreadful image of the hacker's avatar stares out at everyone.
+  showGlitch(m) {
+    const name = m.name || 'Someone';
+    const img = avatarImage(m.avatar || {}, 'full');
+    const ov = document.createElement('div');
+    ov.className = 'glitch-overlay';
+    ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-dread"><img src="${img}" alt=""><div class="glitch-name">👾 ${esc(name).toUpperCase()} HAS HACKED THE GAME 👾</div><div class="glitch-sub">YOUR SCREEN HAS BEEN GLITCHED</div></div>`;
+    this.c.appendChild(ov);
+    document.body.classList.add('glitching');
+    sfx.win();
+    setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); }, 5000);
+  }
   sendChat(text) {
     text = text.trim(); if (!text) return;
     const jm = text.match(/^\/jam(?:\s+(\w+))?\s*$/i);
@@ -1309,6 +1322,7 @@ export class Game {
       if (down && !e.repeat && e.code === 'KeyW') { const now = performance.now(); if (now - (this.lastW || 0) < 280) this.sprinting = true; this.lastW = now; }
       if (!down && e.code === 'KeyW') this.sprinting = false;
       if (down && !e.repeat && e.code === 'KeyQ' && !this.dead && this.dashCd <= 0) { const tor = this.hasAbility('tornado'); this.dashT = tor ? 0.4 : 0.18; this.dashCd = tor ? 1.2 : 2; this.dashDir.set(Math.sin(this.facing), 0, Math.cos(this.facing)); this.tornadoSpin = tor; sfx.jump(); }
+      if (down && !e.repeat && e.code === 'KeyT' && !this.dead && this.hasAbility('teleport') && this.hackTpCd <= 0) { this.hackTpCd = 3; this.pos.x += Math.sin(this.facing) * 12; this.pos.z += Math.cos(this.facing) * 12; this.vel.set(0, 0, 0); this.showBig('👾 HACKED: Teleported!', 1200); sfx.checkpoint(); }
       if (e.code === 'Space') {
         if (down) { if (!e.repeat) this.jumpBuf = 0.15; e.preventDefault(); }
         else this.cutJump();
@@ -1399,6 +1413,7 @@ export class Game {
       } else if (m.t === 'chat') this.onChat(m);
       else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
       else if (m.t === 'tokenDrop') { this.showBig(`🪙 YOU GOT A ${String(m.name || 'TOKEN').toUpperCase()}!`, 4500); sfx.win(); if (!reduceMotion()) confetti(this.c); }
+      else if (m.t === 'glitch') { this.showGlitch(m); }
       else if (m.t === 'pong') { this._ping = Math.max(0, Math.round(performance.now() - (m.id || performance.now()))); }
       else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
 
@@ -1515,7 +1530,7 @@ export class Game {
   physics(dt) {
     if (this.frozen) { this.vel.set(0, 0, 0); this.carSpeed = 0; this.anim = 'idle'; return; }
     if (this.vehicleId && !this.dead) { this.drivePhysics(dt); return; }
-    if (this.hasAbility('magnet')) this.magnetT = Math.max(this.magnetT, 1); // coin-magnet ability: coins always in range
+    if (this.hasAbility('magnet') || this.hasAbility('coinhack')) this.magnetT = Math.max(this.magnetT, 1); // coin-magnet ability: coins always in range
     if (this.hasAbility('shield')) this.shield = true; // aegis ability: kill parts always blocked
     const k = this.keys;
     const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - this.joy.y;
@@ -1580,7 +1595,7 @@ export class Game {
       const p = b.p;
       const touching = P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2];
       if (!touching) continue;
-      if (p.k === 'kill') { if (this.inSafe) continue; if (this.shield) { this.shield = false; this.vel.y = 50; this.showBig('🛡️ Shield saved you!', 1500); sfx.checkpoint(); continue; } this.die(); return; }
+      if (p.k === 'kill') { if (this.inSafe) continue; if (this.hasAbility('noclip')) continue; if (this.shield) { this.shield = false; this.vel.y = 50; this.showBig('🛡️ Shield saved you!', 1500); sfx.checkpoint(); continue; } this.die(); return; }
       if (p.k === 'bounce' && this.vel.y <= 0.1) { this.vel.y = 110; this.onGround = false; sfx.bounce(); }
       if (p.k === 'jump' && this.vel.y <= 0.1) { this.vel.y = Number(p.power) || 180; this.onGround = false; sfx.bounce(); this.showBig('Boing! 🚀', 900); }
       if (p.k === 'heal' && !this.collected.has('heal:' + p.id) && this.health < 100 && !this.dead) {
@@ -1632,7 +1647,7 @@ export class Game {
         }
       }
     }
-    if (this.magnetT > 0) { for (const b of this.triggers) { const q = b.p; if (q.k !== 'coin' || this.collected.has(q.id)) continue; const dx = q.p[0] - P.x, dz = q.p[2] - P.z; if (dx * dx + dz * dz < 144) { this.collected.add(q.id); const mm = this.meshes.get(q.id); if (mm) mm.visible = false; sfx.coin(); this.send({ t: 'coin', part: q.id }); } } }
+    if (this.magnetT > 0) { const vacR = this.hasAbility('coinhack') ? 400 : 144; for (const b of this.triggers) { const q = b.p; if (q.k !== 'coin' || this.collected.has(q.id)) continue; const dx = q.p[0] - P.x, dz = q.p[2] - P.z; if (dx * dx + dz * dz < vacR) { this.collected.add(q.id); const mm = this.meshes.get(q.id); if (mm) mm.visible = false; sfx.coin(); this.send({ t: 'coin', part: q.id }); } } }
   }
 
   // ---------- loop ----------

@@ -1,7 +1,7 @@
 // pets.js — Pets: adopt a pet, equip it, and it follows you.
 // Pets already live in the catalog and follow you in 3D games; this page
 // makes them a first-class feature, and the lobby now shows your pet too.
-import { CATALOG } from './catalog.js?v=3253bf8f';
+import { CATALOG } from './catalog.js?v=843f2486';
 
 export async function petsPage(D) {
   const { api, mount, esc, toast } = D;

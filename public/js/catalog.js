@@ -291,6 +291,7 @@ export const CATALOG = [
   { id: 'token_scout', type: 'token', name: 'Scout Token', price: 0, limited: true, emoji: '🌀', color: '#7b2ff7', rarity: 'scout' },
   { id: 'token_drpepper', type: 'token', name: 'Dr. Pepper Token', price: 0, limited: true, emoji: '🥤', color: '#c8102e', rarity: 'drpepper' },
   { id: 'token_skull', type: 'token', name: 'Skull Token', price: 0, limited: true, emoji: '💀', color: '#eceff1', rarity: 'skull' },
+  { id: 'token_glitch', type: 'token', name: 'Glitch Token', price: 0, limited: true, emoji: '👾', color: '#00ff41', rarity: 'glitch' },
   // ---- Ability items (won from the wheel; equip in Gear — each grants an ability) ----
   { id: 'gear_swiftboots', type: 'gear', name: 'Swift Boots', price: 0, limited: true, emoji: '👟', color: '#4caf50', ability: 'speed', rarity: 'common' },
   { id: 'gear_dashsneakers', type: 'gear', name: 'Dash Sneakers', price: 0, limited: true, emoji: '👟', color: '#66bb6a', ability: 'speed', rarity: 'common' },
@@ -305,6 +306,10 @@ export const CATALOG = [
   { id: 'gear_starmantle', type: 'gear', name: 'Star Mantle', price: 0, limited: true, emoji: '🌟', color: '#7b2ff7', ability: 'star', rarity: 'galactic' },
   { id: 'gear_nebulacloak', type: 'gear', name: 'Nebula Cloak', price: 0, limited: true, emoji: '🌌', color: '#9575cd', ability: 'star', rarity: 'galactic' },
   { id: 'gear_universalcore', type: 'gear', name: 'Universal Core', price: 0, limited: true, emoji: '🌠', color: '#ff2d95', ability: 'universal', rarity: 'universal' },
+  // ---- Glitch Token prizes (grant-only; real hacker tools) ----
+  { id: 'gear_glitchblade', type: 'gear', name: 'Glitch Blade', price: 0, limited: true, emoji: '🗡️', color: '#00ff41', ability: 'teleport', rarity: 'glitch' },
+  { id: 'hat_hackerhood', type: 'hat', name: 'Hacker Hood', price: 0, limited: true, emoji: '🎩', color: '#212121', ability: 'noclip', rarity: 'glitch' },
+  { id: 'gear_dataleech', type: 'gear', name: 'Data Leech', price: 0, limited: true, emoji: '🧲', color: '#00e5ff', ability: 'coinhack', rarity: 'glitch' },
   // ---- Scout Token prizes (only @scout) ----
   { id: 'hat_blobtwirly', type: 'hat', name: 'Blob Twirly Hat', price: 0, limited: true, emoji: '🌀', color: '#7b2ff7', rarity: 'scout' },
   { id: 'shirt_austee', type: 'shirt', name: 'Austee', price: 0, limited: true, emoji: '🌪️', color: '#311b92', ability: 'tornado', rarity: 'scout' },

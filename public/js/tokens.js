@@ -3,11 +3,11 @@
 // rarity. Ability items equip in Gear and grant a real in-game ability.
 // The Pumpkin Shop Token is a 1-in-100,000,000 wheel jackpot — it unlocks
 // the pumpkin shop for exactly one purchase.
-import { CATALOG, ITEM } from './catalog.js?v=44f5fe93';
-import { avatarImage } from './avatar3d.js?v=bbc65898';
+import { CATALOG, ITEM } from './catalog.js?v=843f2486';
+import { avatarImage } from './avatar3d.js?v=3b8e954d';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
 
-const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
+const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', glitch: 'Glitch', pumpkin: 'Pumpkin' };
 let lastResult = '';
 // Original soda-ad jingle, synthesized live (a bouncy original melody —
 // the real Dr. Pepper jingle is copyrighted, so this one is made in code).
@@ -28,7 +28,7 @@ function playPepperJingle() {
   } catch (e) { /* audio unavailable — the ad still plays silently */ }
 }
 const PUMPY_SVG = `<svg viewBox="0 0 200 200" width="150" height="150" aria-label="Pumpy the pumpkin shopkeeper"><ellipse cx="100" cy="118" rx="76" ry="64" fill="#ff6d00"/><path d="M100 54 Q64 118 100 182 M100 54 Q136 118 100 182 M100 54 Q82 118 100 182 M100 54 Q118 118 100 182" stroke="#e65100" stroke-width="4" fill="none" opacity=".7"/><rect x="91" y="34" width="18" height="26" rx="6" fill="#558b2f"/><path d="M109 44 Q132 30 138 52 Q120 58 109 44" fill="#66bb6a"/><circle cx="74" cy="104" r="12" fill="#fff"/><circle cx="74" cy="104" r="6" fill="#212121"/><circle cx="126" cy="104" r="12" fill="#fff"/><circle cx="126" cy="104" r="6" fill="#212121"/><path d="M68 132 Q100 156 132 132" stroke="#212121" stroke-width="6" fill="none" stroke-linecap="round"/><path d="M100 160 L88 176 L100 170 L112 176 Z" fill="#c8102e"/><circle cx="100" cy="163" r="4" fill="#ffd700"/></svg>`;
-const ABILITY_LABEL = { speed: '⚡ +50% run speed', doublejump: '☁️ Double jump', magnet: '🧲 Coins fly to you', shield: '🛡️ Block kill parts', fly: '🪽 Hold Space to glide', star: '🌟 Speed + coin magnet', universal: '🌠 Speed + double jump + magnet', tornado: '🌪️ Tornado dash (Q) + speed' };
+const ABILITY_LABEL = { speed: '⚡ +50% run speed', doublejump: '☁️ Double jump', magnet: '🧲 Coins fly to you', shield: '🛡️ Block kill parts', fly: '🪽 Hold Space to glide', star: '🌟 Speed + coin magnet', universal: '🌠 Speed + double jump + magnet', tornado: '🌪️ Tornado dash (Q) + speed', teleport: '👾 Teleport (T) — blink forward', noclip: '👾 Noclip — kill parts pass through you', coinhack: '👾 Coin Hack — vacuum coins from 20 units' };
 
 export async function tokensPage(D) {
   const { api, mount, esc, toast } = D;
@@ -230,6 +230,7 @@ export async function tokensPage(D) {
       token_universal: { fx: 'universal', accent: '#ff2d95', glow: 'rgba(255, 45, 149, .55)', bg: 'linear-gradient(160deg, rgba(255, 45, 149, .22), rgba(0, 229, 255, .2) 45%, rgba(118, 255, 3, .18) 70%, transparent)', motif: '🌈', caption: 'Every color. Every power. One token.', sub: 'Spin it on the wheel to win a prize!' },
       token_scout:     { fx: 'scout', accent: '#00e5ff', glow: 'rgba(0, 229, 255, .6)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), rgba(0, 0, 0, .4) 75%)', motif: '🌀', caption: 'A whirlwind is coming for @scout…', sub: 'Only @scout can spin it — Blob Twirly Hat + Austee inside!' },
       token_skull:     { fx: 'skull', accent: '#aeea00', glow: 'rgba(174, 234, 0, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(174, 234, 0, .16), rgba(0, 0, 0, .55) 75%)', motif: '💀', caption: 'Something is watching from the dark…', sub: '💀 Mystery roll — spin it to win ANY item in FunTopia!' },
+      token_glitch:    { accent: '#00ff41', glow: 'rgba(0, 255, 65, .55)', bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 255, 65, .2), rgba(0, 0, 0, .5) 75%)', motif: '👾', caption: 'WARNING: reality.exe has stopped working…', sub: '👾 Hacker tools — spin it to win a real hack!' },
     };
     let stopCoin = null;
     const playCineCutscene = async (tokenId, prize) => {
@@ -331,6 +332,7 @@ export async function tokensPage(D) {
       // Pumpkin and Dr. Pepper keep their own big ceremonies.
       if (tokenId === 'token_pumpkin') { runPumpkinCeremony(); return; }
       if (tokenId === 'token_drpepper') { runPepperAd(tok, '🎉 YOU GOT A TOKEN! 🎉', 'Spin it on the wheel to win Dr. Pepper stuff!'); return; }
+      if (tokenId === 'token_glitch') { runGlitchCeremony(null); return; }
       // Every other token gets its own cinematic cutscene.
       playCineCutscene(tokenId);
     };
@@ -352,6 +354,15 @@ export async function tokensPage(D) {
     app.querySelector('#tokenRevealClose').onclick = () => closeAndAdvance(() => { reveal.hidden = true; });
     app.querySelector('#pepperAdClose').onclick = () => closeAndAdvance(() => { app.querySelector('#pepperAd').hidden = true; });
     setTimeout(checkNewTokens, 800);
+    // Glitch Token: the whole screen breaks, then the prize cinematic plays.
+    const runGlitchCeremony = (item) => {
+      const ov = document.createElement('div');
+      ov.className = 'glitch-overlay';
+      ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-dread"><img src="${avatarImage(me.avatar, 'full')}" alt=""><div class="glitch-name">👾 YOU GOT THE HACKER TOKEN 👾</div><div class="glitch-sub">EVERYONE'S SCREEN IS GLITCHING</div></div>`;
+      app.appendChild(ov);
+      document.body.classList.add('glitching');
+      setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); playCineCutscene('token_glitch', item); }, 2500);
+    };
     const runPumpkinCeremony = () => {
       const ceremony = app.querySelector('#pumpkinCeremony');
       const boom = app.querySelector('#pumpkinBoom');
@@ -400,6 +411,7 @@ export async function tokensPage(D) {
           wheel.classList.remove('spinning');
           orbit.classList.remove('on', 'dancing');
           if (b.dataset.token === 'token_drpepper') { runPepperAd(item); return; }
+          if (b.dataset.token === 'token_glitch') { runGlitchCeremony(item); return; }
           if (r.jackpot) { markSeen('token_pumpkin'); runPumpkinCeremony(); return; }
           lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}`;
           result.innerHTML = lastResult;

@@ -1855,7 +1855,7 @@ createFamily({ app, auth, supabase, filter, notify, key });
 createVersion({ app, auth, supabase, isOwner });
 createTrade({ app, auth, supabase, notify, key });
 createTwoUi({ app, auth, supabase, key });
-createTokens({ app, auth, supabase, key });
+createTokens({ app, auth, supabase, key, rooms, broadcast });
 
 wss.on('connection', (ws) => {
   let player = null, room = null;

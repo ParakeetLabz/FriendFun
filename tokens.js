@@ -43,10 +43,12 @@ export function rollTokenDrop() {
   return null;
 }
 // Tokens that can never be bought (granted only).
-const NOT_BUYABLE = new Set(['token_pumpkin', 'token_scout', 'token_skull']);
+const NOT_BUYABLE = new Set(['token_pumpkin', 'token_scout', 'token_skull', 'token_glitch']);
+// Glitch Token prizes: real hacker tools.
+const GLITCH_PRIZES = ['gear_glitchblade', 'hat_hackerhood', 'gear_dataleech'];
 
 export function createTokens(D) {
-  const { app, auth, supabase, key } = D;
+  const { app, auth, supabase, key, rooms, broadcast } = D;
   const inv = u => Array.isArray(u.inventory) ? u.inventory : [];
 
   // Tokens are never purchasable — they are granted by admins (or won as a jackpot).
@@ -66,6 +68,7 @@ export function createTokens(D) {
     if (tokenId === 'token_scout' && key(u.name) !== 'scout') return res.status(403).json({ error: 'The Scout Token is only for @scout' });
     let pool = ABILITY_BY_RARITY[tok.rarity] || [];
     if (tokenId === 'token_skull') pool = MYSTERY_POOL;
+    else if (tokenId === 'token_glitch') pool = GLITCH_PRIZES;
     else if (!pool.length) pool = PRIZE_BY_RARITY[tok.rarity] || [];
     if (!pool.length) return res.status(500).json({ error: 'No prizes for that token yet' });
     const itemId = pool[Math.floor(Math.random() * pool.length)];
@@ -77,6 +80,13 @@ export function createTokens(D) {
     if (tokenId !== 'token_skull' && Math.random() < PUMPKIN_JACKPOT) { next.push('token_pumpkin'); jackpot = true; }
     const { data, error } = await supabase.from('users').update({ inventory: next }).eq('name', u.name).select().single();
     if (error) return res.status(500).json({ error: error.message });
+    // A Glitch spin hacks every game in progress: every player's screen
+    // glitches and sees a dreadful image of the hacker's avatar.
+    if (tokenId === 'token_glitch' && rooms && broadcast) {
+      for (const [, room] of rooms) {
+        try { broadcast(room, { t: 'glitch', name: u.name, avatar: data.avatar || u.avatar, item: itemId }); } catch {}
+      }
+    }
     res.json({ ok: true, item: itemId, jackpot, inventory: data.inventory });
   });
 
@@ -97,7 +107,7 @@ export function createTokens(D) {
 
   // What the client needs to render the wheel + shops.
   app.get('/api/tokens/info', auth, async (req, res) => {
-    const allTokens = ['common', 'uncommon', 'rare', 'superrare', 'king', 'galactic', 'universal', 'scout', 'drpepper', 'skull'];
+    const allTokens = ['common', 'uncommon', 'rare', 'superrare', 'king', 'galactic', 'universal', 'scout', 'drpepper', 'skull', 'glitch'];
     const prizeList = r => {
       const ids = r === 'skull' ? [] : [...(ABILITY_BY_RARITY[r] || []), ...(PRIZE_BY_RARITY[r] || [])];
       return ids.map(id => ({ id, name: ITEM[id]?.name, emoji: ITEM[id]?.emoji, ability: ITEM[id]?.ability, color: ITEM[id]?.color }));
