@@ -13,7 +13,7 @@ import { createFamily } from './family.js';
 import { createVersion } from './version.js';
 import { createTrade } from './trade.js';
 import { createTwoUi } from './twoui.js';
-import { createTokens } from './tokens.js';
+import { createTokens, rollTokenDrop } from './tokens.js';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
@@ -1987,11 +1987,19 @@ wss.on('connection', (ws) => {
       if (player.won) return; player.won = true;
       const earnedBadges = [...new Set([...list(player.user, 'earnedBadges'), ...winBadges(player.game)])];
       const inventory = list(player.user, 'inventory');
+      // Token drop on every win: common 1%, uncommon 0.1%, rare 0.01%, and so on (10x rarer each tier).
+      const droppedToken = rollTokenDrop();
+      if (droppedToken && !inventory.includes(droppedToken)) inventory.push(droppedToken);
       const winUpdate = { funtix: (Number(player.user.funtix) || 0) + ECON.WIN_TIX, champ: true, earnedBadges, inventory };
       const { data: updated, error } = await supabase.from('users').update(winUpdate).eq('name', player.user.name).select().single();
       if (error || !updated) return send(ws, { t: 'error', error: 'Could not add FunTix' });
       player.user = updated;
       send(ws, { t: 'money', ...money(updated), earned: ECON.WIN_TIX });
+      if (droppedToken) {
+        const tokName = ITEM[droppedToken]?.name || droppedToken;
+        send(ws, { t: 'tokenDrop', token: droppedToken, name: tokName });
+        broadcast(room, { t: 'chat', system: true, text: `🪙 ${player.name} got a ${tokName}!` });
+      }
       broadcast(room, { t: 'chat', system: true, text: `${player.name} beat the game! (+${ECON.WIN_TIX} FunTix, ${winBadges(player.game).length} badge${winBadges(player.game).length === 1 ? '' : 's'} earned)` });
     }
     else if (m.t === 'emote' && ['wave','dance','sit','spin','bow','cheer','laugh','dab'].includes(m.e)) broadcast(room, { t: 'emote', id: player.id, e: m.e }, ws);

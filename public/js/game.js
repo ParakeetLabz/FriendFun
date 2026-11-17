@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=32a86ecf';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=bbc65898';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -13,7 +13,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=3253bf8f';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=44f5fe93';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -116,7 +116,7 @@ export class Game {
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
     // which survive sanitizing. Covers the seeded game + Studio-made blob games.
     const __isBlobWorld = this.world.stealablob || (Array.isArray(this.world.parts) && this.world.parts.some(p => p.name === 'Conveyor') && this.world.parts.some(p => /^Base[1-8]$/.test(p.name || '')));
-    if (__isBlobWorld) import('./stealablob.js?v=90e7f933').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    if (__isBlobWorld) import('./stealablob.js?v=71519120').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
     this.last = performance.now();
     this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
   }
@@ -1398,6 +1398,7 @@ export class Game {
         for (const s of m.p) { if (s[0] === this.myId) continue; const p = this.players.get(s[0]); if (p) p.target = s; }
       } else if (m.t === 'chat') this.onChat(m);
       else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
+      else if (m.t === 'tokenDrop') { this.showBig(`🪙 YOU GOT A ${String(m.name || 'TOKEN').toUpperCase()}!`, 4500); sfx.win(); if (!reduceMotion()) confetti(this.c); }
       else if (m.t === 'pong') { this._ping = Math.max(0, Math.round(performance.now() - (m.id || performance.now()))); }
       else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
 

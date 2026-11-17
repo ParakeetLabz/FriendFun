@@ -3,8 +3,8 @@
 // rarity. Ability items equip in Gear and grant a real in-game ability.
 // The Pumpkin Shop Token is a 1-in-100,000,000 wheel jackpot — it unlocks
 // the pumpkin shop for exactly one purchase.
-import { CATALOG, ITEM } from './catalog.js?v=3253bf8f';
-import { avatarImage } from './avatar3d.js?v=32a86ecf';
+import { CATALOG, ITEM } from './catalog.js?v=44f5fe93';
+import { avatarImage } from './avatar3d.js?v=bbc65898';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', pumpkin: 'Pumpkin' };
@@ -83,7 +83,7 @@ export async function tokensPage(D) {
         <div class="cine-spotlight"></div>
         <div class="cine-motif" id="cineMotif">✨</div>
         <img class="cine-avatar" id="cineAvatar" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar" />
-        <div class="cine-token" id="cineToken">🪙</div>
+        <canvas class="cine-token" id="cineTokenCanvas" width="320" height="320"></canvas>
         <div class="cine-burst" id="cineBurst"></div>
         <div class="cine-caption" id="cineCaption">A gift arrives…</div>
       </div>
@@ -133,7 +133,7 @@ export async function tokensPage(D) {
         <span class="muted small">${RARITY_LABEL[t.rarity] || t.rarity} · You have <b>${n}</b></span>
         <span class="muted small">${prizeLine}</span>
         <button class="btn-primary token-spin" data-token="${t.id}" ${n < 1 ? 'disabled' : ''}>🎡 Spin (${n})</button>
-        <span class="muted small">Granted by admins only</span>
+        <span class="muted small">${(info.dropRates || []).find(d => d.id === t.id) ? `🍀 Drops when you win a game — ${(info.dropRates.find(d => d.id === t.id)).label} chance` : t.rarity === 'scout' ? 'Only @scout can spin it' : t.rarity === 'skull' ? 'Granted by admins only' : 'Granted by admins only'}</span>
       </div>`;
     }).join('')}</div>
     <h2>Ability items you own</h2>
@@ -225,12 +225,19 @@ export async function tokensPage(D) {
       token_scout:     { accent: '#00e5ff', glow: 'rgba(0, 229, 255, .6)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), rgba(0, 0, 0, .4) 75%)', motif: '🌀', caption: 'A whirlwind is coming for @scout…', sub: 'Only @scout can spin it — Blob Twirly Hat + Austee inside!' },
       token_skull:     { accent: '#aeea00', glow: 'rgba(174, 234, 0, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(174, 234, 0, .16), rgba(0, 0, 0, .55) 75%)', motif: '💀', caption: 'Something is watching from the dark…', sub: '💀 Mystery roll — spin it to win ANY item in FunTopia!' },
     };
-    const playCineCutscene = (tokenId) => {
+    let stopCoin = null;
+    const playCineCutscene = async (tokenId) => {
       const tok = ITEM[tokenId];
       const cfg = TOKEN_CUTSCENE[tokenId] || TOKEN_CUTSCENE.token_common;
       const cine = app.querySelector('#cineCutscene');
       const stage = app.querySelector('#cineStage');
-      const tokenEl = app.querySelector('#cineToken');
+      const tokenEl = app.querySelector('#cineTokenCanvas');
+      // Live 3D coin: a real spinning token in the token's colors.
+      try {
+        const { startToken3D } = await import('./token3d.js?v=9a0c49bc');
+        if (stopCoin) stopCoin();
+        stopCoin = startToken3D(tokenEl, { emoji: tok?.emoji || '🪙', color: tok?.color || cfg.accent });
+      } catch (e) { tokenEl.style.display = 'none'; }
       const burst = app.querySelector('#cineBurst');
       const cap = app.querySelector('#cineCaption');
       const card = app.querySelector('#cineTitlecard');
@@ -238,7 +245,8 @@ export async function tokensPage(D) {
       stage.style.setProperty('--cine-glow', cfg.glow);
       stage.style.setProperty('--cine-accent', cfg.accent);
       app.querySelector('#cineMotif').textContent = cfg.motif;
-      tokenEl.textContent = tok?.emoji || '🪙';
+      tokenEl.style.display = '';
+      tokenEl.style.opacity = '0';
       tokenEl.classList.remove('drop', 'burst');
       burst.innerHTML = '';
       card.hidden = true;
@@ -246,11 +254,11 @@ export async function tokensPage(D) {
       cap.textContent = cfg.caption;
       cine.hidden = false;
       let done = false;
-      const finish = () => { if (done) return; done = true; cine.hidden = true; closeAndAdvance(() => {}); };
+      const finish = () => { if (done) return; done = true; if (stopCoin) { stopCoin(); stopCoin = null; } cine.hidden = true; closeAndAdvance(() => {}); };
       app.querySelector('#cineSkip').onclick = finish;
       app.querySelector('#cineContinue').onclick = finish;
       // Beat 1: token drops in.
-      setTimeout(() => { if (done) return; tokenEl.classList.add('drop'); cap.textContent = `The ${tok?.name || 'Token'}!`; }, 1200);
+      setTimeout(() => { if (done) return; tokenEl.style.opacity = '1'; tokenEl.classList.add('drop'); cap.textContent = `The ${tok?.name || 'Token'}!`; }, 1200);
       // Beat 2: token explodes in the token's colors.
       setTimeout(() => {
         if (done) return;

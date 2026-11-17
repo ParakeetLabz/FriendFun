@@ -20,6 +20,28 @@ const PUMPKIN_ITEMS = CATALOG.filter(it => it.pumpkin).map(it => it.id);
 const MYSTERY_POOL = CATALOG.filter(it => !it.limited && it.type !== 'token' && it.type !== 'pass').map(it => it.id);
 // 0.000001% = 1 in 100,000,000
 const PUMPKIN_JACKPOT = 1e-8;
+// Token drop rates on every game win (each rarity is 10x rarer than the last).
+export const TOKEN_DROP_RATES = [
+  { rarity: 'common',    chance: 0.01,      label: '1%' },
+  { rarity: 'uncommon',  chance: 0.001,     label: '0.1%' },
+  { rarity: 'rare',      chance: 0.0001,    label: '0.01%' },
+  { rarity: 'superrare', chance: 0.00001,   label: '0.001%' },
+  { rarity: 'king',      chance: 0.000001,  label: '0.0001%' },
+  { rarity: 'galactic',  chance: 0.0000001, label: '0.00001%' },
+  { rarity: 'universal', chance: 0.00000001, label: '0.000001%' },
+];
+// Roll one win's token drop. Returns the token id or null.
+export function rollTokenDrop() {
+  const r = Math.random();
+  let lo = 0;
+  // Rarest first so the tiny chances are checked against the smallest slice.
+  for (let i = TOKEN_DROP_RATES.length - 1; i >= 0; i--) {
+    const { rarity, chance } = TOKEN_DROP_RATES[i];
+    if (r < lo + chance) return TOKEN_BY_RARITY[rarity];
+    lo += chance;
+  }
+  return null;
+}
 // Tokens that can never be bought (granted only).
 const NOT_BUYABLE = new Set(['token_pumpkin', 'token_scout', 'token_skull']);
 
@@ -84,6 +106,7 @@ export function createTokens(D) {
       pumpkin: PUMPKIN_ITEMS.map(id => ({ id, name: ITEM[id]?.name, emoji: ITEM[id]?.emoji, type: ITEM[id]?.type, color: ITEM[id]?.color })),
       pumpkinChance: '0.000001%',
       skullNote: 'Mystery roll — any item in FunTopia!',
+      dropRates: TOKEN_DROP_RATES.map(({ rarity, label }) => ({ id: TOKEN_BY_RARITY[rarity], rarity, label })),
     });
   });
 }
