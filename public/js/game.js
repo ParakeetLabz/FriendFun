@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle } from './avatar3d.js?v=3b8e954d';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle, loadUgcGlb } from './avatar3d.js?v=24aeaab1';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -13,7 +13,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=843f2486';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=6f0f1eed';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -304,7 +304,9 @@ export class Game {
   // ---------- in-game inventory (owned gear) ----------
   ownedGears() {
     const inv = this.me.inventory || [];
-    return CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none' && inv.includes(i.id));
+    const cat = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none' && inv.includes(i.id));
+    const ugc = inv.filter(id => id.startsWith('ugc_')).map(id => ITEM[id]).filter(it => it && it.type === 'gear');
+    return cat.concat(ugc);
   }
   toolbarGears() {
     const gears = this.ownedGears().map(g => ({ id: g.id, name: g.name, emoji: g.emoji || '📦', temp: false }));
@@ -1410,13 +1412,26 @@ export class Game {
   }
   setGear() {
     if (this.gearMesh) { this.gearMesh.parent?.remove(this.gearMesh); this.gearMesh = null; }
-    const g = buildGear(this.me.avatar?.gear);
+    const gearId = this.me.avatar?.gear;
+    const g = buildGear(gearId);
     if (g) {
       const limbs = this.char.userData.limbs || {};
       const hand = limbs.rhand || limbs.rarm;
       g.position.set(0, limbs.rhand ? -0.3 : -2, 0.5);
       (hand || this.char).add(g);
       this.gearMesh = g;
+    } else {
+      // UGC gear: hold its 3D model (GLB) in-hand, same as the avatar preview does.
+      const it = ITEM[gearId];
+      if (it?.model_url) {
+        const limbs = this.char.userData.limbs || {};
+        const hand = limbs.rhand || limbs.rarm;
+        const anchor = new THREE.Group();
+        anchor.position.set(0, limbs.rhand ? -0.3 : -2, 0.5);
+        (hand || this.char).add(anchor);
+        this.gearMesh = anchor;
+        loadUgcGlb(it.model_url, 1.1, it.model_transform).then(m => { if (anchor.parent) anchor.add(m); }).catch(() => {});
+      }
     }
   }
   useGear() {
@@ -1715,6 +1730,7 @@ export class Game {
     if (pet) { pet.position.copy(char.position); this.scene.add(pet); }
     const gear = buildGear(p.avatar?.gear);
     if (gear) { const limbs = char.userData.limbs || {}; const hand = limbs.rhand || limbs.rarm; gear.position.set(0, limbs.rhand ? -0.3 : -2, 0.5); (hand || char).add(gear); }
+    else { const git = ITEM[p.avatar?.gear]; if (git?.model_url) { const limbs = char.userData.limbs || {}; const hand = limbs.rhand || limbs.rarm; const anchor = new THREE.Group(); anchor.position.set(0, limbs.rhand ? -0.3 : -2, 0.5); (hand || char).add(anchor); loadUgcGlb(git.model_url, 1.1, git.model_transform).then(m => { if (anchor.parent) anchor.add(m); }).catch(() => {}); } }
     const pl = { id: p.id, name: p.name, avatar: p.avatar, club: p.club, badge: p.badge, char, pet: pet || null, target: p.s ? [p.id, ...p.s] : null, emote: null };
     if (pl.target) char.position.set(pl.target[1], pl.target[2], pl.target[3]);
     this.players.set(p.id, pl);

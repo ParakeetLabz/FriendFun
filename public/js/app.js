@@ -26,7 +26,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=3b8e954d').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=24aeaab1').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -67,7 +67,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=843f2486';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=6f0f1eed';
 import { templates, GEN_GAMES } from './worlds.js?v=9daecf07';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=2024b7f0');
+  const m = await import('./lobby.js?v=8100784c');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -761,7 +761,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=3898dff5');
+  const { Game } = await import('./game.js?v=9ccab4b3');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -780,7 +780,7 @@ async function avatarPage(tab = 'body') {
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
-        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'gear', 'vehicle', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', gear: 'Gears', vehicle: 'Vehicles', rig: 'Rig' }[t]}</button>`).join('')}</div>
+        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'gear', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', gear: 'Gears', rig: 'Rig' }[t]}</button>`).join('')}</div>
         <div class="av-body"></div>
       </div>
     </div>`, () => {
@@ -823,7 +823,7 @@ async function avatarPage(tab = 'body') {
       } else {
         const owned = CATALOG.filter(i => i.type === tab && (me.inventory.includes(i.id) || i.id === tab + '_none'))
           .concat(UGC_LIST.filter(u => u.type === tab && me.inventory.includes(u.id)));
-        body.innerHTML = `<div class="item-grid">${owned.map(i => `<button class="item ${av[tab] === i.id ? 'worn' : ''}" data-id="${i.id}">${i.type === 'pet' ? (PET_MODELS[i.id] ? `<canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : `<img src="${itemImage(i)}">`}<span>${esc(i.name)}</span></button>`).join('')}
+        body.innerHTML = `<div class="item-grid">${owned.map(i => `<button class="item ${av[tab] === i.id ? 'worn' : ''}" data-id="${i.id}">${(i.ugc && i.model_url) ? glbCardImg() : i.type === 'pet' ? (PET_MODELS[i.id] ? `<canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : `<img src="${itemImage(i)}">`}<span>${esc(i.name)}</span></button>`).join('')}
           <a class="item more" href="#/catalog/${tab}"><span class="plus">+</span><span>Get More</span></a></div>`;
         body.querySelectorAll('[data-id]').forEach(b => b.onclick = () => {
           // Only ONE ability item at a time: picking an ability item unequips
@@ -861,7 +861,7 @@ async function loadUgc() {
 }
 
 async function catalogPage(filter = 'all') {
-  const filters = ['all', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'vehicle', 'ugc'];
+  const filters = ['all', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'ugc'];
   const labels = { all: 'All', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', vehicle: 'Vehicles', ugc: `${icons.palette} UGC` };
   const list = filter === 'ugc' ? UGC_LIST : CATALOG.filter(i => !i.limited && (filter === 'all' || i.type === filter));
   const soc = await api('GET', '/api/social/me').catch(() => ({ wishlist: [] }));
@@ -1370,13 +1370,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=884fa73c');
+  const { Studio } = await import('./studio.js?v=0ff0a978');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=3898dff5');
+      const { Game: GameClass } = await import('./game.js?v=9ccab4b3');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1506,7 +1506,7 @@ async function moderationPage() {
       catch (e) { toast(e.message, true); }
     }));
     app.querySelectorAll('[data-ugc-ok]').forEach(b => b.onclick = async () => {
-      try { await api('POST', '/api/ugc/' + b.dataset.ugcOk + '/approve'); await loadUgc(); toast('UGC item approved'); reload(); }
+      try { await api('POST', '/api/ugc/' + b.dataset.ugcOk + '/approve'); me = await api('GET', '/api/me'); await loadUgc(); toast('UGC item approved'); reload(); }
       catch (e) { toast(e.message, true); }
     });
     app.querySelectorAll('[data-ugc-no]').forEach(b => b.onclick = async () => {
@@ -1532,7 +1532,7 @@ async function ugcGlbModal(u) {
   let alive = true;
   const close = () => { alive = false; d.remove(); };
   const decide = async (kind) => {
-    try { await api('POST', '/api/ugc/' + u.id + '/' + kind); await loadUgc(); toast(kind === 'approve' ? 'Approved' : 'Rejected'); }
+    try { await api('POST', '/api/ugc/' + u.id + '/' + kind); if (kind === 'approve') me = await api('GET', '/api/me'); await loadUgc(); toast(kind === 'approve' ? 'Approved' : 'Rejected'); }
     catch (e) { toast(e.message, true); }
     close(); route();
   };
@@ -1724,14 +1724,14 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=34a1af35'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=65eda775'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
-      case 'trades': { const m = await import('./trade.js?v=2b0512ad'); return m.tradePage(tradeDeps); }
-      case 'trade': { const m = await import('./trade.js?v=2b0512ad'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
-      case 'pets': { const m = await import('./pets.js?v=43ad5439'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=b7f8b126'); return m.tokensPage(tokensDeps); }
+      case 'trades': { const m = await import('./trade.js?v=05bc1a3c'); return m.tradePage(tradeDeps); }
+      case 'trade': { const m = await import('./trade.js?v=05bc1a3c'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
+      case 'pets': { const m = await import('./pets.js?v=a6d6af28'); return m.petsPage(petsDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=66afc4ed'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
@@ -1746,7 +1746,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=511ecae2'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=5dd26373'); return m.skinmakerPage(skinmakerDeps); }
       case 'themes': return themesPage(themesDeps);
       default: location.hash = '#/home'; return;
     }
