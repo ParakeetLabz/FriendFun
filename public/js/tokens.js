@@ -65,7 +65,7 @@ export async function tokensPage(D) {
     </div>
     <div class="pepper-ad" id="pepperAd" hidden>
       <div class="pepper-ad-fizz" id="pepperAdFizz"></div>
-      <div class="pepper-ad-can">${PEPPER_CAN}</div>
+      <div class="pepper-ad-can pepper-ad-hero" id="pepperAdCan">${PEPPER_CAN}</div>
       <div class="pepper-ad-word">Dr Pepper</div>
       <div class="pepper-ad-tag">Est. 1885 &bull; 23 flavors &bull; It's a pepper thing!</div>
       <div class="pepper-ad-card" id="pepperAdCard" hidden>
@@ -80,6 +80,7 @@ export async function tokensPage(D) {
       <div class="cine-bar cine-bar-top"></div>
       <div class="cine-bar cine-bar-bottom"></div>
       <div class="cine-stage" id="cineStage">
+        <div class="cine-fx" id="cineFx" hidden></div>
         <div class="cine-spotlight"></div>
         <div class="cine-motif" id="cineMotif">✨</div>
         <img class="cine-avatar" id="cineAvatar" src="${avatarImage(me.avatar, 'full')}" alt="Your avatar" />
@@ -192,7 +193,11 @@ export async function tokensPage(D) {
       ad.hidden = false;
       card.hidden = true;
       fizz.innerHTML = '';
-      for (let i = 0; i < 24; i++) {
+      const can = app.querySelector('#pepperAdCan');
+      can.classList.remove('pepper-ad-hero');
+      void can.offsetWidth;
+      can.classList.add('pepper-ad-hero');
+      for (let i = 0; i < 48; i++) {
         const b = document.createElement('i');
         b.style.left = `${4 + Math.random() * 92}%`;
         b.style.setProperty('--rise', `${120 + Math.random() * 260}px`);
@@ -219,11 +224,11 @@ export async function tokensPage(D) {
       token_uncommon:  { accent: '#76ff03', glow: 'rgba(118, 255, 3, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(118, 255, 3, .2), transparent 70%)', motif: '🍃', caption: 'Something fresh is growing…', sub: 'Spin it on the wheel to win a prize!' },
       token_rare:      { accent: '#00e5ff', glow: 'rgba(0, 229, 255, .55)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), transparent 70%)', motif: '❄️', caption: 'Something cool is coming…', sub: 'Spin it on the wheel to win a prize!' },
       token_superrare: { accent: '#b388ff', glow: 'rgba(179, 136, 255, .55)', bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(123, 47, 247, .3), transparent 70%)', motif: '⚡', caption: 'The air is crackling…', sub: 'Spin it on the wheel to win a prize!' },
-      token_king:      { accent: '#ffca28', glow: 'rgba(255, 202, 40, .6)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 202, 40, .25), rgba(123, 47, 247, .2) 60%, transparent 75%)', motif: '👑', caption: 'All hail… a royal gift!', sub: 'Spin it on the wheel to win a prize!' },
-      token_galactic:  { accent: '#7c4dff', glow: 'rgba(124, 77, 255, .6)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124, 77, 255, .35), rgba(0, 229, 255, .15) 60%, transparent 75%)', motif: '🌌', caption: 'From the far edge of the galaxy…', sub: 'Spin it on the wheel to win a prize!' },
-      token_universal: { accent: '#ff2d95', glow: 'rgba(255, 45, 149, .55)', bg: 'linear-gradient(160deg, rgba(255, 45, 149, .22), rgba(0, 229, 255, .2) 45%, rgba(118, 255, 3, .18) 70%, transparent)', motif: '🌈', caption: 'Every color. Every power. One token.', sub: 'Spin it on the wheel to win a prize!' },
-      token_scout:     { accent: '#00e5ff', glow: 'rgba(0, 229, 255, .6)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), rgba(0, 0, 0, .4) 75%)', motif: '🌀', caption: 'A whirlwind is coming for @scout…', sub: 'Only @scout can spin it — Blob Twirly Hat + Austee inside!' },
-      token_skull:     { accent: '#aeea00', glow: 'rgba(174, 234, 0, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(174, 234, 0, .16), rgba(0, 0, 0, .55) 75%)', motif: '💀', caption: 'Something is watching from the dark…', sub: '💀 Mystery roll — spin it to win ANY item in FunTopia!' },
+      token_king:      { fx: 'king', accent: '#ffca28', glow: 'rgba(255, 202, 40, .6)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(255, 202, 40, .25), rgba(123, 47, 247, .2) 60%, transparent 75%)', motif: '👑', caption: 'All hail… a royal gift!', sub: 'Spin it on the wheel to win a prize!' },
+      token_galactic:  { fx: 'galactic', accent: '#7c4dff', glow: 'rgba(124, 77, 255, .6)',  bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124, 77, 255, .35), rgba(0, 229, 255, .15) 60%, transparent 75%)', motif: '🌌', caption: 'From the far edge of the galaxy…', sub: 'Spin it on the wheel to win a prize!' },
+      token_universal: { fx: 'universal', accent: '#ff2d95', glow: 'rgba(255, 45, 149, .55)', bg: 'linear-gradient(160deg, rgba(255, 45, 149, .22), rgba(0, 229, 255, .2) 45%, rgba(118, 255, 3, .18) 70%, transparent)', motif: '🌈', caption: 'Every color. Every power. One token.', sub: 'Spin it on the wheel to win a prize!' },
+      token_scout:     { fx: 'scout', accent: '#00e5ff', glow: 'rgba(0, 229, 255, .6)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0, 229, 255, .22), rgba(0, 0, 0, .4) 75%)', motif: '🌀', caption: 'A whirlwind is coming for @scout…', sub: 'Only @scout can spin it — Blob Twirly Hat + Austee inside!' },
+      token_skull:     { fx: 'skull', accent: '#aeea00', glow: 'rgba(174, 234, 0, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(174, 234, 0, .16), rgba(0, 0, 0, .55) 75%)', motif: '💀', caption: 'Something is watching from the dark…', sub: '💀 Mystery roll — spin it to win ANY item in FunTopia!' },
     };
     let stopCoin = null;
     const playCineCutscene = async (tokenId) => {
@@ -244,6 +249,34 @@ export async function tokensPage(D) {
       stage.style.setProperty('--cine-bg', cfg.bg);
       stage.style.setProperty('--cine-glow', cfg.glow);
       stage.style.setProperty('--cine-accent', cfg.accent);
+      const fx = app.querySelector('#cineFx');
+      fx.innerHTML = '';
+      fx.className = 'cine-fx';
+      if (cfg.fx) {
+        fx.classList.add('cine-fx-' + cfg.fx);
+        fx.hidden = false;
+        if (cfg.fx === 'galactic') {
+          for (let i = 0; i < 42; i++) {
+            const st = document.createElement('i');
+            st.style.left = `${Math.random() * 100}%`;
+            st.style.top = `${Math.random() * 100}%`;
+            const sz = 2 + Math.random() * 4;
+            st.style.width = st.style.height = `${sz}px`;
+            st.style.animationDelay = `${Math.random() * 1.6}s`;
+            fx.appendChild(st);
+          }
+        } else if (cfg.fx === 'king') {
+          for (let i = 0; i < 26; i++) {
+            const cf = document.createElement('i');
+            cf.style.left = `${Math.random() * 100}%`;
+            cf.style.animationDelay = `${Math.random() * 2.6}s`;
+            cf.style.animationDuration = `${1.8 + Math.random() * 1.6}s`;
+            if (i % 3 === 0) cf.style.background = '#fff3c4';
+            if (i % 3 === 1) cf.style.background = '#ff6d00';
+            fx.appendChild(cf);
+          }
+        }
+      } else { fx.hidden = true; }
       app.querySelector('#cineMotif').textContent = cfg.motif;
       tokenEl.style.display = '';
       tokenEl.style.opacity = '0';
@@ -321,8 +354,10 @@ export async function tokensPage(D) {
       const ceremony = app.querySelector('#pumpkinCeremony');
       const boom = app.querySelector('#pumpkinBoom');
       const text = app.querySelector('#pumpkinCeremonyText');
+      const stage = app.querySelector('.pumpkin-glitch-stage');
       ceremony.hidden = false;
       document.body.classList.add('pumpkin-shake');
+      if (stage) { stage.classList.add('pumpkin-tear'); setTimeout(() => stage.classList.remove('pumpkin-tear'), 2600); }
       text.textContent = 'SOMETHING IS HAPPENING…';
       setTimeout(() => { text.textContent = 'THE PUMPKIN TOKEN IS BREAKING REALITY…'; }, 900);
       setTimeout(() => {

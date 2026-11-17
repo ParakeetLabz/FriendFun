@@ -1285,6 +1285,36 @@ body.pumpkin-boom-shake { animation: pumpkinBoomShake .09s linear infinite; }
 .cine-token-sub { font-size: clamp(15px, 3vw, 19px); color: #ffe9a8; opacity: .95; }
 .cine-continue { margin-top: 14px; font-size: 18px; padding: 12px 34px; }
 .cine-skip { position: absolute; z-index: 6; right: 18px; bottom: 13vh; background: rgba(255, 255, 255, .12); color: #fff; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 8px 16px; font-size: 14px; cursor: pointer; }
+
+/* ---------- Per-token cinematic FX layers ---------- */
+.cine-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.cine-fx[hidden] { display: none; }
+/* Galactic: twinkling starfield + a slow cosmic drift. */
+.cine-fx-galactic { background: radial-gradient(ellipse 80% 60% at 50% 40%, rgba(124, 77, 255, .35), transparent 70%); animation: cineDrift 6s ease-in-out infinite alternate; }
+.cine-fx-galactic i { position: absolute; background: #fff; border-radius: 50%; animation: cineTwinkle 1.6s ease-in-out infinite; }
+@keyframes cineTwinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.4); } }
+@keyframes cineDrift { from { transform: scale(1) rotate(0deg); } to { transform: scale(1.12) rotate(2deg); } }
+/* Universal: sweeping rainbow beams. */
+.cine-fx-universal { background: linear-gradient(115deg, rgba(255, 45, 149, .22), rgba(255, 215, 0, .18) 30%, rgba(0, 229, 255, .2) 55%, rgba(118, 255, 3, .18) 80%, rgba(255, 45, 149, .22)); background-size: 300% 300%; animation: cineRainbow 4s linear infinite; }
+@keyframes cineRainbow { from { background-position: 0% 50%; } to { background-position: 300% 50%; } }
+/* King: falling golden confetti + light rays. */
+.cine-fx-king { background: repeating-linear-gradient(115deg, transparent 0 60px, rgba(255, 202, 40, .07) 60px 64px); animation: cineRays 5s linear infinite; }
+.cine-fx-king i { position: absolute; top: -12px; width: 8px; height: 12px; background: #ffca28; animation: cineConfetti 2.6s linear infinite; }
+@keyframes cineRays { from { background-position: 0 0; } to { background-position: 120px 0; } }
+@keyframes cineConfetti { from { transform: translateY(-4vh) rotate(0deg); opacity: 1; } to { transform: translateY(105vh) rotate(540deg); opacity: .7; } }
+/* Scout: a dark tornado vortex. */
+.cine-fx-scout { background: radial-gradient(ellipse 55% 45% at 50% 50%, rgba(0, 229, 255, .18), rgba(0, 0, 0, .6) 75%); }
+.cine-fx-scout::before { content: ''; position: absolute; left: 50%; top: 50%; width: 70vmin; height: 70vmin; margin: -35vmin 0 0 -35vmin; border-radius: 50%; background: conic-gradient(from 0deg, transparent, rgba(0, 229, 255, .35), transparent 30%, rgba(123, 47, 247, .3), transparent 60%, rgba(0, 229, 255, .35), transparent); animation: cineVortex 1.6s linear infinite; -webkit-mask: radial-gradient(circle, transparent 32%, #000 34%, #000 62%, transparent 64%); mask: radial-gradient(circle, transparent 32%, #000 34%, #000 62%, transparent 64%); }
+@keyframes cineVortex { to { transform: rotate(360deg); } }
+/* Skull: eerie fog + lightning flashes. */
+.cine-fx-skull { background: radial-gradient(ellipse 60% 50% at 50% 60%, rgba(174, 234, 0, .14), rgba(0, 0, 0, .7) 75%); animation: cineFlicker 2.4s steps(1) infinite; }
+@keyframes cineFlicker { 0%, 88%, 100% { filter: brightness(1); } 90% { filter: brightness(2.1); } 92% { filter: brightness(.7); } 94% { filter: brightness(1.9); } }
+/* Dr. Pepper: a richer ad — the can gets a hero glow + fizz. */
+.pepper-ad-hero { animation: pepperHero 2.2s ease-in-out both; }
+@keyframes pepperHero { 0% { transform: scale(.6) rotate(-14deg); opacity: 0; } 55% { transform: scale(1.12) rotate(4deg); opacity: 1; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+/* Pumpkin: a harder reality-break — screen tear + static surge. */
+.pumpkin-tear { animation: pumpkinTear .18s steps(2) infinite; }
+@keyframes pumpkinTear { 0% { clip-path: inset(0 0 62% 0); transform: translateX(-8px); } 50% { clip-path: inset(58% 0 0 0); transform: translateX(9px); } 100% { clip-path: inset(28% 0 30% 0); transform: translateX(-4px); } }
 /* Dr. Pepper ad: the whole screen becomes a Dr. Pepper ad, then the prize
    card pops up. The can + wordmark are drawn in code (pepper.js). */
 .pepper-ad { position: fixed; inset: 0; background: radial-gradient(ellipse at center, #e02340 0%, #8a0d1f 65%, #4a060d 100%); z-index: 320; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; overflow: hidden; }
