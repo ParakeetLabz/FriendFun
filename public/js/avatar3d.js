@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=3253bf8f';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=44f5fe93';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
-import { isVerified } from './verified.js?v=6fb5be32';
+import { isVerified } from './verified.js?v=4e9b72be';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
