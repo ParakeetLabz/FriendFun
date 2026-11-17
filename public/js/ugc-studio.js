@@ -44,7 +44,7 @@ export async function ugcPage(D) {
         </div>
         <div class="ugc-model" hidden>
           <p class="muted small" style="margin:8px 0 4px">Where should it go?</p>
-          <div class="av-tabs">${UGC_MODEL_SLOTS.map(s => `<button data-ugcsSlot="${s}" class="${s === slot ? 'active' : ''}">${s[0].toUpperCase() + s.slice(1)}</button>`).join('')}</div>
+          <div class="av-tabs">${UGC_MODEL_SLOTS.map(s => `<button data-ugcs-slot="${s}" class="${s === slot ? 'active' : ''}">${s[0].toUpperCase() + s.slice(1)}</button>`).join('')}</div>
           <div class="ugc-drop">
             <label class="btn-secondary btn-small">Choose .glb file<input type="file" class="ugc-glb" accept=".glb,model/gltf-binary" hidden></label>
             <span class="muted small ugc-filename">No file chosen</span>
@@ -114,7 +114,7 @@ export async function ugcPage(D) {
       rebuild();
     });
     // 3D model tab
-    app.querySelectorAll('[data-ugcsSlot]').forEach(b => b.onclick = () => {
+    app.querySelectorAll('[data-ugcs-slot]').forEach(b => b.onclick = () => {
       slot = b.dataset.ugcsSlot;
       app.querySelectorAll('[data-ugcsSlot]').forEach(x => x.classList.toggle('active', x === b));
       rebuild();

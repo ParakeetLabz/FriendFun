@@ -37,6 +37,7 @@ export function createUgc(D) {
       if (!model_url.startsWith(okPrefix)) return res.status(400).json({ error: 'Invalid model URL' });
       model_transform = validUgcTransform(b.transform);
       if (typeof model_transform === 'string') return res.status(400).json({ error: model_transform });
+      template = 'model'; // ugc_items.template is NOT NULL — model items carry no remix template
     } else {
       // Remix path (hats and shirts only)
       if (!['hat', 'shirt'].includes(type)) return res.status(400).json({ error: 'Remix only supports hats and shirts — use a 3D model for gears' });

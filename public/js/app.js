@@ -1724,7 +1724,7 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=cad52c03'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=34a1af35'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
