@@ -77,12 +77,12 @@ export function createUgc(D) {
     const { data } = await supabase.from('ugc_items').select('*').eq('creator', req.user.name).order('created_at', { ascending: false });
     res.json((data || []).map(r => ({ ...ugcPublic(ugcDef(r)), status: r.status })));
   });
-  app.get('/api/ugc/pending', modOnly, async (req, res) => {
+  app.get('/api/ugc/pending', auth, modOnly, async (req, res) => {
     if (!ugcState.tableOk) return res.json([]);
     const { data } = await supabase.from('ugc_items').select('*').eq('status', 'pending').order('created_at', { ascending: true });
     res.json((data || []).map(r => ({ ...ugcPublic(ugcDef(r)), status: r.status })));
   });
-  app.post('/api/ugc/:id/approve', modOnly, async (req, res) => {
+  app.post('/api/ugc/:id/approve', auth, modOnly, async (req, res) => {
     const raw = String(req.params.id).replace(/^ugc_/, '');
     const { data, error } = await supabase.from('ugc_items').update({ status: 'approved' }).eq('id', raw).eq('status', 'pending').select().single();
     if (error || !data) return res.status(404).json({ error: 'Not found or already reviewed' });
@@ -95,7 +95,7 @@ export function createUgc(D) {
     logMod(req.user.name, 'ugc_approve', data.name, data.creator);
     res.json({ ok: true });
   });
-  app.post('/api/ugc/:id/reject', modOnly, async (req, res) => {
+  app.post('/api/ugc/:id/reject', auth, modOnly, async (req, res) => {
     const raw = String(req.params.id).replace(/^ugc_/, '');
     const { data, error } = await supabase.from('ugc_items').update({ status: 'rejected' }).eq('id', raw).eq('status', 'pending').select().single();
     if (error || !data) return res.status(404).json({ error: 'Not found or already reviewed' });
