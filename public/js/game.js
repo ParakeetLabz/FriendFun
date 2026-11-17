@@ -84,11 +84,13 @@ function buildGear(gearId) {
 const GEAR_COOLDOWN = { gear_sword: 0.8, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
   gear_blaster: 0.5, gear_raygun: 0.7, gear_crossbow: 0.9, gear_freezeray: 1.0,
   gear_hammer: 1.0, gear_axe: 0.9, gear_katana: 0.6, gear_spear: 0.9, gear_mace: 1.1,
-  gear_lasersword: 0.7, gear_cannon: 2.5, gear_bazooka: 2.8 };
+  gear_lasersword: 0.7, gear_cannon: 2.5, gear_bazooka: 2.8,
+  gear_boombox: 3, gear_microphone: 2, gear_pumpkinsword: 1.2, gear_freezeray: 1.2 };
 const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
-  gear_blaster: 'pellet', gear_raygun: 'pellet', gear_crossbow: 'pellet', gear_freezeray: 'pellet',
+  gear_blaster: 'pellet', gear_raygun: 'pellet', gear_crossbow: 'pellet', gear_freezeray: 'freeze',
   gear_hammer: 'melee', gear_axe: 'melee', gear_katana: 'melee', gear_spear: 'melee', gear_mace: 'melee',
-  gear_lasersword: 'melee', gear_cannon: 'rocket', gear_bazooka: 'rocket' };
+  gear_lasersword: 'melee', gear_cannon: 'rocket', gear_bazooka: 'rocket',
+  gear_boombox: 'boombox', gear_microphone: 'mic', gear_pumpkinsword: 'pumpkin' };
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const RIVALS_WEAPONS = {
@@ -455,6 +457,9 @@ export class Game {
     const it = ITEM[id];
     if (!it || it.type !== 'gear' || this.o.test) return;
     this.me.avatar = this.me.avatar || {};
+    // Only ONE ability item at a time: equipping an ability gear unequips
+    // ability items in the other slots (shirt/hat/head/face).
+    if (it.ability) for (const sl of ['shirt', 'hat', 'head', 'face']) { const cur = ITEM[this.me.avatar[sl]]; if (cur?.ability) this.me.avatar[sl] = sl + '_none'; }
     this.me.avatar.gear = id;
     this.setGear();
     this.renderInv();
@@ -1426,8 +1431,12 @@ export class Game {
     const bh = GEAR_BEHAVIOR[id] || 'melee';
     if (bh === 'melee') this.swingSword();
     else if (bh === 'pellet') this.fireProjectile('pellet', dir, 70, 1.4);
+    else if (bh === 'freeze') this.fireProjectile('freeze', dir, 70, 1.4);
     else if (bh === 'rocket') this.fireProjectile('rocket', dir, 38, 5);
     else if (bh === 'grapple') this.fireGrapple(dir);
+    else if (bh === 'boombox') this.useBoombox();
+    else if (bh === 'mic') this.useMic();
+    else if (bh === 'pumpkin') this.swingPumpkin();
   }
   swingSword() {
     this.gearSwingT = 0.35;
@@ -1438,11 +1447,40 @@ export class Game {
       if (d.length() < 5.5 && d.normalize().dot(fwd) > 0.4) { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); break; }
     }
   }
+  useBoombox() {
+    // Boombox: everyone in the room dances for 3 seconds.
+    this.emote = 'dance'; this.emoteT = 3;
+    this.send({ t: 'gearBoombox' });
+    if (!reduceMotion()) confetti(this.c);
+    sfx.win();
+    this.sys('📻 Boombox! Everybody dance!');
+  }
+  useMic() {
+    // Microphone: shout a big message the whole room sees.
+    const text = prompt('🎤 Shout to the whole room:', '');
+    if (text == null || !text.trim()) return;
+    this.send({ t: 'gearShout', text: text.trim() });
+    this.showBig('🎤 ' + text.trim().slice(0, 60), 3000);
+  }
+  swingPumpkin() {
+    // Pumpkin Sword: a melee swing that hits EVERYONE in range + pumpkin burst.
+    this.gearSwingT = 0.35;
+    sfx.swing?.() || sfx.click?.();
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(this.char.quaternion);
+    let hits = 0;
+    for (const p of this.players.values()) {
+      const d = p.char.position.clone().sub(this.pos); d.y = 0;
+      if (d.length() < 6.5 && d.normalize().dot(fwd) > 0.3) { this.send({ t: 'gearHit', id: p.id }); hits++; }
+    }
+    if (hits) { this.onKill(hits === 1 ? 'a player' : hits + ' players'); this.sys(`🎃 Pumpkin Sword hit ${hits} player${hits > 1 ? 's' : ''}!`); }
+    if (!reduceMotion()) confetti(this.c);
+  }
   fireProjectile(kind, dir, speed, radius) {
     const isRocket = kind === 'rocket';
+    const isFreeze = kind === 'freeze';
     const mesh = new THREE.Mesh(
       new THREE.SphereGeometry(isRocket ? 0.55 : 0.28, 10, 8),
-      new THREE.MeshStandardMaterial({ color: isRocket ? '#e53935' : '#a1887f', emissive: isRocket ? '#ff5722' : '#000000', emissiveIntensity: 0.7, roughness: 0.5 }));
+      new THREE.MeshStandardMaterial({ color: isRocket ? '#e53935' : isFreeze ? '#00e5ff' : '#a1887f', emissive: isRocket ? '#ff5722' : isFreeze ? '#00b0ff' : '#000000', emissiveIntensity: 0.7, roughness: 0.5 }));
     const start = this.pos.clone(); start.y += 3.2;
     start.addScaledVector(dir, 1.5);
     mesh.position.copy(start);
@@ -1636,11 +1674,13 @@ export class Game {
       else if (m.t === 'freeze') {
         this.frozen = !!m.on;
         if (this.frozen && this.vehicleId) this.exitVehicle();
-        this.sys(this.frozen ? '❄️ You were frozen by a moderator' : 'You were unfrozen');
+        this.sys(this.frozen ? '❄️ You were frozen' + (m.from ? ` by ${m.from}'s Freeze Ray!` : ' by a moderator') : 'You were unfrozen');
+        if (this.frozen && m.from) { clearTimeout(this._gearFreezeT); this._gearFreezeT = setTimeout(() => { if (this.frozen) { this.frozen = false; this.sys('🧊 Thawed out!'); } }, 3000); }
       }
       else if (m.t === 'slap') { this.vel.x += (Math.random() - 0.5) * 60; this.vel.z += (Math.random() - 0.5) * 60; this.vel.y = 40; this.sys('👋 Slapped by a moderator!'); sfx.oof(); }
       else if (m.t === 'launch') { this.vel.y = 120; this.sys('🚀 Launched by a moderator!'); sfx.jump(); }
       else if (m.t === 'forceEmote') { if (EMOTE_TIMES[m.e]) { this.emote = m.e; this.emoteT = EMOTE_TIMES[m.e]; } }
+      else if (m.t === 'shout') { this.showBig(`🎤 ${m.name}: ${m.text}`, 4000); this.sys(`🎤 ${m.name} shouted: ${m.text}`); }
       else if (m.t === 'sys') this.sys(m.text);
       else if (m.t === 'rivals') { this.startRivals(m); }
       else if (m.t === 'rivalsRound') { this.onRivalsRound(m); }
@@ -1937,7 +1977,11 @@ export class Game {
       if (!hit && this.blockedAt(mp.x, mp.y, mp.z)) hit = true;
       if (!hit) for (const p of this.players.values()) {
         const d = p.char.position.clone(); d.y += 2.5;
-        if (d.distanceTo(mp) < 1.6 + (pr.kind === 'rocket' ? 0.8 : 0)) { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); hit = true; break; }
+        if (d.distanceTo(mp) < 1.6 + (pr.kind === 'rocket' ? 0.8 : 0)) {
+          if (pr.kind === 'freeze') { this.send({ t: 'gearFreeze', id: p.id }); this.sys(`🧊 Froze ${p.name}!`); }
+          else { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); }
+          hit = true; break;
+        }
       }
       if (hit) {
         this.scene.remove(pr.mesh);

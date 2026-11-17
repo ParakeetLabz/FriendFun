@@ -440,6 +440,15 @@ app.put('/api/me/avatar', auth, async (req, res) => {
   for (const k of Object.keys(DEFAULT_AVATAR.colors)) colors[k] = hex.test(a.colors?.[k]) ? a.colors[k] : req.user.avatar.colors[k];
   const pick = (slot) => (a[slot] && (a[slot] === slot + '_none' || req.user.inventory.includes(a[slot])) && itemDef(a[slot])?.type === slot) ? a[slot] : req.user.avatar[slot];
   const avatar = { colors, hat: pick('hat'), face: pick('face'), shirt: pick('shirt'), head: pick('head') || DEFAULT_AVATAR.head, pet: pick('pet') || DEFAULT_AVATAR.pet, gear: pick('gear') || DEFAULT_AVATAR.gear, vehicle: pick('vehicle') || 'vehicle_none', rig: (a.rig === 'r6' || a.rig === 'r15') ? a.rig : (req.user.avatar.rig === 'r6' ? 'r6' : 'r15') };
+  // Only ONE ability-granting item can be equipped at a time. Keep the one in
+  // the slot that just changed (vs the stored avatar); if none changed, keep
+  // the highest-priority slot (gear > shirt > hat > head > face).
+  const abilSlots = ['gear', 'shirt', 'hat', 'head', 'face'].filter(sl => itemDef(avatar[sl])?.ability);
+  if (abilSlots.length > 1) {
+    const oldAv = req.user.avatar || {};
+    const changed = abilSlots.find(sl => avatar[sl] !== oldAv[sl]) || abilSlots[0];
+    for (const sl of abilSlots) if (sl !== changed) avatar[sl] = sl + '_none';
+  }
   await supabase.from('users').update({ avatar }).eq('name', req.user.name);
   res.json(avatar);
 });
@@ -2031,6 +2040,16 @@ wss.on('connection', (ws) => {
       player.lastGearHit = now;
       const target = room.players.get(m.id);
       if (target && target.ws && target.id !== player.id) send(target.ws, { t: 'gearHit', from: player.name, dmg: Math.max(1, Math.min(150, m.dmg | 0 || 100)) });
+    } else if (m.t === 'gearFreeze' && typeof m.id === 'number') {
+      // Freeze Ray: freeze the target for 3 seconds instead of killing them.
+      const target = room.players.get(m.id);
+      if (target && target.ws && target.id !== player.id) send(target.ws, { t: 'freeze', on: true, from: player.name });
+    } else if (m.t === 'gearBoombox') {
+      // Boombox: everyone in the room dances for 3 seconds.
+      broadcast(room, { t: 'forceEmote', e: 'dance', from: player.name });
+    } else if (m.t === 'gearShout') {
+      // Microphone: a big shout everyone in the room sees.
+      broadcast(room, { t: 'shout', name: player.name, text: String(m.text || '').slice(0, 120) });
     }
   });
   ws.on('close', () => {

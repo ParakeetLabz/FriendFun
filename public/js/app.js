@@ -761,7 +761,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=6e754628');
+  const { Game } = await import('./game.js?v=3898dff5');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -825,7 +825,13 @@ async function avatarPage(tab = 'body') {
           .concat(UGC_LIST.filter(u => u.type === tab && me.inventory.includes(u.id)));
         body.innerHTML = `<div class="item-grid">${owned.map(i => `<button class="item ${av[tab] === i.id ? 'worn' : ''}" data-id="${i.id}">${i.type === 'pet' ? (PET_MODELS[i.id] ? `<canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : `<img src="${itemImage(i)}">`}<span>${esc(i.name)}</span></button>`).join('')}
           <a class="item more" href="#/catalog/${tab}"><span class="plus">+</span><span>Get More</span></a></div>`;
-        body.querySelectorAll('[data-id]').forEach(b => b.onclick = () => { av[tab] = b.dataset.id; rebuild(); render(); save(); });
+        body.querySelectorAll('[data-id]').forEach(b => b.onclick = () => {
+          // Only ONE ability item at a time: picking an ability item unequips
+          // ability items in the other slots.
+          const it = ITEM[b.dataset.id];
+          if (it?.ability) for (const sl of ['gear', 'shirt', 'hat', 'head', 'face']) if (sl !== tab) { const cur = ITEM[av[sl]]; if (cur?.ability) av[sl] = sl + '_none'; }
+          av[tab] = b.dataset.id; rebuild(); render(); save();
+        });
         paintPetVoxels(body);
       }
     };
@@ -1370,7 +1376,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=6e754628');
+      const { Game: GameClass } = await import('./game.js?v=3898dff5');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
