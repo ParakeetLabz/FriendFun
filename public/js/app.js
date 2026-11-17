@@ -867,7 +867,7 @@ async function catalogPage(filter = 'all') {
   const soc = await api('GET', '/api/social/me').catch(() => ({ wishlist: [] }));
   const wish = new Set(soc.wishlist || []);
   const itemHtml = i => `
-      <div class="cat-item">${i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : (i.ugc && i.model_url ? `<div class="cat-img">${glbCardImg()}</div>` : `<div class="cat-img"><img src="${itemImage(i)}"></div>`)}<div class="cat-name">${esc(i.name)}</div>
+      <div class="cat-item">${(i.ugc && i.model_url) ? `<div class="cat-img">${glbCardImg()}</div>` : i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : `<div class="cat-img"><img src="${itemImage(i)}"></div>`}<div class="cat-name">${esc(i.name)}</div>
         ${i.ugc ? `<div class="muted small">by ${esc(i.creator)} · ${i.sales} sold</div>` : ''}
         <div class="cat-price">${priceHtml(i)}</div>
         <button class="btn-wish ${wish.has(i.id) ? 'on' : ''}" data-wish="${i.id}" title="Wishlist"><span class="ic">${icons.heart}</span></button>
