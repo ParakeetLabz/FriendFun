@@ -474,7 +474,9 @@ button.badge-card { cursor: pointer; } button.badge-card:hover { border-color: #
 .pet-img-lg canvas.gear-voxel { width: 84px; height: 84px; }
 
 /* ---------- in-game gear toolbar (Roblox backpack style) + kill feed ---------- */
-.inv-bar { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 6; align-items: stretch; }
+.inv-bar { position: fixed; bottom: 10px; left: 0; right: 0; display: flex; overflow-x: auto; overflow-y: hidden; z-index: 6; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.inv-bar::-webkit-scrollbar { display: none; }
+.inv-inner { display: flex; gap: 6px; margin: 0 auto; padding: 0 8px; align-items: stretch; }
 .inv-item { position: relative; width: 72px; min-height: 72px; border-radius: 6px; border: 2px solid rgba(255,255,255,.14); background: rgba(30,30,34,.72); color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 8px 4px 6px; transition: transform .08s, border-color .08s, background .08s; font-family: inherit; }
 .inv-item:hover { border-color: rgba(255,255,255,.55); background: rgba(50,50,56,.8); }
 .inv-item:active { transform: scale(.94); }

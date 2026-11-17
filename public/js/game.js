@@ -324,8 +324,8 @@ export class Game {
     if (!bar) return;
     const gears = this.toolbarGears();
     const cur = this.me.avatar?.gear;
-    bar.innerHTML = gears.length ? gears.map((g, i) => `<button class="inv-item${g.id === cur ? ' active' : ''}" data-id="${g.id}" data-temp="${g.temp ? 1 : 0}" title="${esc(g.name)}${i < 9 ? ' (' + (i + 1) + ')' : ''}">${i < 9 ? `<span class="inv-key">${i + 1}</span>` : ''}<span class="inv-emoji">${g.emoji}</span><span class="inv-name">${esc(g.name)}</span></button>`).join('')
-      : `<div class="inv-empty">No gears yet — <a href="#/catalog/gear">get some in the Marketplace</a></div>`;
+    bar.innerHTML = `<div class="inv-inner">${gears.length ? gears.map((g, i) => `<button class="inv-item${g.id === cur ? ' active' : ''}" data-id="${g.id}" data-temp="${g.temp ? 1 : 0}" title="${esc(g.name)}${i < 9 ? ' (' + (i + 1) + ')' : ''}">${i < 9 ? `<span class="inv-key">${i + 1}</span>` : ''}<span class="inv-emoji">${g.emoji}</span><span class="inv-name">${esc(g.name)}</span></button>`).join('')
+      : `<div class="inv-empty">No gears yet — <a href="#/catalog/gear">get some in the Marketplace</a></div>`}</div>`;
     bar.querySelectorAll('.inv-item').forEach(b => b.onclick = () => this.equipGear(b.dataset.id, b.dataset.temp === '1'));
     bar.style.display = 'flex';
   }
