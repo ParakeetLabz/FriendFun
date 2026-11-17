@@ -108,7 +108,7 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
-    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
+    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
@@ -148,11 +148,68 @@ export class Game {
         <h3><span class="ic">${icons.shield}</span> FunPanel <button class="funpanel-close">×</button></h3>
         <h4>Players</h4>
         <div class="fp-players"></div>
-        <h4>Self</h4>
-        <div class="fp-row"><button class="btn-secondary fp-fly"><span class="ic">${icons.send}</span> Fly: OFF</button><button class="btn-secondary fp-spawn">TP to Spawn</button></div>
-        <div class="fp-row"><button class="btn-secondary fp-noclip"><span class="ic">${icons.x}</span> Noclip: OFF</button><button class="btn-secondary fp-speed"><span class="ic">${icons.zap}</span> Speed: OFF</button></div>
+        <h4>Self Powers</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary fp-fly"><span class="ic">${icons.send}</span> Fly: OFF</button>
+          <button class="btn-secondary fp-noclip"><span class="ic">${icons.x}</span> Noclip: OFF</button>
+          <button class="btn-secondary fp-speed"><span class="ic">${icons.zap}</span> Speed: OFF</button>
+          <button class="btn-secondary fp-spawn">TP to Spawn</button>
+          <button class="btn-secondary" data-fps="god">🛡️ God: OFF</button>
+          <button class="btn-secondary" data-fps="superjump">🚀 Super Jump: OFF</button>
+          <button class="btn-secondary" data-fps="heal">❤️ Heal</button>
+          <button class="btn-secondary" data-fps="big">🔍 Big: OFF</button>
+          <button class="btn-secondary" data-fps="small">🔎 Small: OFF</button>
+          <button class="btn-secondary" data-fps="rainbow">🌈 Rainbow: OFF</button>
+          <button class="btn-secondary" data-fps="tprand">🎲 TP to Random Player</button>
+          <button class="btn-secondary" data-fps="tpspot">📍 TP to Random Spot</button>
+          <button class="btn-secondary" data-fps="spin">🌀 Spin Me</button>
+          <button class="btn-secondary" data-fps="nightvision">🔦 Night Vision: OFF</button>
+          <button class="btn-secondary" data-fps="slowmo">🐢 Slow-Mo: OFF</button>
+          <button class="btn-secondary" data-fps="fastfwd">⏩ Fast-Forward: OFF</button>
+          <button class="btn-secondary" data-fps="flyspeed">💨 Fly Speed: OFF</button>
+          <button class="btn-secondary" data-fps="nodash">♾️ No Dash Cooldown: OFF</button>
+          <button class="btn-secondary" data-fps="dbljump">☁️ Always Double Jump: OFF</button>
+          <button class="btn-secondary" data-fps="reset">💀 Reset Character</button>
+          <button class="btn-secondary" data-fps="clearfx">🧹 Clear All Effects</button>
+        </div>
+        <h4>World</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpw="daynight">🌙 Night: OFF</button>
+          <button class="btn-secondary" data-fpw="fog">🌫️ Fog: OFF</button>
+          <button class="btn-secondary" data-fpw="lowg">🌕 Low Gravity: OFF</button>
+          <button class="btn-secondary" data-fpw="highg">⬇️ High Gravity: OFF</button>
+          <button class="btn-secondary" data-fpw="rain">🌧️ Rain: OFF</button>
+          <button class="btn-secondary" data-fpw="confetti">🎉 Confetti Burst</button>
+          <button class="btn-secondary" data-fpw="fireworks">🎆 Fireworks</button>
+          <button class="btn-secondary" data-fpw="skycolor">🎨 Cycle Sky Color</button>
+        </div>
+        <h4>Everyone</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpb="freezeall">❄️ Freeze All</button>
+          <button class="btn-secondary" data-fpb="unfreezeall">☀️ Unfreeze All</button>
+          <button class="btn-secondary" data-fpb="bringall">🧲 Bring All to Me</button>
+          <button class="btn-secondary" data-fpb="muteall">🔇 Mute All</button>
+          <button class="btn-secondary" data-fpb="unmuteall">🔊 Unmute All</button>
+          <button class="btn-secondary" data-fpb="giftall">🎁 Gift All FunTix</button>
+          <button class="btn-secondary" data-fpb="danceall">💃 Make All Dance</button>
+          <button class="btn-secondary" data-fpb="launchall">🚀 Launch All</button>
+        </div>
+        <h4>Fun</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpf="confetti">🎉 Confetti for Everyone</button>
+          <button class="btn-secondary" data-fpf="dance">💃 Everyone Dances</button>
+          <button class="btn-secondary" data-fpf="shake">📳 Shake Everyone's Screen</button>
+          <button class="btn-secondary" data-fpf="tixrain">🌧️ FunTix Rain</button>
+          <button class="btn-secondary" data-fpf="glitchall">👾 Glitch Everyone's Screen</button>
+        </div>
         ${['owner', 'admin'].includes(this.me.role) ? `<h4>Server</h4>
         <div class="fp-row"><input class="fp-announce" placeholder="Announce to server..." maxlength="200"><button class="btn-primary fp-announce-send">Send</button></div>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpserver="clearannounce">🧹 Clear Announcement</button>
+          <button class="btn-secondary" data-fpserver="maintenance">🔧 Maintenance: OFF</button>
+          <button class="btn-secondary" data-fpserver="playercount">👥 Player Count</button>
+          <button class="btn-secondary" data-fpserver="modlog">📋 Mod Log</button>
+        </div>
         ${this.me.role === 'owner' ? '<div class="fp-row"><button class="btn-danger fp-kickall">Kick everyone</button></div>' : ''}` : ''}
       </div>` : ''}
       <div class="picker-pop emote-picker hidden"></div>
@@ -205,6 +262,11 @@ export class Game {
     if (sp2B) sp2B.onclick = () => { this.speedBoost = !this.speedBoost; sp2B.textContent = `Speed: ${this.speedBoost ? 'ON' : 'OFF'}`; this.sys(`Speed boost ${this.speedBoost ? 'enabled' : 'disabled'}`); };
     const spB = q('.fp-spawn');
     if (spB) spB.onclick = () => this.spawn();
+    q('.funpanel')?.querySelectorAll('[data-fps]').forEach(b => b.onclick = () => this.fpSelfAction(b.dataset.fps, b));
+    q('.funpanel')?.querySelectorAll('[data-fpw]').forEach(b => b.onclick = () => this.fpWorldAction(b.dataset.fpw, b));
+    q('.funpanel')?.querySelectorAll('[data-fpb]').forEach(b => b.onclick = () => this.fpBulkAction(b.dataset.fpb));
+    q('.funpanel')?.querySelectorAll('[data-fpf]').forEach(b => b.onclick = () => this.fpFunAction(b.dataset.fpf));
+    q('.funpanel')?.querySelectorAll('[data-fpserver]').forEach(b => b.onclick = () => this.fpServerAction(b.dataset.fpserver, b));
     const annS = q('.fp-announce-send');
     if (annS) annS.onclick = async () => {
       const v = q('.fp-announce')?.value.trim();
@@ -819,7 +881,16 @@ export class Game {
       <button class="btn-secondary" data-fp="bring" data-id="${p.id}" title="Teleport them to you">Bring</button>
       <button class="btn-secondary" data-fp="freeze" data-id="${p.id}" title="Freeze/unfreeze them">${this.frozenIds?.has(p.id) ? 'Unfreeze' : 'Freeze'}</button>
       <button class="btn-secondary" data-fp="mute" data-id="${p.id}" title="Mute 10 min">Mute</button>
+      <button class="btn-secondary" data-fp="unmute" data-id="${p.id}" title="Unmute them">Unmute</button>
+      <button class="btn-secondary" data-fp="tospawn" data-id="${p.id}" title="Teleport them to spawn">To Spawn</button>
+      <button class="btn-secondary" data-fp="slap" data-id="${p.id}" title="Slap them">👋 Slap</button>
+      <button class="btn-secondary" data-fp="launch" data-id="${p.id}" title="Launch them into the sky">🚀 Launch</button>
+      <button class="btn-secondary" data-fp="dance" data-id="${p.id}" title="Make them dance">💃 Dance</button>
+      <button class="btn-secondary" data-fp="dm" data-id="${p.id}" title="Send them a staff DM">📩 DM</button>
       ${['owner', 'admin'].includes(this.me.role) ? `<button class="btn-secondary" data-fp="gift" data-id="${p.id}" title="Give FunTix"><span class="ic">${icons.gift}</span></button>` : ''}
+      ${this.me.role === 'owner' ? `<button class="btn-secondary" data-fp="take" data-id="${p.id}" title="Take FunTix from them">💸 Take Tix</button>
+      <button class="btn-secondary" data-fp="giveitem" data-id="${p.id}" title="Give them any item">🎁 Give Item</button>
+      <button class="btn-secondary" data-fp="resetav" data-id="${p.id}" title="Reset their avatar">🔄 Reset Avatar</button>` : ''}
       <button class="btn-secondary" data-fp="kick" data-id="${p.id}" title="Kick from server">Kick</button>
       <button class="btn-danger" data-fp="ban" data-id="${p.id}" title="Start a ban (needs a second staff to confirm)">Ban</button>
     </div>`).join('') : '<p class="muted small">No other players here.</p>';
@@ -847,6 +918,15 @@ export class Game {
         this.sys(`Gave ${p.name} ${amt} FunTix 🎉`);
       }
       else if (a === 'mute') { await this.fpApi('POST', '/api/mod/mute', { name: p.name, minutes: 10, reason: 'Muted in-game via FunPanel' }); this.sys(`Muted ${p.name} for 10 min`); }
+      else if (a === 'unmute') { await this.fpApi('POST', '/api/mod/unmute', { name: p.name }); this.sys(`Unmuted ${p.name}`); }
+      else if (a === 'tospawn') { await this.fpApi('POST', '/api/mod/send', { kind: 'tospawn', name: p.name }); this.sys(`Sent ${p.name} to spawn`); }
+      else if (a === 'slap') { await this.fpApi('POST', '/api/mod/send', { kind: 'slap', name: p.name }); this.sys(`Slapped ${p.name} 👋`); }
+      else if (a === 'launch') { await this.fpApi('POST', '/api/mod/send', { kind: 'launch', name: p.name }); this.sys(`Launched ${p.name} 🚀`); }
+      else if (a === 'dance') { await this.fpApi('POST', '/api/mod/send', { kind: 'emote', name: p.name, emote: 'dance' }); this.sys(`Made ${p.name} dance 💃`); }
+      else if (a === 'dm') { const text = prompt(`Staff DM to ${p.name}:`, ''); if (text == null || !text.trim()) return; await this.fpApi('POST', '/api/mod/send', { kind: 'dm', name: p.name, text: text.trim() }); this.sys(`DM sent to ${p.name} 📩`); }
+      else if (a === 'take') { const amt = prompt(`Take how many FunTix from ${p.name}? (1-100000)`, '100'); if (amt == null) return; await this.fpApi('POST', `/api/admin/users/${encodeURIComponent(p.name)}/command`, { command: 'take_tix', amount: +amt }); this.sys(`Took ${amt} FunTix from ${p.name} 💸`); }
+      else if (a === 'giveitem') { const item = prompt(`Give ${p.name} which item id? (e.g. gear_swiftboots)`, 'gear_swiftboots'); if (item == null || !item.trim()) return; await this.fpApi('POST', `/api/admin/users/${encodeURIComponent(p.name)}/command`, { command: 'grant_item', item: item.trim() }); this.sys(`Gave ${item.trim()} to ${p.name} 🎁`); }
+      else if (a === 'resetav') { if (!confirm(`Reset ${p.name}'s avatar to default?`)) return; await this.fpApi('POST', `/api/admin/users/${encodeURIComponent(p.name)}/command`, { command: 'reset_avatar' }); this.sys(`Reset ${p.name}'s avatar 🔄`); }
       else if (a === 'kick') { if (!confirm(`Kick ${p.name} from the server?`)) return; await this.fpApi('POST', '/api/mod/kick', { name: p.name, reason: 'Kicked in-game via FunPanel' }); this.sys(`Kicked ${p.name}`); }
       else if (a === 'ban') {
         if (!confirm(`Start a BAN for ${p.name}? A second staff member must confirm it on the Moderation page.`)) return;
@@ -854,6 +934,127 @@ export class Game {
         this.sys(r.message || `Ban started for ${p.name}`);
         alert((r.message || 'Ban initiated') + '\n\nA second staff member must confirm it on the Moderation page.');
       }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  // ---------- FunPanel: Self Powers ----------
+  fpSelfAction(a, btn) {
+    const on = (flag, label) => { this[flag] = !this[flag]; if (btn) btn.textContent = `${label}: ${this[flag] ? 'ON' : 'OFF'}`; return this[flag]; };
+    if (a === 'god') { on('fpGod', '🛡️ God'); this.sys(`God mode ${this.fpGod ? 'ON — invincible' : 'OFF'}`); }
+    else if (a === 'superjump') { on('fpSuperJump', '🚀 Super Jump'); this.sys(`Super jump ${this.fpSuperJump ? 'ON' : 'OFF'}`); }
+    else if (a === 'heal') { this.health = 100; this.updateHud(); this.sys('Healed to full ❤️'); }
+    else if (a === 'big') { const v = on('fpBig', '🔍 Big'); if (v) this.fpSmall = false; this.applyFpScale(); }
+    else if (a === 'small') { const v = on('fpSmall', '🔎 Small'); if (v) this.fpBig = false; this.applyFpScale(); }
+    else if (a === 'rainbow') { on('fpRainbow', '🌈 Rainbow'); this.sys(`Rainbow ${this.fpRainbow ? 'ON' : 'OFF'}`); }
+    else if (a === 'tprand') { const ps = [...this.players.values()]; if (!ps.length) return this.sys('No other players to teleport to'); const p = ps[Math.floor(Math.random() * ps.length)]; this.pos.copy(p.char.position); this.pos.y += 4; this.vel.set(0, 0, 0); this.sys(`Teleported to ${p.name}`); }
+    else if (a === 'tpspot') { this.pos.set((Math.random() - 0.5) * 80, 10, (Math.random() - 0.5) * 80); this.vel.set(0, 0, 0); this.sys('Teleported to a random spot 📍'); }
+    else if (a === 'spin') { this.emote = 'spin'; this.emoteT = 2; this.sys('Spinning! 🌀'); }
+    else if (a === 'nightvision') { on('fpNightVision', '🔦 Night Vision'); this.applyFpLight(); }
+    else if (a === 'slowmo') { const v = on('fpSlowMo', '🐢 Slow-Mo'); if (v) this.fpFastFwd = false; this.sys(`Slow-mo ${this.fpSlowMo ? 'ON' : 'OFF'}`); }
+    else if (a === 'fastfwd') { const v = on('fpFastFwd', '⏩ Fast-Forward'); if (v) this.fpSlowMo = false; this.sys(`Fast-forward ${this.fpFastFwd ? 'ON' : 'OFF'}`); }
+    else if (a === 'flyspeed') { on('fpFlySpeed', '💨 Fly Speed'); this.sys(`Fly speed ${this.fpFlySpeed ? '2x' : 'normal'}`); }
+    else if (a === 'nodash') { on('fpNoDash', '♾️ No Dash Cooldown'); this.sys(`Dash cooldown ${this.fpNoDash ? 'removed' : 'restored'}`); }
+    else if (a === 'dbljump') { on('fpDblJump', '☁️ Always Double Jump'); this.sys(`Double jump ${this.fpDblJump ? 'always on' : 'normal'}`); }
+    else if (a === 'reset') { this.die(); this.sys('Character reset 💀'); }
+    else if (a === 'clearfx') { this.fpGod = this.fpSuperJump = this.fpBig = this.fpSmall = this.fpRainbow = this.fpNightVision = this.fpSlowMo = this.fpFastFwd = this.fpFlySpeed = this.fpNoDash = this.fpDblJump = false; this.applyFpScale(); this.applyFpLight(); this.sys('All FunPanel effects cleared 🧹'); this.renderFunPanel(); }
+  }
+  applyFpScale() {
+    if (!this.char) return;
+    const sc = this.fpBig ? 1.5 : this.fpSmall ? 0.6 : 1;
+    this.char.scale.setScalar(sc);
+  }
+  applyFpLight() {
+    if (!this.renderer) return;
+    this.renderer.toneMappingExposure = this.fpNightVision ? 2.2 : 1;
+  }
+  // ---------- FunPanel: World ----------
+  fpWorldAction(a, btn) {
+    const on = (flag, label) => { this[flag] = !this[flag]; if (btn) btn.textContent = `${label}: ${this[flag] ? 'ON' : 'OFF'}`; return this[flag]; };
+    if (a === 'daynight') { on('fpNight', '🌙 Night'); this.applyFpSky(); }
+    else if (a === 'fog') { on('fpFog', '🌫️ Fog'); this.applyFpSky(); }
+    else if (a === 'lowg') { const v = on('fpLowG', '🌕 Low Gravity'); if (v) this.fpHighG = false; this.sys(`Low gravity ${this.fpLowG ? 'ON — moon jump!' : 'OFF'}`); }
+    else if (a === 'highg') { const v = on('fpHighG', '⬇️ High Gravity'); if (v) this.fpLowG = false; this.sys(`High gravity ${this.fpHighG ? 'ON — heavy!' : 'OFF'}`); }
+    else if (a === 'rain') { on('fpRain', '🌧️ Rain'); this.applyFpRain(); }
+    else if (a === 'confetti') { if (!reduceMotion()) confetti(this.c); this.sys('🎉 Confetti!'); }
+    else if (a === 'fireworks') { this.fpFireworks(); }
+    else if (a === 'skycolor') { this._skyIdx = ((this._skyIdx || 0) + 1) % 6; this.applyFpSky(); this.sys('Sky color changed 🎨'); }
+  }
+  applyFpSky() {
+    if (!this.scene) return;
+    const skies = ['#87ceeb', '#ff9a3c', '#1a1a2e', '#ff6b9d', '#00e5ff', '#7b2ff7'];
+    const sky = skies[this._skyIdx || 0];
+    this.scene.background = new THREE.Color(this.fpNight ? '#0a0a1a' : sky);
+    this.scene.fog = this.fpFog ? new THREE.Fog(this.fpNight ? 0x0a0a1a : 0x87ceeb, 20, 90) : null;
+  }
+  applyFpRain() {
+    let r = this.c.querySelector('.fp-rain');
+    if (this.fpRain && !r) { r = document.createElement('div'); r.className = 'fp-rain'; r.innerHTML = Array.from({ length: 40 }, (_, i) => `<i style="left:${(i * 2.5) % 100}%;animation-delay:${(i % 10) * 0.09}s"></i>`).join(''); this.c.appendChild(r); }
+    else if (!this.fpRain && r) r.remove();
+  }
+  fpFireworks() {
+    if (!this.scene || !this.pos) return;
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const c = new THREE.Color().setHSL(Math.random(), 0.9, 0.6);
+        const g = new THREE.Group();
+        for (let j = 0; j < 24; j++) {
+          const m = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6), new THREE.MeshBasicMaterial({ color: c }));
+          const a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI;
+          m.position.set(this.pos.x + Math.sin(a) * Math.cos(b) * 8, this.pos.y + 12 + Math.sin(b) * 6, this.pos.z + Math.cos(a) * Math.cos(b) * 8);
+          g.add(m);
+        }
+        this.scene.add(g);
+        setTimeout(() => { this.scene.remove(g); }, 1200);
+      }, i * 250);
+    }
+    this.sys('🎆 Fireworks!');
+  }
+  // ---------- FunPanel: Everyone (bulk) ----------
+  async fpBulkAction(a) {
+    const ps = [...this.players.values()];
+    if (!ps.length) return this.sys('No other players here');
+    try {
+      if (a === 'freezeall' || a === 'unfreezeall') {
+        const on = a === 'freezeall';
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'freeze', name: p.name, on });
+        this.sys(`${on ? 'Froze' : 'Unfroze'} all ${ps.length} players`);
+      } else if (a === 'bringall') {
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'bring', name: p.name, x: +this.pos.x.toFixed(2), y: +this.pos.y.toFixed(2), z: +this.pos.z.toFixed(2) });
+        this.sys(`Brought all ${ps.length} players to you 🧲`);
+      } else if (a === 'muteall' || a === 'unmuteall') {
+        const path = a === 'muteall' ? '/api/mod/mute' : '/api/mod/unmute';
+        for (const p of ps) await this.fpApi('POST', path, { name: p.name, minutes: 10, reason: 'FunPanel bulk action' });
+        this.sys(`${a === 'muteall' ? 'Muted' : 'Unmuted'} all ${ps.length} players`);
+      } else if (a === 'giftall') {
+        const amt = prompt(`Give how many FunTix to EVERYONE? (1-10000)`, '100');
+        if (amt == null) return;
+        for (const p of ps) await this.fpApi('POST', '/api/admin/funtix', { name: p.name, amount: +amt });
+        this.sys(`Gave all ${ps.length} players ${amt} FunTix 🎁`);
+      } else if (a === 'danceall') {
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'emote', name: p.name, emote: 'dance' });
+        this.sys(`Made all ${ps.length} players dance 💃`);
+      } else if (a === 'launchall') {
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'launch', name: p.name });
+        this.sys(`Launched all ${ps.length} players 🚀`);
+      }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  // ---------- FunPanel: Fun (broadcast effects) ----------
+  async fpFunAction(a) {
+    try {
+      if (a === 'confetti') { if (!reduceMotion()) confetti(this.c); this.sys('🎉 Confetti for you!'); }
+      else if (a === 'dance') { this.emote = 'dance'; this.emoteT = 5; this.sys('💃 You are dancing!'); }
+      else if (a === 'shake') { document.body.classList.add('glitching'); setTimeout(() => document.body.classList.remove('glitching'), 1500); this.sys('📳 Screen shake!'); }
+      else if (a === 'tixrain') { await this.fpApi('POST', '/api/admin/site/command', { command: 'funtix_rain', amount: 50 }); this.sys('🌧️ FunTix rain started!'); }
+      else if (a === 'glitchall') { const r = await this.fpApi('POST', '/api/mod/glitch-all', {}); this.sys(`👾 Glitched every screen in ${r.rooms || 0} game(s)!`); }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  // ---------- FunPanel: Server ----------
+  async fpServerAction(a, btn) {
+    try {
+      if (a === 'clearannounce') { await this.fpApi('POST', '/api/admin/site/command', { command: 'clear_announce' }); this.sys('Announcement cleared 🧹'); }
+      else if (a === 'maintenance') { this.fpMaintenance = !this.fpMaintenance; await this.fpApi('POST', '/api/admin/site/command', { command: 'maintenance', on: this.fpMaintenance }); if (btn) btn.textContent = `🔧 Maintenance: ${this.fpMaintenance ? 'ON' : 'OFF'}`; this.sys(`Maintenance mode ${this.fpMaintenance ? 'ON' : 'OFF'}`); }
+      else if (a === 'playercount') { const r = await this.fpApi('GET', '/api/player-count'); this.sys(`👥 ${r.count || 0} players online right now`); }
+      else if (a === 'modlog') { const r = await this.fpApi('GET', '/api/mod/log'); const lines = (r || []).slice(0, 8).map(x => `${x.by || '?'}: ${x.action || ''} ${x.target || ''}`).join('\n'); alert(lines || 'No mod actions logged yet.'); }
     } catch (e) { this.sys('FunPanel: ' + e.message); }
   }
   updateLeaderboard() {
@@ -875,14 +1076,18 @@ export class Game {
   // dreadful image of the hacker's avatar stares out at everyone.
   showGlitch(m) {
     const name = m.name || 'Someone';
-    const img = avatarImage(m.avatar || {}, 'full');
+    let img = '';
+    try { img = avatarImage(m.avatar || {}, 'full'); } catch {}
     const ov = document.createElement('div');
     ov.className = 'glitch-overlay';
-    ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-dread"><img src="${img}" alt=""><div class="glitch-name">👾 ${esc(name).toUpperCase()} HAS HACKED THE GAME 👾</div><div class="glitch-sub">YOUR SCREEN HAS BEEN GLITCHED</div></div>`;
+    const dread = img
+      ? `<img src="${img}" alt="">`
+      : `<div class="glitch-dread-emoji">👾</div>`;
+    ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-tear"></div><div class="glitch-dread">${dread}<div class="glitch-name">👾 ${esc(name).toUpperCase()} HAS HACKED THE GAME 👾</div><div class="glitch-sub">YOUR SCREEN HAS BEEN GLITCHED</div><div class="glitch-sub2">THE HACKER IS IN CONTROL</div></div>`;
     this.c.appendChild(ov);
     document.body.classList.add('glitching');
     sfx.win();
-    setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); }, 5000);
+    setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); }, 6000);
   }
   sendChat(text) {
     text = text.trim(); if (!text) return;
@@ -1433,6 +1638,9 @@ export class Game {
         if (this.frozen && this.vehicleId) this.exitVehicle();
         this.sys(this.frozen ? '❄️ You were frozen by a moderator' : 'You were unfrozen');
       }
+      else if (m.t === 'slap') { this.vel.x += (Math.random() - 0.5) * 60; this.vel.z += (Math.random() - 0.5) * 60; this.vel.y = 40; this.sys('👋 Slapped by a moderator!'); sfx.oof(); }
+      else if (m.t === 'launch') { this.vel.y = 120; this.sys('🚀 Launched by a moderator!'); sfx.jump(); }
+      else if (m.t === 'forceEmote') { if (EMOTE_TIMES[m.e]) { this.emote = m.e; this.emoteT = EMOTE_TIMES[m.e]; } }
       else if (m.t === 'sys') this.sys(m.text);
       else if (m.t === 'rivals') { this.startRivals(m); }
       else if (m.t === 'rivalsRound') { this.onRivalsRound(m); }
@@ -1532,6 +1740,8 @@ export class Game {
     if (this.vehicleId && !this.dead) { this.drivePhysics(dt); return; }
     if (this.hasAbility('magnet') || this.hasAbility('coinhack')) this.magnetT = Math.max(this.magnetT, 1); // coin-magnet ability: coins always in range
     if (this.hasAbility('shield')) this.shield = true; // aegis ability: kill parts always blocked
+    if (this.fpGod) { this.shield = true; this.health = 100; } // FunPanel god mode
+    if (this.fpNoDash) this.dashCd = 0; // FunPanel: no dash cooldown
     const k = this.keys;
     const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - this.joy.y;
     const s = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + this.joy.x;
@@ -1550,20 +1760,21 @@ export class Game {
     else this.coyote = Math.max(0, (this.coyote || 0) - dt);
     this.jumpBuf = Math.max(0, (this.jumpBuf || 0) - dt);
     if (this.fly && this.isStaff()) {
-      this.vel.y = (this.keys.Space ? 34 : 0) - (this.keys.KeyC ? 34 : 0);
+      const fs = this.fpFlySpeed ? 70 : 34;
+      this.vel.y = (this.keys.Space ? fs : 0) - (this.keys.KeyC ? fs : 0);
       this.onGround = false; this.jumping = false;
     } else if (this.noclip) {
       this.vel.y = (this.keys.Space ? 34 : 0) - (this.keys.KeyC ? 34 : 0);
       this.onGround = false; this.jumping = false;
     } else {
       if (this.jumpBuf > 0 && (this.onGround || this.coyote > 0)) {
-        this.vel.y = JUMP; this.onGround = false; this.coyote = 0; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+        this.vel.y = JUMP * (this.fpSuperJump ? 2 : 1); this.onGround = false; this.coyote = 0; this.jumpBuf = 0; this.jumping = true; sfx.jump();
       } else if (this.jumpBuf > 0 && !this.usedAirJump && !this.onGround) {
-        this.vel.y = JUMP * 0.92; this.usedAirJump = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
-      } else if (this.jumpBuf > 0 && this.usedAirJump && !this.usedAirJump2 && !this.onGround && this.hasAbility('doublejump')) {
-        this.vel.y = JUMP * 0.92; this.usedAirJump2 = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+        this.vel.y = JUMP * 0.92 * (this.fpSuperJump ? 2 : 1); this.usedAirJump = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+      } else if (this.jumpBuf > 0 && this.usedAirJump && !this.usedAirJump2 && !this.onGround && (this.hasAbility('doublejump') || this.fpDblJump)) {
+        this.vel.y = JUMP * 0.92 * (this.fpSuperJump ? 2 : 1); this.usedAirJump2 = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
       }
-      const grav = this.inLowg ? GRAVITY * 0.4 : this.inWater ? GRAVITY * 0.35 : GRAVITY;
+      const grav = this.fpLowG ? GRAVITY * 0.25 : this.fpHighG ? GRAVITY * 2 : this.inLowg ? GRAVITY * 0.4 : this.inWater ? GRAVITY * 0.35 : GRAVITY;
       this.vel.y = Math.max(this.vel.y - grav * dt, -160);
       if (this.hasAbility('fly') && this.vel.y < 0 && k.Space) this.vel.y = Math.max(this.vel.y, -8); // glide
       if (this.inWater) { if (k.Space) this.vel.y = 22; this.vel.y = Math.max(this.vel.y, -12); }
@@ -1666,11 +1877,16 @@ export class Game {
     for (const fn of (this._scriptState?.tickFns || [])) { try { fn(dt, this.t); } catch (e) { console.warn('onTick error:', e); } }
     if (!this.dead) {
       this.updateDynamics();
-      this.physics(dt);
+      this.physics(dt * (this.fpSlowMo ? 0.5 : this.fpFastFwd ? 1.5 : 1));
       if (this.firing && this.rivals && this.rivalsWeapon().auto) this.fireRivals();
       this.char.position.copy(this.pos);
       let dy = (this.facing ?? 0) - this.char.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       this.char.rotation.y += dy * Math.min(1, dt * 14);
+      if (this.fpRainbow && this.char) {
+        this._rainbowT = (this._rainbowT || 0) + dt;
+        const hue = (this._rainbowT * 0.25) % 1;
+        this.char.traverse(o => { if (o.material && o.material.color && !o.userData.isTag) o.material.color.setHSL(hue, 0.85, 0.55); });
+      }
       animateCharacter(this.char, this.anim, this.t, dt);
       this.updatePet(this.pet, this.pos, this.facing ?? 0, dt);
     } else if (this.debris) stepDebris(this.debris, dt, this.solids);

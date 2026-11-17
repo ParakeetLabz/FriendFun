@@ -358,10 +358,14 @@ export async function tokensPage(D) {
     const runGlitchCeremony = (item) => {
       const ov = document.createElement('div');
       ov.className = 'glitch-overlay';
-      ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-dread"><img src="${avatarImage(me.avatar, 'full')}" alt=""><div class="glitch-name">👾 YOU GOT THE HACKER TOKEN 👾</div><div class="glitch-sub">EVERYONE'S SCREEN IS GLITCHING</div></div>`;
+      let img = '';
+      try { img = avatarImage(me.avatar, 'full'); } catch {}
+      const dread = img ? `<img src="${img}" alt="">` : `<div class="glitch-dread-emoji">👾</div>`;
+      ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-tear"></div><div class="glitch-dread">${dread}<div class="glitch-name">👾 YOU GOT THE HACKER TOKEN 👾</div><div class="glitch-sub">EVERYONE'S SCREEN IS GLITCHING</div><div class="glitch-sub2">YOU ARE THE HACKER NOW</div></div>`;
       app.appendChild(ov);
       document.body.classList.add('glitching');
-      setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); playCineCutscene('token_glitch', item); }, 2500);
+      // The glitch IS the ceremony: it owns the screen for 4 full seconds.
+      setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); playCineCutscene('token_glitch', item); }, 4000);
     };
     const runPumpkinCeremony = () => {
       const ceremony = app.querySelector('#pumpkinCeremony');

@@ -1205,6 +1205,16 @@ app.post('/api/mod/send', auth, modOnly, async (req, res) => {
     msg = { t: 'tp', x, y: y + 3, z };
   } else if (kind === 'freeze') {
     msg = { t: 'freeze', on: !!req.body.on };
+  } else if (kind === 'tospawn') {
+    msg = { t: 'tp', x: 0, y: 10, z: 0 };
+  } else if (kind === 'slap') {
+    msg = { t: 'slap' };
+  } else if (kind === 'launch') {
+    msg = { t: 'launch' };
+  } else if (kind === 'emote') {
+    msg = { t: 'forceEmote', e: String(req.body.emote || 'dance') };
+  } else if (kind === 'dm') {
+    msg = { t: 'sys', text: `📩 Staff DM: ${String(req.body.text || '').slice(0, 200)}` };
   }
   if (!msg) return res.status(400).json({ error: 'Unknown message kind' });
   let n = 0;
@@ -1213,6 +1223,17 @@ app.post('/api/mod/send', auth, modOnly, async (req, res) => {
   }
   logMod(req.user.name, kind, target.name, n + ' session(s)');
   res.json({ ok: true, sessions: n });
+});
+
+// Glitch every game in progress: every player's screen glitches with a
+// dreadful image of the staff member who fired it (FunPanel button).
+app.post('/api/mod/glitch-all', auth, modOnly, async (req, res) => {
+  let n = 0;
+  for (const [, room] of rooms) {
+    try { broadcast(room, { t: 'glitch', name: req.user.name, avatar: req.user.avatar, item: 'gear_glitchblade' }); n++; } catch {}
+  }
+  logMod(req.user.name, 'glitch-all', 'all rooms', n + ' room(s)');
+  res.json({ ok: true, rooms: n });
 });
 
 // Grant FunTix to a user (admins and up).

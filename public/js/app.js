@@ -761,7 +761,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=fcacf582');
+  const { Game } = await import('./game.js?v=6e754628');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1370,7 +1370,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=fcacf582');
+      const { Game: GameClass } = await import('./game.js?v=6e754628');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1725,7 +1725,7 @@ async function route() {
       case 'trades': { const m = await import('./trade.js?v=2b0512ad'); return m.tradePage(tradeDeps); }
       case 'trade': { const m = await import('./trade.js?v=2b0512ad'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
       case 'pets': { const m = await import('./pets.js?v=43ad5439'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=663dcafb'); return m.tokensPage(tokensDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=b7f8b126'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
