@@ -232,7 +232,7 @@ export async function tokensPage(D) {
       token_skull:     { fx: 'skull', accent: '#aeea00', glow: 'rgba(174, 234, 0, .5)',   bg: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(174, 234, 0, .16), rgba(0, 0, 0, .55) 75%)', motif: '💀', caption: 'Something is watching from the dark…', sub: '💀 Mystery roll — spin it to win ANY item in FunTopia!' },
     };
     let stopCoin = null;
-    const playCineCutscene = async (tokenId) => {
+    const playCineCutscene = async (tokenId, prize) => {
       const tok = ITEM[tokenId];
       const cfg = TOKEN_CUTSCENE[tokenId] || TOKEN_CUTSCENE.token_common;
       const cine = app.querySelector('#cineCutscene');
@@ -288,7 +288,7 @@ export async function tokensPage(D) {
       cap.textContent = cfg.caption;
       cine.hidden = false;
       let done = false;
-      const finish = () => { if (done) return; done = true; if (stopCoin) { stopCoin(); stopCoin = null; } cine.hidden = true; closeAndAdvance(() => {}); };
+      const finish = () => { if (done) return; done = true; if (stopCoin) { stopCoin(); stopCoin = null; } cine.hidden = true; if (prize) refresh(); else closeAndAdvance(() => {}); };
       app.querySelector('#cineSkip').onclick = finish;
       app.querySelector('#cineContinue').onclick = finish;
       // Beat 1: token drops in.
@@ -317,9 +317,10 @@ export async function tokensPage(D) {
       setTimeout(() => {
         if (done) return;
         cap.style.display = 'none';
-        app.querySelector('#cineTokenBig').textContent = tok?.emoji || '🪙';
-        app.querySelector('#cineTokenName').textContent = tok?.name || '';
-        app.querySelector('#cineTokenSub').textContent = cfg.sub;
+        app.querySelector('#cineTitle').textContent = prize ? '🎉 YOU WON! 🎉' : 'YOU GOT A TOKEN!';
+        app.querySelector('#cineTokenBig').textContent = prize?.emoji || tok?.emoji || '🪙';
+        app.querySelector('#cineTokenName').textContent = prize?.name || tok?.name || '';
+        app.querySelector('#cineTokenSub').textContent = prize ? (ABILITY_LABEL[prize.ability] || '') : cfg.sub;
         card.hidden = false;
       }, 3300);
     };
@@ -399,15 +400,10 @@ export async function tokensPage(D) {
           wheel.classList.remove('spinning');
           orbit.classList.remove('on', 'dancing');
           if (b.dataset.token === 'token_drpepper') { runPepperAd(item); return; }
-          explode(item?.color);
-          lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}${r.jackpot ? '<br>🎃 <b>JACKPOT!</b> You also won a <b>Pumpkin Shop Token</b> (1 in 100,000,000)!' : ''}`;
-          result.innerHTML = lastResult;
           if (r.jackpot) { markSeen('token_pumpkin'); runPumpkinCeremony(); return; }
-          app.querySelector('#tokenRevealEmoji').textContent = item?.emoji || '✨';
-          app.querySelector('#tokenRevealName').textContent = item?.name || r.item;
-          app.querySelector('#tokenRevealAbility').textContent = ABILITY_LABEL[item?.ability] || '';
-          app.querySelector('#tokenRevealJackpot').innerHTML = '';
-          reveal.hidden = false;
+          lastResult = `🎉 You won <b>${esc(item?.name || r.item)}</b> ${item?.emoji || ''} — ${esc(ABILITY_LABEL[item?.ability] || '')}`;
+          result.innerHTML = lastResult;
+          playCineCutscene(b.dataset.token, item);
         }, 1400);
       } catch (e) { wheel.classList.remove('spinning'); orbit.classList.remove('on', 'dancing'); result.textContent = ''; toast(e.message || 'Spin failed', true); b.disabled = false; }
     });

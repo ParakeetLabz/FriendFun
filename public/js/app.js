@@ -1725,7 +1725,7 @@ async function route() {
       case 'trades': { const m = await import('./trade.js?v=efe4ca1c'); return m.tradePage(tradeDeps); }
       case 'trade': { const m = await import('./trade.js?v=efe4ca1c'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
       case 'pets': { const m = await import('./pets.js?v=3063df53'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=bd002875'); return m.tokensPage(tokensDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=4e965f63'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
