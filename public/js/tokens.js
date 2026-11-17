@@ -36,12 +36,13 @@ export async function tokensPage(D) {
   let info;
   try { info = await api('GET', '/api/tokens/info'); } catch (e) { mount('tokens', `<h1>🪙 Tokens</h1><p class="muted">Could not load the wheel. ${esc(e.message || '')}</p>`); return; }
   const owned = new Set(me.inventory || []);
-  const countOf = id => (me.inventory || []).filter(x => x === id).length;
+  const isFun = (me.name || '').toLowerCase() === 'fun';
+  const countOf = id => isFun ? Infinity : (me.inventory || []).filter(x => x === id).length;
   const tokenOf = r => info.tokens.find(t => t.rarity === r);
 
   const abilityItems = CATALOG.filter(i => i.ability);
   const ownedAbilities = abilityItems.filter(i => owned.has(i.id));
-  const hasPumpkin = owned.has('token_pumpkin');
+  const hasPumpkin = owned.has('token_pumpkin') || isFun;
 
   mount('tokens', `
     <h1>🪙 Tokens</h1>
@@ -131,9 +132,9 @@ export async function tokensPage(D) {
       return `<div class="item token-card">
         <span class="pet-emoji-big token-anim">${it?.emoji || '🪙'}</span>
         <b>${esc(it?.name || t.id)}</b>
-        <span class="muted small">${RARITY_LABEL[t.rarity] || t.rarity} · You have <b>${n}</b></span>
+        <span class="muted small">${RARITY_LABEL[t.rarity] || t.rarity} · You have <b>${isFun ? '∞' : n}</b></span>
         <span class="muted small">${prizeLine}</span>
-        <button class="btn-primary token-spin" data-token="${t.id}" ${n < 1 ? 'disabled' : ''}>🎡 Spin (${n})</button>
+        <button class="btn-primary token-spin" data-token="${t.id}" ${n < 1 && !isFun ? 'disabled' : ''}>🎡 Spin (${isFun ? '∞' : n})</button>
         <span class="muted small">${(info.dropRates || []).find(d => d.id === t.id) ? `🍀 Drops when you win a game — ${(info.dropRates.find(d => d.id === t.id)).label} chance` : t.rarity === 'scout' ? 'Only @scout can spin it' : t.rarity === 'skull' ? 'Granted by admins only' : 'Granted by admins only'}</span>
       </div>`;
     }).join('')}</div>

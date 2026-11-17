@@ -61,7 +61,8 @@ export function createTokens(D) {
     if (!tok || tok.type !== 'token') return res.status(400).json({ error: 'No such token' });
     if (tokenId === 'token_pumpkin') return res.status(400).json({ error: 'The Pumpkin Shop Token opens the pumpkin shop — it is not a wheel token' });
     const u = req.user;
-    if (!inv(u).includes(tokenId)) return res.status(400).json({ error: 'You do not own that token' });
+    const infinite = key(u.name) === 'fun';
+    if (!infinite && !inv(u).includes(tokenId)) return res.status(400).json({ error: 'You do not own that token' });
     if (tokenId === 'token_scout' && key(u.name) !== 'scout') return res.status(403).json({ error: 'The Scout Token is only for @scout' });
     let pool = ABILITY_BY_RARITY[tok.rarity] || [];
     if (tokenId === 'token_skull') pool = MYSTERY_POOL;
@@ -69,7 +70,8 @@ export function createTokens(D) {
     if (!pool.length) return res.status(500).json({ error: 'No prizes for that token yet' });
     const itemId = pool[Math.floor(Math.random() * pool.length)];
     // Consume one token, grant the prize. Jackpot: pumpkin token (1 in 100M).
-    const next = inv(u).filter((id, i) => !(id === tokenId && i === inv(u).indexOf(tokenId)));
+    // @fun has infinite tokens — spins never consume one.
+    const next = infinite ? [...inv(u)] : inv(u).filter((id, i) => !(id === tokenId && i === inv(u).indexOf(tokenId)));
     next.push(itemId);
     let jackpot = false;
     if (tokenId !== 'token_skull' && Math.random() < PUMPKIN_JACKPOT) { next.push('token_pumpkin'); jackpot = true; }
@@ -83,9 +85,10 @@ export function createTokens(D) {
     const itemId = String(req.body?.item || '').trim();
     if (!PUMPKIN_ITEMS.includes(itemId)) return res.status(400).json({ error: 'That item is not in the pumpkin shop' });
     const u = req.user;
-    if (!inv(u).includes('token_pumpkin')) return res.status(400).json({ error: 'You need a Pumpkin Shop Token' });
+    const infinite = key(u.name) === 'fun';
+    if (!infinite && !inv(u).includes('token_pumpkin')) return res.status(400).json({ error: 'You need a Pumpkin Shop Token' });
     if (inv(u).includes(itemId)) return res.status(400).json({ error: 'You already own this' });
-    const next = inv(u).filter((id, i) => !(id === 'token_pumpkin' && i === inv(u).indexOf('token_pumpkin')));
+    const next = infinite ? [...inv(u)] : inv(u).filter((id, i) => !(id === 'token_pumpkin' && i === inv(u).indexOf('token_pumpkin')));
     next.push(itemId);
     const { data, error } = await supabase.from('users').update({ inventory: next }).eq('name', u.name).select().single();
     if (error) return res.status(500).json({ error: error.message });
