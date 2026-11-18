@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=3b8e954d';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=24aeaab1';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=a89886d1';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
@@ -149,6 +149,8 @@ export async function lobbyPage(D) {
     if (hash === '#/home' || hash === '#/lobby') { closeOverlay(); return; }
     overlayBody.innerHTML = '';
     overlay.classList.add('open');
+    // No ✕ on game pages — the game has its own menu/leave controls.
+    overlay.querySelector('.lb-ov-close').style.display = (hash.startsWith('#/games/') || hash.startsWith('#/play/')) ? 'none' : '';
     window.__setOverlayApp(overlayBody);
     window.__closeLobbyOverlay = closeOverlay;
     if (location.hash === hash) window.__route();
