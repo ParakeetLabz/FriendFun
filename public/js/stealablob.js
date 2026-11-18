@@ -22,6 +22,12 @@ export function sabSlotPos(baseIdx, slotIdx) {
 }
 
 const RARITY_W = { common: 72, rare: 19, epic: 6, legendary: 2.2, mythic: 0.8, secret: 0 };
+// Mystery Blocks: a rare belt spawn that hides a random blob. One in twenty
+// spawns is a block instead of a blob; buying it cracks it open to reveal a
+// random blob (same rarity weights as the belt, secret never included).
+const MYSTERY_CHANCE = 0.05;
+const MYSTERY_PRICE = 1000;
+const MYSTERY_DEF = { name: 'Mystery Block', rarity: 'mystery', price: MYSTERY_PRICE, income: 0, color: '#2d1b4e', hat: null };
 export const SAB_BLOBS = [
   { name: 'Bloop', rarity: 'common', price: 50, income: 2, color: '#5ec8f2', hat: null },
   { name: 'Gooey', rarity: 'common', price: 75, income: 3, color: '#7ed957', hat: null },
@@ -1048,7 +1054,7 @@ export const SAB_BLOBS = [
   { name: 'Frosty Guac', rarity: 'mythic', price: 87200, income: 2907, color: '#ff6b6b', hat: 'halo' },
   { name: 'Ultra Octopus', rarity: 'mythic', price: 62400, income: 2080, color: '#636e72', hat: 'crown' },
 ];
-const RARITY_COLOR = { common: 0x9aa5b1, rare: 0x4a90e2, epic: 0x9b59e6, legendary: 0xf5b301, mythic: 0xff5e8a, secret: 0x9d4edd };
+const RARITY_COLOR = { common: 0x9aa5b1, rare: 0x4a90e2, epic: 0x9b59e6, legendary: 0xf5b301, mythic: 0xff5e8a, secret: 0x9d4edd, mystery: 0xb388ff };
 // One-of-one blob for @scout: a black void blob. Reserved id 90001 is far beyond
 // the conveyor's sequential ids, so spawnBlob() is deterministic for it on every
 // client and the grant below stays in sync across the room.
@@ -1229,6 +1235,70 @@ function buildBlobMesh(b) {
   return g;
 }
 
+function makeQuestionTexture() {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#2d1b4e'; ctx.fillRect(0, 0, 256, 256);
+  ctx.strokeStyle = '#b388ff'; ctx.lineWidth = 10; ctx.strokeRect(10, 10, 236, 236);
+  ctx.fillStyle = '#ffd700'; ctx.font = 'bold 170px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('?', 128, 140);
+  return new THREE.CanvasTexture(cv);
+}
+
+// Mystery Block mesh: a dark box with a glowing gold "?" on every face.
+// Same refs shape as a blob mesh, so the tick's waddle/blink/ring code works.
+function buildMysteryMesh(b) {
+  const g = new THREE.Group();
+  const refs = {};
+  const boxMat = new THREE.MeshStandardMaterial({ map: makeQuestionTexture(), roughness: 0.35, metalness: 0.25 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.7, 1.7), boxMat);
+  body.position.y = 1.35; body.castShadow = true;
+  g.add(body); refs.body = body; refs.bodyMat = boxMat;
+  // little eyes on the front face (they blink in tick, like blobs)
+  refs.eyes = [];
+  for (const sx of [-1, 1]) {
+    const eg = new THREE.Group(); eg.position.set(sx * 0.35, 1.55, 0.87);
+    const white = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
+    white.scale.z = 0.5; eg.add(white);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 }));
+    pupil.position.set(0, 0, 0.1); eg.add(pupil);
+    g.add(eg); refs.eyes.push(eg);
+  }
+  // stubby feet + arms (dark), so the tick's waddle code has something to move
+  const dark = new THREE.MeshStandardMaterial({ color: 0x1a1030, roughness: 0.5 });
+  refs.feet = []; refs.arms = [];
+  for (const sx of [-1, 1]) {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.6), dark);
+    f.position.set(sx * 0.45, 0.13, 0.2); g.add(f); refs.feet.push(f);
+    const a = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), dark);
+    a.position.set(sx * 0.98, 1.35, 0); g.add(a); refs.arms.push(a);
+  }
+  // gold ring + purple ground glow (pulse in tick, like blobs)
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.7, 0.07, 8, 40), new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xffd700, emissiveIntensity: 0.8 }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 0.12; g.add(ring); refs.ring = ring;
+  const glowDisc = new THREE.Mesh(new THREE.CircleGeometry(2.3, 24),
+    new THREE.MeshBasicMaterial({ map: makeGlowTexture('#b388ff'), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  glowDisc.rotation.x = -Math.PI / 2; glowDisc.position.y = 0.06; g.add(glowDisc); refs.glowDisc = glowDisc;
+  // orbiting gold sparkles, like epic+ blobs
+  const sg = new THREE.Group();
+  for (let i = 0; i < 4; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: STAR_TEX(), color: 0xffd700, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const ang = (i / 4) * Math.PI * 2;
+    sp.position.set(Math.cos(ang) * 1.9, 1.2 + (i % 2) * 0.9, Math.sin(ang) * 1.9);
+    sp.scale.setScalar(0.35); sg.add(sp);
+  }
+  g.add(sg); refs.sparkles = sg;
+  // floating name + price label
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
+  const tex = new THREE.CanvasTexture(cv);
+  const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  label.scale.set(4.6, 1.44, 1); label.position.y = 3.9; g.add(label);
+  refs.labelCv = cv; refs.labelTex = tex;
+  g.userData.refs = refs;
+  drawLabel(b, refs);
+  return g;
+}
+
 function drawLabel(b, refs) {
   refs = refs || b.mesh.userData.refs;
   const cv = refs.labelCv, ctx = cv.getContext('2d');
@@ -1270,11 +1340,11 @@ export function startStealABlob(game) {
   // HUD
   const hud = document.createElement('div');
   hud.className = 'sab-hud';
-  hud.innerHTML = `<span class="sab-pill">🪙 <b class="sab-coins">150</b></span><span class="sab-pill">💰 <b class="sab-inc">0</b>/s</span><span class="sab-pill">🫧 <b class="sab-owned">0</b></span><span class="sab-pill">🏠 <b class="sab-base">…</b></span><span class="sab-pill">📖 <b>${SAB_BLOBS.length.toLocaleString()}</b> blobs</span><span class="sab-hint">Click a walking blob to buy · enemy blob to steal · Sell mode: click your blob to sell</span>`;
+  hud.innerHTML = `<span class="sab-pill">🪙 <b class="sab-coins">150</b></span><span class="sab-pill">💰 <b class="sab-inc">0</b>/s</span><span class="sab-pill">🫧 <b class="sab-owned">0</b></span><span class="sab-pill">🏠 <b class="sab-base">…</b></span><span class="sab-pill">📖 <b>${SAB_BLOBS.length.toLocaleString()}</b> blobs</span><span class="sab-pill sab-myst" style="display:none">❓ Mystery Block!</span><span class="sab-hint">Click a walking blob to buy · ❓ Mystery Block hides a random blob · enemy blob to steal · Sell mode: click your blob to sell</span>`;
   const style = document.createElement('style');
   style.textContent = `.sab-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:5;flex-wrap:wrap;justify-content:center}.sab-pill{background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.2);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:700}.sab-hint{font-size:12px;color:#cfd8e3;align-self:center}.sab-btn{cursor:pointer;color:#fff;font-family:inherit}.sab-owned{color:#3ee6c4;font-weight:700}`;
   game.c.appendChild(style); game.c.appendChild(hud);
-  const coinsEl = hud.querySelector('.sab-coins'), incEl = hud.querySelector('.sab-inc'), ownedEl = hud.querySelector('.sab-owned'), baseEl = hud.querySelector('.sab-base');
+  const coinsEl = hud.querySelector('.sab-coins'), incEl = hud.querySelector('.sab-inc'), ownedEl = hud.querySelector('.sab-owned'), baseEl = hud.querySelector('.sab-base'), mystPill = hud.querySelector('.sab-myst');
 
   // action buttons: sell-mode toggle, rebirth
   function hudBtn(cls, label) { const b = document.createElement('button'); b.className = 'sab-pill sab-btn ' + cls; b.textContent = label; hud.appendChild(b); return b; }
@@ -1505,12 +1575,46 @@ export function startStealABlob(game) {
   function spawnBlob(idx, seedOverride, defOverride) {
     if (blobs.has(idx)) return; // never double-spawn (restore pre-creates ids)
     const rnd = mulberry((seedOverride ?? seed) + idx * 7919);
-    const t = defOverride || (idx === SCOUT_BLOB_ID ? SAB_BLOBS.find(b => b.name === SCOUT_BLOB_NAME) : pickBlob(rnd));
+    // first draw of this idx's stream decides mystery or not (restored blobs
+    // carry a defOverride and the Scout grant id is excluded, so neither can
+    // ever become a block). Every client computes the same decision.
+    const isMystery = !defOverride && idx !== SCOUT_BLOB_ID && rnd() < MYSTERY_CHANCE;
+    const t = defOverride || (idx === SCOUT_BLOB_ID ? SAB_BLOBS.find(b => b.name === SCOUT_BLOB_NAME) : isMystery ? MYSTERY_DEF : pickBlob(rnd));
     const b = { id: idx, ...t, x: (rnd() - 0.5) * 8, z: -55, state: 'walking', owner: null, base: -1, slot: -1, mesh: null, surfY: 0.3 };
-    b.mesh = buildBlobMesh(b);
+    b.mesh = isMystery ? buildMysteryMesh(b) : buildBlobMesh(b);
     b.mesh.traverse(o => o.userData.sabBlob = idx);
     game.scene.add(b.mesh);
     blobs.set(idx, b);
+  }
+  // The blob inside a Mystery Block is fixed per (day, block id) on its own
+  // seeded stream, so every client in the room reveals the same blob without
+  // any new wire message. pickBlob never returns the secret Scout Blob
+  // (secret weight is 0), so a block can never grant it.
+  function revealBlobFor(idx) { return pickBlob(mulberry(seed + idx * 104729)); }
+  function announceMystery(idx) {
+    const b = blobs.get(idx);
+    if (b?.rarity === 'mystery') game.sys('❓ A Mystery Block appeared on the conveyor — 1,000 coins for a random blob!');
+  }
+  // Crack a Mystery Block open: the block bursts and the revealed blob runs
+  // home to the buyer's base like a normal buy. Keeps the block's id, so the
+  // 'buy' relay carries the reveal to every client with no extra message.
+  // Returns false if the buyer's base is full (block stays put, no coins lost).
+  function openMysteryBlock(b, buyerPid) {
+    const base = baseFor(buyerPid);
+    const slot = freeSlot(base);
+    if (slot < 0) return false;
+    const reveal = revealBlobFor(b.id);
+    const bx = b.x, bz = b.z;
+    removeBlob(b.id);
+    burst(bx, 1.5, bz, 0xb388ff); burst(bx, 1.5, bz, 0xffd700);
+    const nb = { id: b.id, ...reveal, x: bx, z: bz, state: 'returning', owner: buyerPid, base, slot, mesh: null, surfY: 0.3 };
+    nb.mesh = buildBlobMesh(nb);
+    nb.mesh.traverse(o => o.userData.sabBlob = nb.id);
+    game.scene.add(nb.mesh);
+    blobs.set(nb.id, nb);
+    drawLabel(nb);
+    game.sys(`🎁 ${playerName(buyerPid)} opened a Mystery Block and got a ${reveal.rarity} ${reveal.name}!`);
+    return true;
   }
   function removeBlob(idx) {
     const b = blobs.get(idx);
@@ -1522,6 +1626,7 @@ export function startStealABlob(game) {
     coinsEl.textContent = Math.floor(coins).toLocaleString();
     incEl.textContent = mine.reduce((s, b) => s + b.income, 0) * incomeMult();
     ownedEl.textContent = mine.length;
+    mystPill.style.display = [...blobs.values()].some(b => b.state === 'walking' && b.rarity === 'mystery') ? '' : 'none';
     if (Date.now() - rebArmAt >= 4000) rebBtn.textContent = `♻️×${rebirths} Rebirth ${rebirthCost().toLocaleString()}`;
     saveProgress(); // autosave on every HUD refresh (buys, events, income ticks)
   }
@@ -1560,6 +1665,9 @@ export function startStealABlob(game) {
         const p = sabSlotPos(base, slot);
         b.x = p.x; b.z = p.z; b.surfY = 0.72;
         drawLabel(b);
+      } else if (b.rarity === 'mystery') {
+        // a Mystery Block someone opened: same reveal on every client
+        openMysteryBlock(b, from);
       } else {
         if (b.state !== 'walking') return;
         const base = baseFor(from);
@@ -1624,6 +1732,12 @@ export function startStealABlob(game) {
     if (coins < b.price) { game.sys('Not enough Blob Coins!'); return; }
     const slot = freeSlot(myBase());
     if (slot < 0) { game.sys('Your base is full!'); return; }
+    if (b.rarity === 'mystery') {
+      coins -= b.price;
+      if (openMysteryBlock(b, game.myId)) { sendBlob('buy', b.id); refreshHud(); }
+      else { coins += b.price; game.sys('Your base is full!'); }
+      return;
+    }
     coins -= b.price;
     b.state = 'returning'; b.owner = game.myId; b.base = myBase(); b.slot = slot;
     burst(b.x, 1.5, b.z, 0xffd700); drawLabel(b);
@@ -1764,7 +1878,7 @@ export function startStealABlob(game) {
     if (t - lastSpawn > 2500) {
       lastSpawn = t;
       const walking = [...blobs.values()].filter(b => b.state === 'walking').length;
-      if (walking < 12) spawnBlob(spawnIdx++);
+      if (walking < 12) { const si = spawnIdx++; spawnBlob(si); announceMystery(si); }
     }
     // my steal timer
     if (mySteal) {
@@ -1865,7 +1979,7 @@ export function startStealABlob(game) {
   }
   // seed a few blobs immediately
   coins = startCoins(); // Big Start pass; a restored save overrides this on the first tick
-  for (let i = 0; i < 6; i++) spawnBlob(spawnIdx++);
+  for (let i = 0; i < 6; i++) { const si = spawnIdx++; spawnBlob(si); announceMystery(si); }
   refreshHud();
   game.sys('🫧 Steal a Blob! Buy blobs on the conveyor, steal from rivals, slap thieves!');
 
