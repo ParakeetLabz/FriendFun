@@ -300,38 +300,21 @@ export class Game {
     });
     this.updateLeaderboard();
     this.renderInv();
+    // Shooter games give everyone a free Arena Blaster — with a 1-gear hotbar
+    // there's no list to pick it from, so hand it to gear-less players on join.
+    if (this.o.shooter && (!this.me.avatar?.gear || this.me.avatar.gear === 'gear_none') && !(this.me.inventory || []).includes('gear_blaster'))
+      this.equipGear('gear_blaster', true);
   }
-  // ---------- in-game inventory (owned gear) ----------
-  ownedGears() {
-    const inv = this.me.inventory || [];
-    const cat = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none' && inv.includes(i.id));
-    const ugc = inv.filter(id => id.startsWith('ugc_')).map(id => ITEM[id]).filter(it => it && it.type === 'gear');
-    return cat.concat(ugc);
-  }
-  toolbarGears() {
-    const gears = this.ownedGears().map(g => ({ id: g.id, name: g.name, emoji: g.emoji || '📦', temp: false }));
-    for (const id of (this.o.gameGears || [])) {
-      const it = ITEM[id];
-      if (it && it.type === 'gear' && !gears.some(x => x.id === id))
-        gears.push({ id, name: it.name, emoji: it.emoji || '📦', temp: true });
-    }
-    if (this.o.shooter && !gears.some(x => x.id === 'gear_blaster'))
-      gears.unshift({ id: 'gear_blaster', name: 'Arena Blaster', emoji: '🔫', temp: true });
-    return gears;
-  }
+  // ---------- in-game hotbar: exactly ONE gear — the one you have equipped ----------
   renderInv() {
     const bar = this.c.querySelector('.inv-bar');
     if (!bar) return;
-    const gears = this.toolbarGears();
     const cur = this.me.avatar?.gear;
-    bar.innerHTML = `<div class="inv-inner">${gears.length ? gears.map((g, i) => `<button class="inv-item${g.id === cur ? ' active' : ''}" data-id="${g.id}" data-temp="${g.temp ? 1 : 0}" title="${esc(g.name)}${i < 9 ? ' (' + (i + 1) + ')' : ''}">${i < 9 ? `<span class="inv-key">${i + 1}</span>` : ''}<span class="inv-emoji">${g.emoji}</span><span class="inv-name">${esc(g.name)}</span></button>`).join('')
-      : `<div class="inv-empty">No gears yet — <a href="#/catalog/gear">get some in the Marketplace</a></div>`}</div>`;
-    bar.querySelectorAll('.inv-item').forEach(b => b.onclick = () => this.equipGear(b.dataset.id, b.dataset.temp === '1'));
+    const it = cur && cur !== 'gear_none' ? ITEM[cur] : null;
+    bar.innerHTML = `<div class="inv-inner">${it ? `<button class="inv-item active" data-id="${it.id}" title="${esc(it.name)} — tap to use"><span class="inv-emoji">${it.emoji || '📦'}</span><span class="inv-name">${esc(it.name)}</span></button>`
+      : `<div class="inv-empty">No gear equipped — pick one in the Locker</div>`}</div>`;
+    bar.querySelectorAll('.inv-item').forEach(b => b.onclick = () => this.useGear());
     bar.style.display = 'flex';
-  }
-  equipGearByIndex(i) {
-    const g = this.toolbarGears()[i];
-    if (g) this.equipGear(g.id, g.temp);
   }
   // ---------- vehicles ----------
   ownedVehicle() {
@@ -1574,7 +1557,7 @@ export class Game {
       if (down && !e.repeat && e.code === 'F4' && this.isStaff()) { e.preventDefault(); this.toggleFunPanel(); return; }
       if (down && !e.repeat && e.code === 'KeyV') { this.toggleVehicle(); return; }
       if (down && !e.repeat && e.code === 'KeyE' && this.vehicleId) { this.exitVehicle(); return; }
-      if (down && !e.repeat && /^Digit[1-9]$/.test(e.code)) { if (this.rivals && +e.code.slice(5) <= 2) { this.rivalsSwitch(+e.code.slice(5)); return; } this.equipGearByIndex(+e.code.slice(5) - 1); return; }
+      if (down && !e.repeat && /^Digit[1-9]$/.test(e.code)) { if (this.rivals && +e.code.slice(5) <= 2) this.rivalsSwitch(+e.code.slice(5)); return; }
       if (down && !e.repeat && e.code === 'KeyR' && this.rivals) { this.rivalsReload(); return; }
       this.keys[e.code] = down;
       if (down && !e.repeat && e.code === 'KeyW') { const now = performance.now(); if (now - (this.lastW || 0) < 280) this.sprinting = true; this.lastW = now; }
