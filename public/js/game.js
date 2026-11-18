@@ -142,8 +142,8 @@ export class Game {
         <div class="health"><div class="health-fill"></div></div>
       </div>
       <div class="touch-ui"><div class="joy-zone"><div class="joy"><div class="joy-knob"></div></div></div><button class="jump-btn" aria-label="Jump"><svg viewBox="0 0 24 24" width="42" height="42"><path fill="currentColor" d="M12 4l8 9h-5v7H9v-7H4z"/></svg></button></div>
-      <div class="hud-bottom"><div class="funbux-hud" title="FunTix">${tix} <span class="tx-count">${this.o.funtix ?? ''}</span></div>${this.o.test ? '<button class="stop-btn">Stop</button>' : ''}<button class="veh-btn" title="Drive vehicle (V)">🚗</button></div>
-      <div class="inv-bar" title="Your gear inventory (click or press 1-9)"></div>
+      <div class="hud-bottom"><div class="funbux-hud" title="FunTix">${tix} <span class="tx-count">${this.o.funtix ?? ''}</span></div>${this.o.test ? '<button class="stop-btn">Stop</button>' : ''}</div>
+      <div class="inv-bar" title="Your gear (tap to use)"></div>
       <div class="kill-feed"></div><div class="fps-hud"></div>
       <div class="big-msg"></div>
       ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<div class="funpanel hidden">
@@ -282,7 +282,6 @@ export class Game {
       try { await this.fpApi('POST', '/api/admin/site/command', { command: 'kick_all' }); } catch (e) { this.sys('Kick failed: ' + e.message); }
     };
     if (q('.stop-btn')) q('.stop-btn').onclick = () => this.exit();
-    if (q('.veh-btn')) q('.veh-btn').onclick = () => this.toggleVehicle();
     this.escMenu.onclick = (e) => {
       const a = e.target.closest('[data-a]')?.dataset.a;
       if (a === 'reset') { this.toggleMenu(false); this.die(); }
