@@ -169,6 +169,7 @@ async function seed() {
     g('g3', 'Sky Tower Climb', 'funtopia', 'Climb the spiral around the giant tower.', 'tower', 654321, 4210, 380),
     g('g4', 'Coin Rush Islands', 'funtopia', 'Hop between floating islands and grab every coin!', 'coinRush', 432100, 3999, 155),
     g('g5', 'Classic Baseplate', 'funtopia', 'The classic. A big grey baseplate.', 'baseplate', 210987, 1500, 90),
+    g('g_tag', '🏷️ Tag!', 'funtopia', 'You are IT! Chase your friends and tag them before the timer runs out — bounce pads to escape, speed pads to catch up!', 'tagArena', 0, 0, 0, 30),
     g('g_voicelounge', '🎤 Voice Lounge', 'funtopia', 'Call your friends and hang out — voice chat lives here.', 'voiceLounge', 0, 0, 0, 50),
   ];
 
@@ -1865,6 +1866,16 @@ app.post('/api/notifications/read', auth, async (req, res) => {
 
 // realtime
 const rooms = new Map();
+const TAG_ROUND_MS = 90 * 1000; // a Tag round lasts 90 seconds
+function tagStartRound(room) {
+  const ids = [...room.players.keys()];
+  if (!ids.length) { room.tag.it = null; room.tag.roundEnd = 0; room.tag.counts = {}; return; }
+  room.tag.it = ids[Math.floor(Math.random() * ids.length)];
+  room.tag.roundEnd = Date.now() + TAG_ROUND_MS;
+  room.tag.counts = {};
+  const it = room.players.get(room.tag.it);
+  broadcast(room, { t: 'tagStart', it: it?.name || '?', itId: room.tag.it, roundEnd: room.tag.roundEnd, counts: room.tag.counts });
+}
 const privateServers = new Map(); // CODE -> { gameId, owner, created }
 const parties = new Map(); // id -> { leader, members: [] }
 const userParty = new Map(); // username -> partyId
@@ -1911,7 +1922,7 @@ wss.on('connection', (ws) => {
         if (!ps || ps.gameId !== g.id) return send(ws, { t: 'error', error: 'Private server not found' });
         roomKey = g.id + ':' + String(m.server).toUpperCase();
       }
-      if (!rooms.has(roomKey)) rooms.set(roomKey, { players: new Map(), coins: new Set((g.world?.parts || []).filter(p => p.k === 'coin').map(p => p.id)), private: roomKey });
+      if (!rooms.has(roomKey)) rooms.set(roomKey, { players: new Map(), coins: new Set((g.world?.parts || []).filter(p => p.k === 'coin').map(p => p.id)), private: roomKey, tag: g.world?.tag ? { it: null, roundEnd: 0, counts: {} } : null });
       room = rooms.get(roomKey);
       if (room.players.size >= (g.max_players || 30)) return send(ws, { t: 'error', error: 'Server is full' });
       for (const p of room.players.values()) if (p.user === u) { send(p.ws, { t: 'error', error: 'You joined from another window' }); p.ws.close(); }
@@ -1931,6 +1942,12 @@ wss.on('connection', (ws) => {
       room.players.set(player.id, player);
       broadcast(room, { t: 'joined', id: player.id, name: player.name, displayName: u.display_name || '', avatar: player.avatar, club: isClub(u), badge: badgeOf(u), role: roleOf(u) }, ws);
       broadcast(room, { t: 'chat', system: true, text: `${player.name} has joined the game.` });
+      // Tag mode: the first player in is "it"; newcomers learn who is "it".
+      if (room.tag) {
+        if (!room.tag.it) { room.tag.it = player.id; room.tag.roundEnd = Date.now() + TAG_ROUND_MS; room.tag.counts = {}; }
+        send(ws, { t: 'tagStart', it: room.players.get(room.tag.it)?.name || player.name, itId: room.tag.it, roundEnd: room.tag.roundEnd, counts: room.tag.counts });
+        if (room.tag.it === player.id) broadcast(room, { t: 'tagStart', it: player.name, itId: player.id, roundEnd: room.tag.roundEnd, counts: room.tag.counts }, ws);
+      }
       return;
     }
     if (!player) return;
@@ -2040,6 +2057,17 @@ wss.on('connection', (ws) => {
       player.lastGearHit = now;
       const target = room.players.get(m.id);
       if (target && target.ws && target.id !== player.id) send(target.ws, { t: 'gearHit', from: player.name, dmg: Math.max(1, Math.min(150, m.dmg | 0 || 100)) });
+    } else if (m.t === 'tag' && typeof m.id === 'number') {
+      // Tag: only the current "it" can tag, 1s cooldown, target must be in the room.
+      if (!room.tag || room.tag.it !== player.id) return;
+      const now = Date.now();
+      if (now - (player.lastTag || 0) < 1000) return;
+      player.lastTag = now;
+      const target = room.players.get(m.id);
+      if (!target || target.id === player.id) return;
+      room.tag.counts[player.id] = (room.tag.counts[player.id] || 0) + 1;
+      room.tag.it = target.id;
+      broadcast(room, { t: 'tagged', from: player.name, fromId: player.id, to: target.name, toId: target.id, counts: room.tag.counts });
     } else if (m.t === 'gearFreeze' && typeof m.id === 'number') {
       // Freeze Ray: freeze the target for 3 seconds instead of killing them.
       const target = room.players.get(m.id);
@@ -2054,10 +2082,14 @@ wss.on('connection', (ws) => {
   });
   ws.on('close', () => {
     if (!player || !room) return;
+    const wasIt = room.tag && room.tag.it === player.id;
     room.players.delete(player.id);
     if (room.private && !room.players.size) { rooms.delete(room.private); privateServers.delete(room.private.split(':')[1]); }
     broadcast(room, { t: 'left', id: player.id });
     broadcast(room, { t: 'chat', system: true, text: `${player.name} has left the game.` });
+    // Tag: if "it" left, hand it to someone still in the room.
+    if (wasIt && room.players.size) tagStartRound(room);
+    if (room.tag && !room.players.size) { room.tag.it = null; room.tag.roundEnd = 0; room.tag.counts = {}; }
     touch(player.name, null);
   });
 });
@@ -2068,6 +2100,15 @@ setInterval(() => {
     const states = [];
     for (const p of room.players.values()) if (p.s) states.push([p.id, ...p.s]);
     broadcast(room, { t: 'S', p: states });
+    // Tag: end the round when the timer runs out (needs 2+ players to count).
+    if (room.tag && room.tag.it && room.tag.roundEnd && Date.now() > room.tag.roundEnd && room.players.size >= 2) {
+      let winnerId = null, best = -1;
+      for (const [id, n] of Object.entries(room.tag.counts)) if (n > best) { best = n; winnerId = Number(id); }
+      if (winnerId == null) winnerId = room.tag.it;
+      const winner = room.players.get(winnerId);
+      broadcast(room, { t: 'tagEnd', winner: winner?.name || '?', winnerId, tags: Math.max(0, best), counts: room.tag.counts });
+      tagStartRound(room);
+    }
   }
 }, 66);
 

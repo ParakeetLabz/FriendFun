@@ -110,7 +110,7 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
-    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false;
+    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false; this.tag = null; this._tagCd = 0; this._tagRing = null;
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
@@ -137,6 +137,7 @@ export class Game {
         ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<button class="hud-btn funpanel-btn" title="FunPanel (F4)"><span class="ic">${icons.shield}</span></button>` : ''}
       </div>
       <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
+      <div class="tag-hud" style="display:none"></div>
       <div class="hud-topright">
         <div class="lb"><div class="lb-head"><span>${esc(this.o.gameName || 'Game')}</span></div><div class="lb-list"></div></div>
         <div class="health"><div class="health-fill"></div></div>
@@ -315,7 +316,43 @@ export class Game {
     bar.querySelectorAll('.inv-item').forEach(b => b.onclick = () => this.useGear());
     bar.style.display = 'flex';
   }
-  // ---------- vehicles ----------
+  // ---------- Tag mode ----------
+  // "It" runs into someone to tag them. The server is the authority on who
+  // is "it"; the client only reports a touch and renders the state.
+  tagTick(dt) {
+    if (!this.world?.tag || !this.tag || this.dead) return;
+    if (this._tagCd > 0) this._tagCd -= dt;
+    // Red ring under whoever is "it" right now.
+    if (!this._tagRing) {
+      const geo = new THREE.RingGeometry(1.4, 2, 32);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff2233, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+      this._tagRing = new THREE.Mesh(geo, mat);
+      this._tagRing.rotation.x = -Math.PI / 2;
+      this.scene.add(this._tagRing);
+    }
+    const itId = this.tag.itId;
+    let itPos = null;
+    if (itId === this.myId) itPos = this.pos;
+    else { const p = this.players.get(itId); if (p) itPos = p.char.position; }
+    if (itPos) { this._tagRing.visible = true; this._tagRing.position.set(itPos.x, 0.15, itPos.z); }
+    else this._tagRing.visible = false;
+    // If I'm "it", a touch tags the nearest player in reach.
+    if (itId !== this.myId || this._tagCd > 0) return;
+    for (const p of this.players.values()) {
+      const d = p.char.position.clone().sub(this.pos); d.y = 0;
+      if (d.length() < 3.5) { this._tagCd = 1; this.send({ t: 'tag', id: p.id }); return; }
+    }
+  }
+  updateTagHUD() {
+    const el = this.c.querySelector('.tag-hud');
+    if (!el) return;
+    if (!this.world?.tag || !this.tag) { el.style.display = 'none'; return; }
+    const secs = Math.max(0, Math.ceil((this.tag.roundEnd - Date.now()) / 1000));
+    const itName = this.tag.itId === this.myId ? 'YOU' : (this.tag.it || '???');
+    const mine = (this.tag.counts || {})[this.myId] || 0;
+    el.innerHTML = `🏷️ TAG — ${this.tag.itId === this.myId ? '<b>YOU ARE IT!</b> Tag someone!' : `IT: <b>${esc(itName)}</b> — run!`} <span class="tag-timer">${secs}s</span> · Your tags: <b>${mine}</b>`;
+    el.style.display = 'block';
+  }
   ownedVehicle() {
     const inv = this.me?.inventory || [];
     const sel = this.me?.avatar?.vehicle;
@@ -1654,6 +1691,9 @@ export class Game {
       else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
       else if (m.t === 'tokenDrop') { this.showBig(`🪙 YOU GOT A ${String(m.name || 'TOKEN').toUpperCase()}!`, 4500); sfx.win(); if (!reduceMotion()) confetti(this.c); }
       else if (m.t === 'glitch') { this.showGlitch(m); }
+      else if (m.t === 'tagStart') { this.tag = { it: m.it, itId: m.itId, roundEnd: m.roundEnd, counts: m.counts || {} }; this.updateTagHUD(); if (m.itId === this.myId) { this.showBig('🏷️ YOU ARE IT! Tag someone!', 3000); sfx.checkpoint(); } else this.sys(`🏷️ ${m.it} is IT!`); }
+      else if (m.t === 'tagged') { if (this.tag) { this.tag.it = m.to; this.tag.itId = m.toId; this.tag.counts = m.counts || this.tag.counts || {}; } this.updateTagHUD(); this.sys(`🏷️ ${m.from} tagged ${m.to}!`); if (m.toId === this.myId) { this.showBig('🏷️ YOU ARE IT! Tag someone!', 3000); sfx.checkpoint(); } }
+      else if (m.t === 'tagEnd') { if (this.tag) this.tag.counts = m.counts || this.tag.counts || {}; this.updateTagHUD(); this.showBig(`🏆 ${m.winner} wins Tag with ${m.tags} tags!`, 5000); sfx.win(); if (m.winnerId === this.myId) this.send({ t: 'win' }); }
       else if (m.t === 'pong') { this._ping = Math.max(0, Math.round(performance.now() - (m.id || performance.now()))); }
       else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
 
@@ -1958,6 +1998,8 @@ export class Game {
     this.updateNPCs(dt);
     // Steal a Blob mode
     if (this.stealablob) { try { this.stealablob.tick(dt, this.t); } catch (e) { console.warn('stealablob tick error:', e); } }
+    // Tag mode
+    if (this.world?.tag) { try { this.tagTick(dt); this.updateTagHUD(); } catch (e) { console.warn('tag tick error:', e); } }
     // gear swing animation
     if (this.gearSwingT > 0 && !this.dead) {      this.gearSwingT -= dt;
       const rarm = this.char.userData.limbs?.rarm;

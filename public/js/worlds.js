@@ -899,7 +899,38 @@ export function voiceLounge() {
   }
   return w;
 }
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge };
+export function tagArena() {
+  const w = startWorld('#7ec8ff');
+  w.tag = true;
+  w.parts.push(part([0, -0.5, 0], [72, 1, 72], '#7ec850', { name: 'TagField' }));
+  const wh = 8;
+  w.parts.push(part([0, wh / 2, -36], [72, wh, 2], '#ff6b6b', { name: 'WallN' }));
+  w.parts.push(part([0, wh / 2, 36], [72, wh, 2], '#ff6b6b', { name: 'WallS' }));
+  w.parts.push(part([-36, wh / 2, 0], [2, wh, 72], '#ff6b6b', { name: 'WallW' }));
+  w.parts.push(part([36, wh / 2, 0], [2, wh, 72], '#ff6b6b', { name: 'WallE' }));
+  // Dodge obstacles — crates and barriers to break line of sight.
+  for (const [x, z] of [[-14, -14], [14, -14], [-14, 14], [14, 14], [0, -20], [0, 20], [-22, 0], [22, 0], [-7, 7], [7, -7]])
+    w.parts.push(part([x, 2, z], [4, 4, 4], '#a1887f', { name: 'Crate', m: 'wood' }));
+  for (const [x, z] of [[-10, -26], [10, 26], [-26, 10], [26, -10]])
+    w.parts.push(part([x, 1.5, z], [8, 3, 2], '#ffd54f', { name: 'Barrier' }));
+  // Center platform — king of the hill spot.
+  w.parts.push(part([0, 1, 0], [12, 2, 12], '#78909c', { name: 'Platform' }));
+  w.parts.push(part([0, 3.5, 0], [5, 1, 5], '#ffd400', { name: 'TopPad', m: 'neon' }));
+  // Bounce pads in the corners — escape from IT.
+  for (const [x, z] of [[-28, -28], [28, -28], [-28, 28], [28, 28]])
+    w.parts.push(part([x, 0.25, z], [5, 0.5, 5], '#ff2d95', { name: 'BouncePad', k: 'bounce', m: 'neon' }));
+  // Speed pads along the mid-edges — chase (or flee) faster.
+  for (const [x, z] of [[0, -30], [0, 30], [-30, 0], [30, 0]])
+    w.parts.push(part([x, 0.25, z], [6, 0.5, 6], '#2ec4ff', { name: 'SpeedPad', k: 'speed', m: 'neon' }));
+  // Coins to grab while you run.
+  for (const [x, z] of [[-18, -18], [18, -18], [-18, 18], [18, 18], [0, -12], [0, 12], [-12, 0], [12, 0]])
+    w.parts.push(part([x, 1.5, z], [2, 2, 2], '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' }));
+  for (const [x, z] of [[-28, -28], [28, -28], [-28, 28], [28, 28]])
+    w.parts.push(part([x, 0.25, z], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  return w;
+}
+
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge, tagArena };
 Object.assign(templates, genTemplates);
 export { GEN_GAMES };
 
