@@ -8,6 +8,41 @@ export const SAB_BASES = [
   { x: 0, z: -26 }, { x: 0, z: 26 }, { x: -26, z: 0 }, { x: 26, z: 0 },
 ];
 export const SAB_SLOTS = 6;
+// Rebirth base expansion: each rebirth adds +2 blob slots (and a bigger
+// platform to hold them), up to +6 slots (3 rebirths). Cap keeps bases
+// from growing forever.
+export const SAB_SLOT_BONUS = 2;
+export const SAB_MAX_BONUS_REBIRTHS = 3;
+export const SAB_MAX_SLOTS = SAB_SLOTS + SAB_SLOT_BONUS * SAB_MAX_BONUS_REBIRTHS; // 12
+export function sabSlotsFor(rebirths) {
+  const r = Math.max(0, Math.min(SAB_MAX_BONUS_REBIRTHS, Math.floor(rebirths || 0)));
+  return SAB_SLOTS + SAB_SLOT_BONUS * r;
+}
+// Gate direction for a base (matches worlds.js stealablob()): the gate
+// faces the map center, so the base grows out the back, away from the gate.
+export function sabGateDir(baseIdx) {
+  const b = SAB_BASES[baseIdx];
+  const gx = Math.abs(b.x) >= Math.abs(b.z) ? -Math.sign(b.x) : 0;
+  const gz = gx === 0 ? -Math.sign(b.z) : 0;
+  return { x: gx, z: gz };
+}
+export function sabSlotPos(baseIdx, slotIdx) {
+  const b = SAB_BASES[baseIdx];
+  if (slotIdx < SAB_SLOTS) {
+    const row = Math.floor(slotIdx / 3), col = slotIdx % 3;
+    return { x: b.x + (col - 1) * 4, z: b.z + (row - 0.5) * 4 };
+  }
+  // Expansion rows sit on the deck behind the base (away from the gate),
+  // 2 slots per row, one row per rebirth (up to 3 rows).
+  const g = sabGateDir(baseIdx);
+  const bx = -g.x, bz = -g.z;   // back direction
+  const px = -bz, pz = bx;      // across the back
+  const pair = Math.floor((slotIdx - SAB_SLOTS) / 2);
+  const side = (slotIdx - SAB_SLOTS) % 2;
+  const back = 9 + pair * 4;    // 9, 13, 17 behind base center
+  const lat = side === 0 ? -2 : 2;
+  return { x: b.x + bx * back + px * lat, z: b.z + bz * back + pz * lat };
+}
 // Base colors + names, in the same order as worlds.js stealablob() colors.
 export const SAB_BASE_COLORS = [
   { hex: '#4a90e2', name: 'blue' }, { hex: '#e24a4a', name: 'red' },
@@ -15,11 +50,6 @@ export const SAB_BASE_COLORS = [
   { hex: '#9b59e6', name: 'purple' }, { hex: '#ff9f43', name: 'orange' },
   { hex: '#3ee6c4', name: 'teal' }, { hex: '#ff5e8a', name: 'pink' },
 ];
-export function sabSlotPos(baseIdx, slotIdx) {
-  const b = SAB_BASES[baseIdx];
-  const row = Math.floor(slotIdx / 3), col = slotIdx % 3;
-  return { x: b.x + (col - 1) * 4, z: b.z + (row - 0.5) * 4 };
-}
 
 const RARITY_W = { common: 72, rare: 19, epic: 6, legendary: 2.2, mythic: 0.8, secret: 0 };
 // Mystery Blocks: a rare belt spawn that hides a random blob. One in twenty
@@ -1429,6 +1459,75 @@ export function startStealABlob(game) {
     return 0;
   }
   function myBase() { return game.myId == null ? 0 : baseFor(game.myId); }
+  // Rebirth counts per player: mine comes from my save, everyone else's
+  // arrives over the blob relay ('reb' increments, 'rebcount' announces a
+  // full count on join). Every client renders every base's expansion from
+  // these counts, so a rebirthed base looks bigger to the whole room.
+  const rebirthsByPid = new Map(); // pid -> rebirth count
+  function rebirthsOf(pid) {
+    if (pid === game.myId) return rebirths;
+    return rebirthsByPid.get(pid) || 0;
+  }
+  function ownerOfBase(baseIdx) {
+    const ranked = currentPids();
+    return ranked[baseIdx] ?? null; // primary owner is the pid at this rank
+  }
+  let announcedRebirths = -1;
+  function announceRebirths(force) {
+    if (game.myId == null) return;
+    if (!force && announcedRebirths === rebirths) return;
+    announcedRebirths = rebirths;
+    sendBlob('rebcount', rebirths);
+  }
+  // --- base expansion (rebirth grows your base) ---
+  // A bigger base = a deck slab growing out the back (away from the gate)
+  // plus a white slot pad under each new blob slot. Rebuilt per base
+  // whenever its owner's rebirth count (or the room line-up) changes.
+  const baseExpansions = new Map(); // baseIdx -> { grp, solid, pairs }
+  function refreshBaseExpansions() {
+    for (let i = 0; i < SAB_BASES.length; i++) {
+      const owner = ownerOfBase(i);
+      const pairs = owner == null ? 0 : Math.max(0, Math.min(SAB_MAX_BONUS_REBIRTHS, Math.floor(rebirthsOf(owner) || 0)));
+      const cur = baseExpansions.get(i);
+      if (cur && cur.pairs === pairs) continue;
+      if (cur) {
+        game.scene.remove(cur.grp);
+        if (cur.solid) { const si = game.solids.indexOf(cur.solid); if (si >= 0) game.solids.splice(si, 1); }
+        baseExpansions.delete(i);
+      }
+      if (pairs <= 0) continue;
+      const b = SAB_BASES[i], c = SAB_BASE_COLORS[i].hex;
+      const g = sabGateDir(i);
+      const bx = -g.x, bz = -g.z;
+      // deck runs from the platform's back edge (flush, so the two slabs
+      // never overlap and z-fight) to 2 past the last new slot row, so the
+      // platform grows to fit the new slots
+      const deckFront = bx !== 0 ? 7 : 6, deckBack = 11 + (pairs - 1) * 4;
+      const depth = deckBack - deckFront, deckW = 12, deckH = 0.6;
+      const cc = (deckFront + deckBack) / 2;
+      const cx = b.x + bx * cc, cz = b.z + bz * cc;
+      const grp = new THREE.Group();
+      const deck = new THREE.Mesh(
+        new THREE.BoxGeometry(bx !== 0 ? depth : deckW, deckH, bz !== 0 ? depth : deckW),
+        new THREE.MeshLambertMaterial({ color: c }));
+      deck.position.set(cx, 0.3, cz);
+      grp.add(deck);
+      for (let s = SAB_SLOTS; s < SAB_SLOTS + pairs * 2; s++) {
+        const p = sabSlotPos(i, s);
+        const pad = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.12, 2.8), new THREE.MeshLambertMaterial({ color: '#ffffff' }));
+        pad.position.set(p.x, 0.66, p.z);
+        grp.add(pad);
+      }
+      game.scene.add(grp);
+      // walkable, so players can reach (and steal) the deck blobs
+      const hw = (bx !== 0 ? depth : deckW) / 2, hd = (bz !== 0 ? depth : deckW) / 2;
+      const solid = { p: { p: [cx, 0.3, cz], s: [hw * 2, deckH, hd * 2] }, min: [cx - hw, 0, cz - hd], max: [cx + hw, 0.6, cz + hd], _arrs: [game.solids] };
+      game.solids.push(solid);
+      baseExpansions.set(i, { grp, solid, pairs });
+    }
+    // keep the base pill honest about your capacity
+    if (baseMarker) { const bc = SAB_BASE_COLORS[baseMarker.idx]; baseEl.textContent = `Base ${baseMarker.idx + 1} (${bc.name}) · ${sabSlotsFor(rebirths)} slots`; }
+  }
   // Remember the base of anyone who leaves, so their orphan blobs don't
   // jump to base 0. Runs from tick; only does work when the player set changes.
   function noteLeavers() {
@@ -1438,9 +1537,14 @@ export function startStealABlob(game) {
     const now = new Map(ranked.map((pid, i) => [pid, i % SAB_BASES.length]));
     for (const [pid, b] of lastRanks) if (!now.has(pid)) frozenBases.set(pid, b);
     lastRanks = now; lastPidKey = key;
+    // the line-up changed (someone joined/left): re-announce my rebirth
+    // count so newcomers learn it, and refresh every base's expansion
+    announceRebirths(true);
+    refreshBaseExpansions();
   }
   function freeSlot(baseIdx) {
-    for (let s = 0; s < SAB_SLOTS; s++) {
+    const cap = sabSlotsFor(rebirthsOf(ownerOfBase(baseIdx)));
+    for (let s = 0; s < cap; s++) {
       const taken = [...blobs.values()].some(b => b.base === baseIdx && b.slot === s && (b.state === 'owned' || b.state === 'returning'));
       if (!taken) return s;
     }
@@ -1518,7 +1622,7 @@ export function startStealABlob(game) {
     for (const e of entries) {
       if (!Number.isInteger(e.id) || e.id < 0) continue;
       if (blobs.has(e.id) && blobs.get(e.id).owner === game.myId) continue; // already mine
-      let slot = (Number.isInteger(e.slot) && e.slot >= 0 && e.slot < SAB_SLOTS) ? e.slot : -1;
+      let slot = (Number.isInteger(e.slot) && e.slot >= 0 && e.slot < SAB_MAX_SLOTS && e.slot < sabSlotsFor(rebirths)) ? e.slot : -1;
       if (slot < 0 || [...blobs.values()].some(b => b.base === base && b.slot === slot && (b.state === 'owned' || b.state === 'returning'))) {
         slot = freeSlot(base);
         if (slot < 0) continue; // base full: blob stays lost rather than stacking
@@ -1704,7 +1808,17 @@ export function startStealABlob(game) {
     } else if (a === 'reb') {
       if (bid === from) { // track id must be the sender's own pid (anti-grief)
         applyRebirth(from);
-        if (from !== game.myId) game.sys(`♻️ ${playerName(from)} rebirthed!`);
+        if (from !== game.myId) {
+          rebirthsByPid.set(from, (rebirthsByPid.get(from) || 0) + 1);
+          refreshBaseExpansions();
+          game.sys(`♻️ ${playerName(from)} rebirthed — their base grew!`);
+        }
+      }
+    } else if (a === 'rebcount') {
+      // a player announcing their total rebirth count (on join / rebirth)
+      if (from !== game.myId && Number.isFinite(bid) && bid >= 0) {
+        rebirthsByPid.set(from, Math.min(100, Math.floor(bid)));
+        refreshBaseExpansions();
       }
     } else if (a === 'slap') {
       const target = bid;
@@ -1772,7 +1886,9 @@ export function startStealABlob(game) {
     applyRebirth(game.myId);
     coins = startCoins();
     rebirths++;
-    game.sys(`♻️ REBIRTH! Your income is now ×${incomeMult()} forever.`);
+    refreshBaseExpansions();
+    announceRebirths(true);
+    game.sys(`♻️ REBIRTH! Your income is now ×${incomeMult()} forever. Your base grew — ${sabSlotsFor(rebirths)} blob slots now!`);
     refreshHud();
   }
   function doSteal(b) {
@@ -1847,6 +1963,7 @@ export function startStealABlob(game) {
     // restore saved progress as soon as your player id is known (before the
     // beacon, so the beacon marks your restored base)
     if (!restoredSave && game.myId != null) restoreSave();
+    if (game.myId != null) announceRebirths(); // let the room know my rebirth count
     if (game.myId != null && !scoutGrantChecked) { scoutGrantChecked = true; grantScoutBlob(); }
     // claim + mark your base as soon as your player id is known; move the
     // marker (quietly) if your rank — and so your base — changed
@@ -1859,10 +1976,12 @@ export function startStealABlob(game) {
     // disagreements (e.g. two players joining at the same instant) and the
     // shuffle when someone leaves mid-game
     noteLeavers();
+    refreshBaseExpansions();
     for (const b of blobs.values()) {
       if ((b.state === 'owned' || b.state === 'returning') && b.owner != null) {
         const want = baseFor(b.owner);
-        if (want !== b.base) {
+        const cap = sabSlotsFor(rebirthsOf(b.owner));
+        if (want !== b.base || b.slot >= cap) {
           const slot = freeSlot(want);
           if (slot >= 0) {
             b.base = want; b.slot = slot;
@@ -1995,6 +2114,11 @@ export function startStealABlob(game) {
       for (const br of bursts) game.scene.remove(br.grp);
       bursts.length = 0;
       blobs.clear();
+      for (const ex of baseExpansions.values()) {
+        game.scene.remove(ex.grp);
+        if (ex.solid) { const si = game.solids.indexOf(ex.solid); if (si >= 0) game.solids.splice(si, 1); }
+      }
+      baseExpansions.clear();
       if (baseMarker) game.scene.remove(baseMarker.grp);
       hud.remove(); style.remove();
     },
