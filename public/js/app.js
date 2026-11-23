@@ -1,7 +1,7 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { startPepperCracks, stopPepperCracks, applyPepperBranding, PEPPER_CAN } from './pepper.js?v=57beac3a';
-import { THEME_IDS, themesPage } from './themes.js?v=3780b96a';
+import { THEME_IDS, themesPage } from './themes.js?v=8011d716';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -153,7 +153,7 @@ async function fillThumbs(root = app) {
     } catch {}
   }
 }
-const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><rect width="16" height="9" fill="#393b3d"/></svg>');
+const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><rect width="16" height="9" fill="#e8e8e8"/></svg>');
 function gameCard(g) {
   return `<a class="game-card" href="#/games/${g.id}">
     <div class="gc-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`} alt="">${g.icon ? `<span class="gc-icon">${esc(g.icon)}</span>` : ''}${g.is2ui ? `<span class="gc-2ui">2UI</span>` : ''}</div>
@@ -548,7 +548,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=449f7ca6');
+  const m = await import('./lobby.js?v=b6487be4');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -669,8 +669,13 @@ async function discoverPage(q) {
 }
 
 async function gamePage(id) {
-  const g = await api('GET', '/api/games/' + id);
-  const allGames = await api('GET', '/api/games').catch(() => []);
+  // Fetch the game + the full list in parallel (the list is only for
+  // "Similar Games") — sequential fetches left the overlay blank for
+  // seconds on a slow connection.
+  const [g, allGames] = await Promise.all([
+    api('GET', '/api/games/' + id),
+    api('GET', '/api/games').catch(() => []),
+  ]);
   const words = new Set(g.name.toLowerCase().split(/\W+/).filter(w => w.length > 3));
   const similar = [...allGames.filter(x => x.id !== g.id && x.creator === g.creator), ...allGames.filter(x => x.id !== g.id && x.creator !== g.creator).sort((x, y) => { const sx = x.name.toLowerCase().split(/\W+/).filter(w => words.has(w)).length, sy = y.name.toLowerCase().split(/\W+/).filter(w => words.has(w)).length; return sy - sx; })].slice(0, 6);
   const mine = g.creator.toLowerCase() === me.name.toLowerCase();
@@ -823,7 +828,7 @@ async function avatarPage(tab = 'body') {
       } else {
         const owned = CATALOG.filter(i => i.type === tab && (me.inventory.includes(i.id) || i.id === tab + '_none'))
           .concat(UGC_LIST.filter(u => u.type === tab && me.inventory.includes(u.id)));
-        body.innerHTML = `<div class="item-grid">${owned.map(i => `<button class="item ${av[tab] === i.id ? 'worn' : ''}" data-id="${i.id}">${(i.ugc && i.model_url) ? glbCardImg() : i.type === 'pet' ? (PET_MODELS[i.id] ? `<canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji}</span>`) : `<img src="${itemImage(i)}">`}<span>${esc(i.name)}</span></button>`).join('')}
+        body.innerHTML = `<div class="item-grid">${owned.map(i => `<button class="item ${av[tab] === i.id ? 'worn' : ''}" data-id="${i.id}">${i.model_url ? glbCardImg() : i.type === 'pet' ? (PET_MODELS[i.id] ? `<canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji || ''}</span>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas>` : `<span class="pet-emoji">${i.emoji || ''}</span>`) : `<img src="${itemImage(i)}">`}<span>${esc(i.name)}</span></button>`).join('')}
           <a class="item more" href="#/catalog/${tab}"><span class="plus">+</span><span>Get More</span></a></div>`;
         body.querySelectorAll('[data-id]').forEach(b => b.onclick = () => {
           // Only ONE ability item at a time: picking an ability item unequips
@@ -855,7 +860,11 @@ let UGC_LIST = [];
 async function loadUgc() {
   try {
     const items = await api('GET', '/api/ugc');
-    UGC_LIST = Array.isArray(items) ? items : [];
+    // Mark the list items themselves as UGC: the render guards check i.ugc,
+    // and the raw API rows don't carry that flag (only the ITEM[] copy did),
+    // so UGC items used to fall through to the emoji branch and print
+    // "undefined" (UGC items have no emoji field).
+    UGC_LIST = (Array.isArray(items) ? items : []).map(u => ({ ...u, ugc: true }));
     for (const u of UGC_LIST) ITEM[u.id] = { id: u.id, type: u.type, name: u.name, price: u.price, color: u.color, template: u.template, model_url: u.model_url || null, model_transform: u.model_transform || null, creator: u.creator, ugc: true };
   } catch { UGC_LIST = []; }
 }
@@ -867,7 +876,7 @@ async function catalogPage(filter = 'all') {
   const soc = await api('GET', '/api/social/me').catch(() => ({ wishlist: [] }));
   const wish = new Set(soc.wishlist || []);
   const itemHtml = i => `
-      <div class="cat-item">${(i.ugc && i.model_url) ? `<div class="cat-img">${glbCardImg()}</div>` : i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji}</div>`) : `<div class="cat-img"><img src="${itemImage(i)}"></div>`}<div class="cat-name">${esc(i.name)}</div>
+      <div class="cat-item">${i.model_url ? `<div class="cat-img">${glbCardImg()}</div>` : i.type === 'pet' ? (PET_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="pet-voxel" width="120" height="120" data-pet="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji || ''}</div>`) : i.type === 'gear' ? (GEAR_MODELS[i.id] ? `<div class="cat-img pet-img"><canvas class="gear-voxel" width="120" height="120" data-gear="${i.id}"></canvas></div>` : `<div class="cat-img pet-img">${i.emoji || ''}</div>`) : `<div class="cat-img"><img src="${itemImage(i)}"></div>`}<div class="cat-name">${esc(i.name)}</div>
         ${i.ugc ? `<div class="muted small">by ${esc(i.creator)} · ${i.sales} sold</div>` : ''}
         <div class="cat-price">${priceHtml(i)}</div>
         <button class="btn-wish ${wish.has(i.id) ? 'on' : ''}" data-wish="${i.id}" title="Wishlist"><span class="ic">${icons.heart}</span></button>
@@ -939,7 +948,7 @@ function buyModal(it, onDone) {
   const opts = [['tix', tix, it.price, me.funtix ?? 0]];
   const d = document.createElement('div'); d.className = 'modal-bg';
   d.innerHTML = `<div class="modal"><h2>Buy Item</h2>
-    <div class="buy-row">${it.type === 'pet' ? (PET_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="pet-voxel" width="160" height="160" data-pet="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji}</div>`) : it.type === 'gear' ? (GEAR_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="gear-voxel" width="160" height="160" data-gear="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji}</div>`) : `<img src="${itemImage(it)}">`}<div><p>Would you like to buy <b>${esc(it.name)}</b>?</p>
+    <div class="buy-row">${it.type === 'pet' ? (PET_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="pet-voxel" width="160" height="160" data-pet="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji || ''}</div>`) : it.type === 'gear' ? (GEAR_MODELS[it.id] ? `<div class="pet-img-lg"><canvas class="gear-voxel" width="160" height="160" data-gear="${it.id}"></canvas></div>` : `<div class="pet-img-lg">${it.emoji || ''}</div>`) : `<img src="${itemImage(it)}">`}<div><p>Would you like to buy <b>${esc(it.name)}</b>?</p>
     <p class="muted small">You have ${tix} ${fmt(me.funtix ?? 0)}</p></div></div>
     <div class="modal-actions"><button class="btn-secondary">Cancel</button>${opts.map(([c, ic, p, bal]) => `<button class="btn-primary buy-with" data-c="${c}" ${bal < p ? 'disabled title="Not enough"' : ''}>Buy for ${ic} ${p}</button>`).join('')}</div></div>`;
   document.body.appendChild(d);
@@ -1341,7 +1350,7 @@ async function createPage() {
     <h1>Create</h1>
     <div class="av-tabs"><button class="active"><span class="ic">${icons.gamepad}</span> Experiences</button><button data-goto="#/ugc"><span class="ic">${icons.palette}</span> UGC Studio</button><button data-goto="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</button></div>
     <a href="#/funai" style="display:block;text-decoration:none;background:var(--grad);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:var(--glow)"><span style="font-weight:900;font-size:18px"><span class="ic">${icons.sparkles}</span> Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
-    <a href="#/2ui/new" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ec4899,#7c3aed);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px"><span style="font-weight:900;font-size:18px">🖥️ Make a 2UI Game</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">A GUI-only game — buttons, coins and labels, no 3D world. Players build their own and everyone can play them →</span></a>
+    <a href="#/2ui/new" style="display:block;text-decoration:none;background:linear-gradient(135deg,#e2231a,#0057a8);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px"><span style="font-weight:900;font-size:18px">🖥️ Make a 2UI Game</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">A GUI-only game — buttons, coins and labels, no 3D world. Players build their own and everyone can play them →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>Generated Worlds (${GEN_GAMES.length})</h2></div>
@@ -1710,9 +1719,25 @@ async function route() {
       window.__openLobbyOverlay?.(location.hash);
       return;
     }
+    if (overlayMode) {
+      // Direct hash changes (back/forward, pasted links) bypass openOverlay,
+      // so paint the loading state here too — otherwise the previous page
+      // sits stale (or blank) until the new page's API calls resolve.
+      app.innerHTML = '<div class="ov-loading"><div class="ov-spinner"></div><p>Loading…</p></div>';
+    }
     switch (seg[0]) {
       case 'login': location.hash = '#/home'; return;
-      case 'home': case 'lobby': { if (overlayMode) window.__clearOverlayApp(); return renderLobby(); }
+      case 'home': case 'lobby': {
+        if (overlayMode) {
+          // Slide the overlay away at once (closeOverlay also clears the
+          // overlay app state) so the live lobby underneath shows while
+          // renderLobby fetches fresh data — otherwise the dead game
+          // canvas stays on screen (black) until the APIs resolve.
+          if (window.__closeLobbyOverlay) window.__closeLobbyOverlay();
+          else window.__clearOverlayApp();
+        }
+        return renderLobby();
+      }
       case 'discover': return await discoverPage(qp.get('q'));
       case 'games': return await gamePage(seg[1]);
       case 'play': return await playPage(seg[1], qp.get('server'), qp.get('voice') === '1');

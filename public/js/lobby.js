@@ -18,9 +18,17 @@ export async function lobbyPage(D) {
   const app = document.getElementById('app');
   app.className = 'fullscreen';
   let games = [], friends = [], party = { active: false }, siteVersion = '1.0';
-  try { [games, friends] = await Promise.all([api('GET', '/api/games'), api('GET', '/api/friends').then(r => r.friends || [])]); } catch {}
-  try { party = await api('GET', '/api/event/party'); } catch {}
-  try { const v = await api('GET', '/api/version'); siteVersion = v.version || '1.0'; } catch {}
+  // One parallel round of fetches (was three sequential awaits) so the
+  // lobby paints promptly instead of leaving the previous page up for seconds.
+  try {
+    const [gRes, fRes, pRes, vRes] = await Promise.all([
+      api('GET', '/api/games').catch(() => []),
+      api('GET', '/api/friends').then(r => r.friends || []).catch(() => []),
+      api('GET', '/api/event/party').catch(() => ({ active: false })),
+      api('GET', '/api/version').catch(() => ({})),
+    ]);
+    games = gRes; friends = fRes; party = pRes; siteVersion = vRes.version || '1.0';
+  } catch {}
   const online = (friends || []).filter(f => f.online || f.gameId);
   const byPlaying = [...games].sort((a, b) => (b.playing || 0) - (a.playing || 0));
   const pick = mode => {
@@ -147,7 +155,9 @@ export async function lobbyPage(D) {
   }
   function openOverlay(hash) {
     if (hash === '#/home' || hash === '#/lobby') { closeOverlay(); return; }
-    overlayBody.innerHTML = '';
+    // Show a loading state at once — the page function awaits its API calls
+    // before painting, and an empty overlay body reads as a black screen.
+    overlayBody.innerHTML = '<div class="ov-loading"><div class="ov-spinner"></div><p>Loading…</p></div>';
     overlay.classList.add('open');
     // No ✕ on game pages — the game has its own menu/leave controls.
     overlay.querySelector('.lb-ov-close').style.display = (hash.startsWith('#/games/') || hash.startsWith('#/play/')) ? 'none' : '';
