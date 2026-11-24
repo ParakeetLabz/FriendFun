@@ -148,7 +148,7 @@ function shade(hex, f) {
 }
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
 // Rounded box — same blocky proportions, softened edges that catch the light.
-function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
+function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
 function attachExtras(root, avatar, opts = {}) {
   const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
   if (petSpec) {
@@ -167,10 +167,10 @@ function attachExtras(root, avatar, opts = {}) {
   const gearIt = ITEM[avatar.gear];
   const gearGlb = opts.gear === false ? null : (gearIt && gearIt.model_url);
   const gearBoxes = opts.gear === false ? null : (GEAR_MODELS[avatar.gear] && GEAR_MODELS[avatar.gear].boxes);
-  // Held gear hangs from the hand: on the R15 rig that is limbs.rhand
-  // (end of the forearm); on the R6 rig it is the end of the one-piece arm.
-  const handAnchor = root.userData.limbs?.rhand || root.userData.limbs?.rarm;
-  const gearY = root.userData.limbs?.rhand ? -0.3 : -2;
+  // Held gear hangs from the end of the right arm (no hands — gear
+  // anchors to the arm pivot on both rigs).
+  const handAnchor = root.userData.limbs?.rarm;
+  const gearY = -2;
   if (gearGlb) {
     const gear = new THREE.Group();
     gear.position.set(0, gearY, 0.5);
@@ -393,12 +393,12 @@ function buildSlimeHead(g) {
 }
 // Visible soft rounding for blocky characters (u137): R6 blocks read as
 // soft/rounded while staying clearly blocky; same radius for both rigs.
-const ROUND_BEV = 0.08;
+const ROUND_BEV = 0.22;
 const HEADS = {
   head_bugs: { h: 1.3, custom: buildBugsHead },
   head_daffy: { h: 1.3, custom: buildDaffyHead },
   head_slimebody: { h: 1.35, custom: buildSlimeHead },
-  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new RoundedBoxGeometry(1.24, 1.2, 1.24, 2, ROUND_BEV) },
+  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new RoundedBoxGeometry(1.24, 1.2, 1.24, 4, ROUND_BEV) },
   head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },
   head_tall: { h: 1.6, fz: 0.56, fw: 0.95, hs: 0.9, geo: () => new THREE.CylinderGeometry(0.55, 0.55, 1.6, 24) },
@@ -440,7 +440,8 @@ const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody
 // head sitting straight on the torso (no neck, no waist, no elbows/knees,
 // no separate hands/shoes). R15 (rig 'r15'): modern Roblox-style — the
 // same blocky language and total height, but arms and legs are two
-// segments with elbow/knee pivots plus a hand/foot at the end.
+// segments with elbow/knee pivots and no hands or feet either — the
+// lower segment extends to the ground instead.
 // smooth=true softens the finish (visible soft edge rounding + glossier material). Both rigs build smooth by default now.
 function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const C = { ...avatar.colors };
@@ -467,7 +468,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   // complex 3D garment in solid colors (no copied textures): torso + collar + placket + buttons + hem
   const clothPart = (w, h, d, material) => {
     const r = Math.max(0.01, Math.min(bev, Math.min(w, h, d) / 2 - 0.01));
-    const g = smooth ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d);
+    const g = smooth ? new RoundedBoxGeometry(w, h, d, 4, r) : new THREE.BoxGeometry(w, h, d);
     const m = new THREE.Mesh(g, material);
     m.castShadow = true; m.receiveShadow = true;
     return m;
@@ -555,7 +556,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     // unit-box parameters, so test by class — head_classic is already rounded.)
     if (smooth && head.geometry instanceof THREE.BoxGeometry && !(head.geometry instanceof RoundedBoxGeometry)) {
       const p = head.geometry.parameters;
-      head.geometry = new RoundedBoxGeometry(p.width, p.height, p.depth, 2, Math.min(bev, Math.min(p.width, p.height, p.depth) / 2 - 0.01));
+      head.geometry = new RoundedBoxGeometry(p.width, p.height, p.depth, 4, Math.min(bev, Math.min(p.width, p.height, p.depth) / 2 - 0.01));
     }
     head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
     const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
@@ -572,8 +573,8 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.userData.w = w; const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
   // R15: a two-segment limb — upper + lower with an elbow/knee pivot.
   // No hands or feet: the lower segment extends to the ground instead.
-  // Returns { upper, lower, end } pivots (end is kept as an empty pivot
-  // so gear anchoring and animation code keep working). Same blocky
+  // Returns { upper, lower, end } pivots (end is an empty pivot, kept
+  // for compatibility). Same blocky
   // language and same total height (hips at y=2, shoulders at y=4,
   // limb ends at y=0).
   const limb2 = (x, y, color, wUp, hUp, wLow, hLow, endW, endH, endD, endZ = 0, endColor = null) => {
@@ -584,17 +585,17 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     const end = new THREE.Group(); end.position.set(0, -hLow, 0); lower.add(end);
     return { upper, lower, end };
   };
-  let larm, rarm, lleg, rleg, larmLow, rarmLow, lhand, rhand, llegLow, rlegLow, lfoot, rfoot;
+  let larm, rarm, lleg, rleg, larmLow, rarmLow, llegLow, rlegLow;
   if (rig === 'r15') {
     if (isBugs) {
       const aL = limb2(-1.35, 4, C.larm, 0.8, 0.85, 0.72, 0.8, 0.7, 0.3, 0.75);
       const aR = limb2(1.35, 4, C.rarm, 0.8, 0.85, 0.72, 0.8, 0.7, 0.3, 0.75);
-      larm = aL.upper; larmLow = aL.lower; lhand = aL.end;
-      rarm = aR.upper; rarmLow = aR.lower; rhand = aR.end;
+      larm = aL.upper; larmLow = aL.lower;
+      rarm = aR.upper; rarmLow = aR.lower;
       const gL = limb2(-0.45, 2, C.lleg, 0.9, 0.85, 0.82, 0.7, 0.95, 0.45, 1.7, 0.45, '#9e9e9e');
       const gR = limb2(0.45, 2, C.rleg, 0.9, 0.85, 0.82, 0.7, 0.95, 0.45, 1.7, 0.45, '#9e9e9e');
-      lleg = gL.upper; llegLow = gL.lower; lfoot = gL.end;
-      rleg = gR.upper; rlegLow = gR.lower; rfoot = gR.end;
+      lleg = gL.upper; llegLow = gL.lower;
+      rleg = gR.upper; rlegLow = gR.lower;
       const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
       tail.position.set(0, 2.3, -0.62); tail.castShadow = true; root.add(tail);
       const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
@@ -602,12 +603,12 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     } else if (isDaffy) {
       const aL = limb2(-1.35, 4, C.larm, 0.75, 0.85, 0.68, 0.8, 0.66, 0.3, 0.7);
       const aR = limb2(1.35, 4, C.rarm, 0.75, 0.85, 0.68, 0.8, 0.66, 0.3, 0.7);
-      larm = aL.upper; larmLow = aL.lower; lhand = aL.end;
-      rarm = aR.upper; rarmLow = aR.lower; rhand = aR.end;
+      larm = aL.upper; larmLow = aL.lower;
+      rarm = aR.upper; rarmLow = aR.lower;
       const gL = limb2(-0.4, 2, '#ff9800', 0.55, 0.9, 0.5, 0.82, 1.15, 0.28, 1.5, 0.5, '#ff9800');
       const gR = limb2(0.4, 2, '#ff9800', 0.55, 0.9, 0.5, 0.82, 1.15, 0.28, 1.5, 0.5, '#ff9800');
-      lleg = gL.upper; llegLow = gL.lower; lfoot = gL.end;
-      rleg = gR.upper; rlegLow = gR.lower; rfoot = gR.end;
+      lleg = gL.upper; llegLow = gL.lower;
+      rleg = gR.upper; rlegLow = gR.lower;
       for (let i = -1; i <= 1; i++) {
         const f = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), mat('#212121'));
         f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
@@ -616,12 +617,12 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
       const armC = suit ? '#263238' : null;
       const aL = limb2(-1.45, 4, armC || C.larm, 0.9, 0.9, 0.8, 0.85, 0.75, 0.3, 0.8, 0, C.larm);
       const aR = limb2(1.45, 4, armC || C.rarm, 0.9, 0.9, 0.8, 0.85, 0.75, 0.3, 0.8, 0, C.rarm);
-      larm = aL.upper; larmLow = aL.lower; lhand = aL.end;
-      rarm = aR.upper; rarmLow = aR.lower; rhand = aR.end;
+      larm = aL.upper; larmLow = aL.lower;
+      rarm = aR.upper; rarmLow = aR.lower;
       const gL = limb2(-0.5, 2, C.lleg, 0.95, 0.9, 0.85, 0.85, 0.85, 0.25, 1.25, 0.2);
       const gR = limb2(0.5, 2, C.rleg, 0.95, 0.9, 0.85, 0.85, 0.85, 0.25, 1.25, 0.2);
-      lleg = gL.upper; llegLow = gL.lower; lfoot = gL.end;
-      rleg = gR.upper; rlegLow = gR.lower; rfoot = gR.end;
+      lleg = gL.upper; llegLow = gL.lower;
+      rleg = gR.upper; rlegLow = gR.lower;
     }
   } else if (isBugs) {
     larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
@@ -642,8 +643,9 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
   // ---- Additive character detail (same silhouette, same height) ----
-  // Collar on a bare torso, finger grooves on R15 hands, toe grooves +
-  // shoe soles on R15 feet, wrist cuffs when no shirt covers the arms.
+  // Collar on a bare torso, wrist cuffs when no shirt covers the arms.
+  // No hands or feet anywhere: no finger grooves, no toe grooves, no
+  // shoe soles on either rig.
   // Every piece is a child of a limb pivot, so animations move it for
   // free. R6 gets the same treatment on its one-piece limbs (grooves +
   // sole ride on the rigid part — no new parts, rig stays 6-part).
@@ -652,22 +654,6 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const endMesh = (g) => g && g.children.find(c => c.isMesh);
   const meshHex = (m) => '#' + m.material.color.getHexString();
   const meshSize = (m) => new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
-  const detailMat = (color, rough = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: rough });
-  const frontGrooves = (parent, m, y, color) => {
-    const s = meshSize(m);
-    for (const sx of [-1, 1]) {
-      const gr = new THREE.Mesh(new THREE.BoxGeometry(0.05, Math.min(0.3, s.y * 0.7), 0.02), detailMat(shade(color, 0.78)));
-      gr.position.set(m.position.x + sx * s.x * 0.22, y, m.position.z + s.z / 2 + 0.011);
-      parent.add(gr);
-    }
-  };
-  const shoeSole = (parent, m, color) => {
-    const s = meshSize(m);
-    const sole = new THREE.Mesh(new THREE.BoxGeometry(s.x + 0.06, 0.08, s.z + 0.06), detailMat(shade(color, 0.55), 0.8));
-    sole.position.set(m.position.x, m.position.y - s.y / 2 + 0.04, m.position.z);
-    sole.castShadow = true;
-    parent.add(sole);
-  };
   // Neckline collar on a bare torso (shirts already bring their own).
   if (!avatar.shirt || avatar.shirt === 'shirt_none') {
     const collar = part(torsoW + 0.04, 0.14, 1.04, shade(meshHex(torso), 0.85));
@@ -675,16 +661,6 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     torso.add(collar);
   }
   if (rig === 'r15') {
-    if (lhand && rhand) {
-      frontGrooves(lhand, endMesh(lhand), endMesh(lhand).position.y, meshHex(endMesh(lhand)));
-      frontGrooves(rhand, endMesh(rhand), endMesh(rhand).position.y, meshHex(endMesh(rhand)));
-    }
-    if (lfoot && rfoot) {
-      frontGrooves(lfoot, endMesh(lfoot), endMesh(lfoot).position.y, meshHex(endMesh(lfoot)));
-      frontGrooves(rfoot, endMesh(rfoot), endMesh(rfoot).position.y, meshHex(endMesh(rfoot)));
-      shoeSole(lfoot, endMesh(lfoot), meshHex(endMesh(lfoot)));
-      shoeSole(rfoot, endMesh(rfoot), meshHex(endMesh(rfoot)));
-    }
     // Wrist cuffs on bare arms (shirt sleeves already add cuffs).
     if (!shirtOn && larmLow && rarmLow) {
       for (const low of [larmLow, rarmLow]) {
@@ -696,16 +672,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
       }
     }
   } else {
-    // R6: grooves near the wrist/ankle ends of the one-piece limbs.
-    // (Arm grooves sit just above the wrist cuff so both stay visible.)
-    frontGrooves(larm, endMesh(larm), -1.6, meshHex(endMesh(larm)));
-    frontGrooves(rarm, endMesh(rarm), -1.6, meshHex(endMesh(rarm)));
-    if (!isBugs && !isDaffy) {
-      frontGrooves(lleg, endMesh(lleg), -1.85, meshHex(endMesh(lleg)));
-      frontGrooves(rleg, endMesh(rleg), -1.85, meshHex(endMesh(rleg)));
-      shoeSole(lleg, endMesh(lleg), meshHex(endMesh(lleg)));
-      shoeSole(rleg, endMesh(rleg), meshHex(endMesh(rleg)));
-    }
+    // R6: plain one-piece limbs — no grooves, no soles, no hands or feet.
     if (!shirtOn) {
       for (const arm of [larm, rarm]) {
         const m = endMesh(arm); if (!m) continue;
@@ -745,7 +712,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   }
   root.userData.rig = rig;
   root.userData.limbs = rig === 'r15'
-    ? { larm, rarm, larmLow, rarmLow, lhand, rhand, lleg, rleg, llegLow, rlegLow, lfoot, rfoot, head: headPivot, torso }
+    ? { larm, rarm, larmLow, rarmLow, lleg, rleg, llegLow, rlegLow, head: headPivot, torso }
     : { larm, rarm, lleg, rleg, head: headPivot, torso };
   if (smooth) { root.userData.headPivot = headPivot; root.userData.smooth = true; }
   attachExtras(root, avatar, opts);
@@ -759,9 +726,10 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
 
 // Returns a THREE.Group; feet at y=0, facing +z. userData.limbs carries the
 // upper pivots (larm, rarm, lleg, rleg, head, torso) plus, on the R15 rig,
-// the lower pivots and hands/feet (larmLow, rarmLow, lhand, rhand, ...).
-// Modern Roblox-style rig: articulated R15-style limbs (elbows, knees,
-// hands, feet) in the same blocky language. The R6 builder is kept as
+// the lower pivots (larmLow, rarmLow, llegLow, rlegLow). No hands or
+// feet on either rig — the lower segments run straight to the ground.
+// Modern Roblox-style rig: articulated R15-style limbs (elbows, knees)
+// in the same blocky language. The R6 builder is kept as
 // the fallback (buildCharacterR6 below).
 // R6 always gets the smooth finish now — same six rigid parts, softer
 // edges and a glossier plastic. R15 keeps its look (the advanced-graphics
