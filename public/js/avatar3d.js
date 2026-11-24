@@ -398,7 +398,7 @@ const HEADS = {
   head_bugs: { h: 1.3, custom: buildBugsHead },
   head_daffy: { h: 1.3, custom: buildDaffyHead },
   head_slimebody: { h: 1.35, custom: buildSlimeHead },
-  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new RoundedBoxGeometry(1.24, 1.2, 1.24, 4, ROUND_BEV) },
+  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) }, // u134 cylinder head restored (u141) — the classic head is a cylinder again, not a rounded box
   head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },
   head_tall: { h: 1.6, fz: 0.56, fw: 0.95, hs: 0.9, geo: () => new THREE.CylinderGeometry(0.55, 0.55, 1.6, 24) },
