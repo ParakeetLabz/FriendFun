@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
 const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
 const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
-import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle, loadUgcGlb } from './avatar3d.js?v=a3b315a0';
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle, loadUgcGlb } from './avatar3d.js?v=54b38ed5';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf } from './ui.js?v=a89886d1';
@@ -13,7 +13,7 @@ import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
 import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
-import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=90a4da23';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=d52f8dae';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -98,8 +98,20 @@ const RIVALS_WEAPONS = {
   smg:     { name: 'SMG',     dmg: 14, hs: 22,  interval: 0.075, range: 38, mag: 32, reload: 1.6, auto: true,  spread: 0.028, tracer: '#e040fb' },
   shotgun: { name: 'Shotgun', dmg: 9,  hs: 14,  interval: 0.9,  range: 20, mag: 6,  reload: 2.3, auto: false, spread: 0.085, pellets: 8, tracer: '#ff9800' },
   sniper:  { name: 'Sniper',  dmg: 90, hs: 140, interval: 1.5,  range: 130, mag: 5,  reload: 2.9, auto: false, spread: 0.001, tracer: '#69f0ae' },
-  pistol:  { name: 'Pistol',  dmg: 18, hs: 28,  interval: 0.24, range: 48,  mag: 12, reload: 1.5,  auto: false, spread: 0.018, tracer: '#cfd8dc' },
+  pistol:  { name: 'Pistol',  dmg: 18, hs: 28,  interval: 0.24, range: 48, mag: 12, reload: 1.5,  auto: false, spread: 0.018, tracer: '#cfd8dc' },
 };
+
+// Strike Arena FPS mode: round-based control-point battles. First team to
+// 5 round wins takes the match. Rounds are 120s; holding the mid point
+// ticks round score (1/s), first to 30 round points wins the round early.
+const FPS_ROUND_MS = 120 * 1000;
+const FPS_ROUNDS_TO_WIN = 5;
+const FPS_SCORE_TARGET = 30;
+const FPS_CAP_RATE = 12.5; // capture % per second while one team holds the point alone (8s to capture)
+const FPS_DECAY_RATE = 6;   // capture % per second drifting back toward 0 when the point is empty
+const FPS_WEAPONS = ['rifle', 'shotgun', 'sniper'];
+const FPS_BOT_NAMES = ['BOT Rex', 'BOT Nova', 'BOT Pixel'];
+const FPS_BOT_DMG = 12, FPS_BOT_RANGE = 32, FPS_BOT_SPEED = 9;
 
 export class Game {
   constructor(container, opts) {
@@ -110,9 +122,11 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
-    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false; this.tag = null; this._tagCd = 0; this._tagRing = null;
+    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false; this.tag = null; this._tagCd = 0; this._tagRing = null; this.fps = null; this._fpsBots = []; this._fpsPoint = null; this._fpsRing = null;
+    if (this.world?.fps) this.fps = this.newFpsState();
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
+    if (this.world?.fps) this.startFps();
     if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
     // Steal a Blob detection: sanitizeWorld() strips the stealablob flag from
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
@@ -138,6 +152,7 @@ export class Game {
       </div>
       <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
       <div class="tag-hud" style="display:none"></div>
+      <div class="fps-hud tag-hud" style="display:none"></div>
       <div class="hud-topright">
         <div class="lb"><div class="lb-head"><span>${esc(this.o.gameName || 'Game')}</span></div><div class="lb-list"></div></div>
         <div class="health"><div class="health-fill"></div></div>
@@ -353,6 +368,376 @@ export class Game {
     el.innerHTML = `🏷️ TAG — ${this.tag.itId === this.myId ? '<b>YOU ARE IT!</b> Tag someone!' : `IT: <b>${esc(itName)}</b> — run!`} <span class="tag-timer">${secs}s</span> · Your tags: <b>${mine}</b>`;
     el.style.display = 'block';
   }
+  // Health bar updater. This was called in several places (Rivals damage,
+  // enemy hits, heals) but never defined — defining it fixes that latent crash.
+  updateHud() { if (this.healthFill) this.healthFill.style.width = Math.max(0, this.health) + '%'; }
+  // ---------- Strike Arena FPS mode ----------
+  // Round-based control-point battles. The server is NOT involved: each
+  // client runs the same deterministic rules from the positions it sees
+  // (teams by sorted player id, capture from whoever stands on the point),
+  // and damage still flows through the server's gearHit routing, like Rivals.
+  newFpsState() {
+    const ammo = {};
+    for (const w of FPS_WEAPONS) ammo[w] = RIVALS_WEAPONS[w].mag;
+    return { team: null, phase: 'playing', round: 1, rounds: { red: 0, blue: 0 }, score: { red: 0, blue: 0 },
+      timeLeft: FPS_ROUND_MS / 1000, capV: 0, owner: null, weapon: 'rifle', ammo, reloading: false, lastShot: -9, endT: 0, overT: 0 };
+  }
+  startFps() {
+    const el = this.c.querySelector('.fps-hud');
+    if (el) el.style.display = 'block';
+    // FPS weapons replace the 1-gear hotbar (same as Rivals).
+    this.c.querySelector('.inv-bar') && (this.c.querySelector('.inv-bar').style.display = 'none');
+    if (!this.c.querySelector('.fps-hitmark')) {
+      const hm = document.createElement('div');
+      hm.className = 'fps-hitmark';
+      hm.textContent = '✕';
+      hm.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:900;color:#fff;text-shadow:0 0 6px #000;opacity:0;pointer-events:none;z-index:7;transition:opacity .12s';
+      this.c.querySelector('.game-root')?.appendChild(hm);
+    }
+    // Pulsing ring on the control point (color follows the holder).
+    const pt = this.fpsPoint();
+    if (pt && !this._fpsRing) {
+      const geo = new THREE.RingGeometry(pt.r - 0.6, pt.r, 40);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffd400, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+      this._fpsRing = new THREE.Mesh(geo, mat);
+      this._fpsRing.rotation.x = -Math.PI / 2;
+      this._fpsRing.position.set(pt.x, 0.35, pt.z);
+      this.scene.add(this._fpsRing);
+    }
+    this.maybeSpawnBots();
+    this.sys('🎯 Strike Arena — capture the mid point, hold it to score, first to 5 rounds wins!');
+    this.updateFpsHUD();
+  }
+  fpsPoint() {
+    if (this._fpsPoint) return this._fpsPoint;
+    const p = (this.world.parts || []).find(x => x.name === 'ControlPoint');
+    if (!p) return null;
+    this._fpsPoint = { x: p.p[0], z: p.p[2], r: Math.max(p.s[0], p.s[2]) / 2 };
+    return this._fpsPoint;
+  }
+  // Teams alternate by sorted player id, so every client agrees without the
+  // server tracking teams. The team locks in when the client first knows its
+  // own id (on 'welcome'; immediately in test mode).
+  computeFpsTeam() {
+    if (!this.myId) return 'red';
+    const ids = [this.myId, ...this.players.keys()].map(String).sort();
+    return ids.indexOf(String(this.myId)) % 2 === 0 ? 'red' : 'blue';
+  }
+  fpsTeamOf(id) {
+    if (!this.myId) return 'blue';
+    const ids = [this.myId, ...this.players.keys()].map(String).sort();
+    const i = ids.indexOf(String(id));
+    return i < 0 ? 'blue' : (i % 2 === 0 ? 'red' : 'blue');
+  }
+  fpsSpawnPoint(team) {
+    const name = team === 'red' ? 'SpawnRed' : 'SpawnBlue';
+    const spots = (this.world.parts || []).filter(p => p.k === 'spawn' && p.name === name);
+    const list = spots.length ? spots : (this.world.parts || []).filter(p => p.k === 'spawn');
+    if (list.length) { const s = list[(Math.random() * list.length) | 0]; return new THREE.Vector3(s.p[0], s.p[1] + s.s[1] / 2, s.p[2]); }
+    return findSpawn(this.world);
+  }
+  respawnAtBase() {
+    if (!this.fps?.team) return;
+    const p = this.fpsSpawnPoint(this.fps.team);
+    this.pos.copy(p); this.vel.set(0, 0, 0);
+    this.char.position.copy(this.pos);
+    if (this.dead) { this.dead = false; this.health = 100; this.char.visible = true; }
+  }
+  // Bots fill the enemy team while the room is near-empty, so Strike Arena
+  // is fun solo. They leave as soon as 2+ humans are in the room.
+  maybeSpawnBots() {
+    if (!this.fps) return;
+    const humans = 1 + this.players.size;
+    if (humans >= 2) { if (this._fpsBots.length) this.removeFpsBots(); return; }
+    if (this._fpsBots.length) return;
+    const enemy = (this.fps.team || 'red') === 'red' ? 'blue' : 'red';
+    FPS_BOT_NAMES.forEach((n, i) => this.spawnFpsBot(n, enemy, i));
+  }
+  spawnFpsBot(name, team, i) {
+    const torso = team === 'red' ? '#e53935' : '#1e88e5';
+    const avatar = {
+      colors: { head: '#eceff1', torso, larm: '#eceff1', rarm: '#eceff1', lleg: '#37474f', rleg: '#37474f' },
+      hat: 'hat_none', face: 'face_smile', shirt: 'shirt_none', head: 'head_classic', pet: 'pet_none', gear: 'gear_none', rig: 'r6',
+    };
+    const char = buildChar(avatar, { pet: false, gear: false });
+    const tag = makeNameTag('🤖 ' + name); tag.userData.isTag = true; char.add(tag);
+    this.scene.add(char);
+    const bot = { name, team, char, hp: 100, dead: false, respawnT: 0, fireCd: 1 + i * 0.4, losT: 0, hasLos: false, avoidT: 0, avoidDir: { x: 0, z: 0 }, strafeDir: 1, strafeT: 0 };
+    this._fpsBots.push(bot);
+    this.respawnFpsBot(bot);
+    return bot;
+  }
+  respawnFpsBot(bot) {
+    const p = this.fpsSpawnPoint(bot.team);
+    bot.char.position.copy(p);
+    bot.char.rotation.y = bot.team === 'red' ? 0 : Math.PI;
+    bot.char.visible = true;
+    bot.hp = 100; bot.dead = false; bot.respawnT = 0; bot.fireCd = 1; bot.hasLos = false;
+  }
+  removeFpsBots() {
+    for (const b of this._fpsBots) this.scene.remove(b.char);
+    this._fpsBots = [];
+  }
+  fpsTracer(from, to, color) {
+    const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
+    this.scene.add(line);
+    setTimeout(() => { this.scene.remove(line); g.dispose(); }, 90);
+  }
+  fpsBotLos(b, targetPos) {
+    const from = b.char.position.clone(); from.y += 3.4;
+    const to = targetPos.clone(); to.y += 2.5;
+    const dir = to.clone().sub(from); const dist = dir.length(); dir.normalize();
+    const ray = new THREE.Raycaster(from, dir, 0.1, dist);
+    const hits = ray.intersectObjects([...this.meshes.values()], false);
+    return hits.length === 0 || hits[0].distance >= dist - 0.5;
+  }
+  fpsBotsTick(dt) {
+    for (const b of this._fpsBots) {
+      if (b.dead) { b.respawnT -= dt; if (b.respawnT <= 0) this.respawnFpsBot(b); continue; }
+      // Nearest enemy: the local player, or a remote player on the enemy team.
+      let target = null, targetPos = null, bestD = Infinity;
+      const consider = (pos, ref) => { const d = Math.hypot(pos.x - b.char.position.x, pos.z - b.char.position.z); if (d < bestD) { bestD = d; target = ref; targetPos = pos; } };
+      if (!this.dead && this.fps.team !== b.team) consider(this.pos, 'me');
+      for (const p of this.players.values()) if (this.fpsTeamOf(p.id) !== b.team) consider(p.char.position, p);
+      const pt = this.fpsPoint();
+      const dest = targetPos || (pt ? new THREE.Vector3(pt.x, 0, pt.z) : null);
+      if (dest) {
+        const dx = dest.x - b.char.position.x, dz = dest.z - b.char.position.z;
+        const dist = Math.hypot(dx, dz);
+        let mx = 0, mz = 0;
+        if (target && dist < 30) {
+          b.strafeT -= dt;
+          if (b.strafeT <= 0) { b.strafeT = 1.5 + Math.random(); b.strafeDir = Math.random() < 0.5 ? 1 : -1; }
+          if (dist > 18) { mx = dx / dist; mz = dz / dist; }
+          else if (dist < 8) { mx = -dx / dist; mz = -dz / dist; }
+          else { mx = -dz / dist * b.strafeDir; mz = dx / dist * b.strafeDir; }
+        } else if (dist > 1.5) { mx = dx / dist; mz = dz / dist; }
+        const step = FPS_BOT_SPEED * dt;
+        if (b.avoidT > 0) { b.avoidT -= dt; mx = b.avoidDir.x; mz = b.avoidDir.z; }
+        if (mx || mz) {
+          const nx = b.char.position.x + mx * step, nz = b.char.position.z + mz * step;
+          if (!this.blockedAt(nx, 0.5, nz)) { b.char.position.x = nx; b.char.position.z = nz; }
+          else if (!this.blockedAt(b.char.position.x + mx * step, 0.5, b.char.position.z)) b.char.position.x += mx * step;
+          else if (!this.blockedAt(b.char.position.x, 0.5, b.char.position.z + mz * step)) b.char.position.z += mz * step;
+          else if (b.avoidT <= 0) { b.avoidT = 0.8; const s = Math.random() < 0.5 ? 1 : -1; b.avoidDir = { x: -mz * s, z: mx * s }; }
+          b.char.rotation.y = Math.atan2(mx, mz);
+          animateCharacter(b.char, 'walk', this.t, dt);
+        } else animateCharacter(b.char, 'idle', this.t, dt);
+      }
+      b.fireCd -= dt; b.losT -= dt;
+      if (target && bestD <= FPS_BOT_RANGE) {
+        if (b.losT <= 0) { b.losT = 0.4; b.hasLos = this.fpsBotLos(b, targetPos); }
+        if (b.hasLos && b.fireCd <= 0) {
+          b.fireCd = 0.9 + Math.random() * 0.4;
+          const from = b.char.position.clone(); from.y += 3.4;
+          const to = targetPos.clone(); to.y += 2.5;
+          this.fpsTracer(from, to, '#ff5252');
+          if (Math.random() < 0.55) {
+            if (target === 'me') this.applyFpsDamage(FPS_BOT_DMG, b.name);
+            else this.send({ t: 'gearHit', id: target.id, dmg: FPS_BOT_DMG });
+          }
+          sfx.shoot?.();
+        }
+      }
+    }
+  }
+  fpsWeapon() { return RIVALS_WEAPONS[this.fps.weapon]; }
+  showFpsHitmarker(hs, kill) {
+    const el = this.c.querySelector('.fps-hitmark'); if (!el) return;
+    el.style.color = kill ? '#ff5252' : hs ? '#ffd400' : '#fff';
+    el.style.opacity = '1';
+    clearTimeout(this._fpsHmT);
+    this._fpsHmT = setTimeout(() => { el.style.opacity = '0'; }, 180);
+  }
+  fireFps() {
+    const f = this.fps; if (!f || this.dead || f.reloading) return;
+    const w = this.fpsWeapon(), now = this.t;
+    if (now - (f.lastShot || -9) < w.interval) return;
+    if (f.ammo[f.weapon] <= 0) { this.fpsReload(); return; }
+    f.lastShot = now; f.ammo[f.weapon]--;
+    const pellets = w.pellets || 1;
+    let best = null; // {kind, ref, point, hs, dmg}
+    for (let i = 0; i < pellets; i++) {
+      const dir = new THREE.Vector3();
+      this.camera.getWorldDirection(dir);
+      dir.x += (Math.random() - 0.5) * w.spread * 2; dir.y += (Math.random() - 0.5) * w.spread * 2; dir.z += (Math.random() - 0.5) * w.spread * 2;
+      dir.normalize();
+      const ray = new THREE.Raycaster(this.camera.position.clone(), dir, 0.5, w.range);
+      ray.camera = this.camera; // sprites (name tags) need raycaster.camera set, else raycast throws
+      const targets = [];
+      for (const p of this.players.values()) { p.char.updateMatrixWorld(); targets.push(p.char); }
+      for (const b of this._fpsBots) if (!b.dead) { b.char.updateMatrixWorld(); targets.push(b.char); }
+      const hits = ray.intersectObjects(targets, true);
+      let pHit = null, pDist = Infinity, pRef = null, pKind = null;
+      for (const h of hits) {
+        let o = h.object, ref = null, kind = null;
+        while (o) {
+          for (const p of this.players.values()) if (p.char === o) { ref = p; kind = 'player'; break; }
+          if (!ref) for (const b of this._fpsBots) if (!b.dead && b.char === o) { ref = b; kind = 'bot'; break; }
+          if (ref || !o.parent) break;
+          o = o.parent;
+        }
+        if (ref && h.distance < pDist) { pDist = h.distance; pHit = h; pRef = ref; pKind = kind; }
+      }
+      const from = this.pos.clone(); from.y += 3.4;
+      const wallHits = ray.intersectObjects([...this.meshes.values()], false);
+      const wDist = wallHits.length ? wallHits[0].distance : Infinity;
+      if (pHit && pDist < wDist) {
+        const localY = pHit.point.y - pRef.char.position.y;
+        const hs = localY > 4.6;
+        const dmg = hs ? w.hs : w.dmg;
+        if (!best || dmg > best.dmg) best = { kind: pKind, ref: pRef, point: pHit.point, hs, dmg };
+        this.fpsTracer(from, pHit.point, w.tracer);
+      } else if (wDist < Infinity) {
+        this.fpsTracer(from, wallHits[0].point, w.tracer);
+      } else {
+        this.fpsTracer(from, this.camera.position.clone().addScaledVector(dir, w.range), w.tracer);
+      }
+    }
+    sfx.shoot?.() || sfx.click?.();
+    if (best) {
+      if (best.kind === 'player') {
+        this.send({ t: 'gearHit', id: best.ref.id, dmg: best.dmg });
+        const willKill = (best.ref._rhp ?? 100) - best.dmg <= 0;
+        this.showFpsHitmarker(best.hs, willKill);
+        best.ref._rhp = (best.ref._rhp ?? 100) - best.dmg;
+      } else {
+        this.showFpsHitmarker(best.hs, best.ref.hp - best.dmg <= 0);
+        this.damageFpsBot(best.ref, best.dmg);
+      }
+    }
+    this.updateFpsHUD();
+  }
+  damageFpsBot(bot, dmg) {
+    if (bot.dead) return;
+    bot.hp -= dmg;
+    if (bot.hp <= 0) {
+      bot.dead = true; bot.respawnT = 3; bot.char.visible = false;
+      this.onKill(bot.name);
+      this.sys(`💥 You eliminated ${bot.name}!`);
+    }
+  }
+  fpsReload() {
+    const f = this.fps; if (!f || f.reloading || this.dead) return;
+    const w = this.fpsWeapon();
+    if (f.ammo[f.weapon] >= w.mag) return;
+    f.reloading = true; this.updateFpsHUD();
+    sfx.click?.();
+    setTimeout(() => { if (this.destroyed) return; f.reloading = false; f.ammo[f.weapon] = w.mag; this.updateFpsHUD(); }, w.reload * 1000);
+  }
+  fpsSwitch(slot) {
+    const f = this.fps; if (!f || this.dead) return;
+    const id = FPS_WEAPONS[slot - 1];
+    if (!id || f.weapon === id) return;
+    f.weapon = id; f.reloading = false;
+    sfx.click?.(); this.updateFpsHUD();
+  }
+  applyFpsDamage(dmg, from) {
+    if (this.dead || !this.fps) return;
+    this.health -= dmg;
+    this.updateHud();
+    sfx.oof();
+    if (this.health <= 0) { this.health = 0; this.die(); }
+  }
+  fpsTick(dt) {
+    if (!this.world?.fps || !this.fps) return;
+    const f = this.fps;
+    if (!f.team && (this.o.test || this.myId)) {
+      f.team = this.computeFpsTeam();
+      if (this._fpsBots.length && this._fpsBots[0].team === f.team) this.removeFpsBots();
+      this.maybeSpawnBots();
+      this.respawnAtBase();
+      this.updateFpsHUD();
+    }
+    if (f.phase === 'over') { f.overT -= dt; if (f.overT <= 0) this.resetFpsMatch(); return; }
+    if (f.phase === 'roundEnd') { f.endT -= dt; if (f.endT <= 0) this.nextFpsRound(); return; }
+    if (!f.team) return; // waiting on team assignment (real play: until 'welcome')
+    f.timeLeft -= dt;
+    // Control-point capture: only one team present moves the point their way;
+    // both present = contested (frozen); empty = drifts back toward neutral.
+    const pt = this.fpsPoint();
+    if (pt) {
+      let redIn = 0, blueIn = 0;
+      const inZone = (x, z) => { const dx = x - pt.x, dz = z - pt.z; return dx * dx + dz * dz < pt.r * pt.r; };
+      if (!this.dead && inZone(this.pos.x, this.pos.z)) { if (f.team === 'red') redIn++; else blueIn++; }
+      for (const p of this.players.values()) if (inZone(p.char.position.x, p.char.position.z)) { if (this.fpsTeamOf(p.id) === 'red') redIn++; else blueIn++; }
+      for (const b of this._fpsBots) if (!b.dead && inZone(b.char.position.x, b.char.position.z)) { if (b.team === 'red') redIn++; else blueIn++; }
+      if (redIn > 0 && blueIn === 0) f.capV = Math.min(100, f.capV + FPS_CAP_RATE * dt);
+      else if (blueIn > 0 && redIn === 0) f.capV = Math.max(-100, f.capV - FPS_CAP_RATE * dt);
+      else if (redIn === 0 && blueIn === 0 && f.capV !== 0) f.capV -= Math.sign(f.capV) * Math.min(Math.abs(f.capV), FPS_DECAY_RATE * dt);
+      if (f.capV >= 100) f.owner = 'red';
+      else if (f.capV <= -100) f.owner = 'blue';
+      if (f.owner === 'red') f.score.red += dt;
+      else if (f.owner === 'blue') f.score.blue += dt;
+      if (this._fpsRing) {
+        const col = f.owner === 'red' ? 0xff5252 : f.owner === 'blue' ? 0x448aff : 0xffd400;
+        this._fpsRing.material.color.setHex(col);
+        const s = 1 + Math.sin(this.t * 2.5) * 0.05;
+        this._fpsRing.scale.set(s, s, 1);
+      }
+    }
+    if (f.score.red >= FPS_SCORE_TARGET || f.score.blue >= FPS_SCORE_TARGET || f.timeLeft <= 0) this.endFpsRound();
+    this.maybeSpawnBots();
+    this.fpsBotsTick(dt);
+    this.updateFpsHUD();
+  }
+  updateFpsHUD() {
+    const el = this.c.querySelector('.fps-hud');
+    if (!el || !this.fps) return;
+    if (!this.world?.fps) { el.style.display = 'none'; return; }
+    const f = this.fps;
+    const secs = Math.max(0, Math.ceil(f.timeLeft));
+    const w = this.fpsWeapon();
+    const redW = Math.max(0, Math.round(f.capV)), blueW = Math.max(0, -Math.round(f.capV));
+    el.innerHTML = `🎯 STRIKE ARENA · ROUND ${f.round} &nbsp; <b style="color:#ff5252">RED ${Math.floor(f.score.red)}</b> — ${Math.floor(f.score.blue)} <b style="color:#448aff">BLUE</b> &nbsp; <span class="tag-timer">${secs}s</span><br>` +
+      `<span style="font-size:12px">YOU: ${f.team ? f.team.toUpperCase() : '…'} · ${w.name} ${f.reloading ? 'RELOADING…' : f.ammo[f.weapon] + ' / ' + w.mag} · [1] Rifle [2] Shotgun [3] Sniper · 💥 ${this.kills}</span>` +
+      `<div style="height:8px;background:rgba(255,255,255,.25);border-radius:4px;margin-top:4px;overflow:hidden;display:flex"><div style="width:${redW}%;background:#ff5252"></div><div style="width:${blueW}%;background:#448aff;margin-left:auto"></div></div>` +
+      `<div style="font-size:12px">${f.owner ? '🔒 ' + f.owner.toUpperCase() + ' holds the point — stand on it to take it back!' : '⚪ Point is neutral — stand on it to capture!'}</div>`;
+    el.style.display = 'block';
+  }
+  endFpsRound() {
+    const f = this.fps; if (!f || f.phase !== 'playing') return;
+    let winner = null;
+    if (f.score.red >= FPS_SCORE_TARGET || f.score.blue >= FPS_SCORE_TARGET) winner = f.score.red >= f.score.blue ? 'red' : 'blue';
+    else if (f.timeLeft <= 0) winner = f.score.red > f.score.blue ? 'red' : f.score.blue > f.score.red ? 'blue' : f.owner;
+    if (winner) f.rounds[winner]++;
+    const won = winner === f.team;
+    f.phase = 'roundEnd'; f.endT = 4;
+    this.showBig(winner ? (won ? '✅ ROUND WON!' : '❌ ROUND LOST') : '🤝 ROUND DRAW', 3000);
+    if (winner) this.sys(`🏆 ${winner.toUpperCase()} takes round ${f.round} — ${f.rounds.red}–${f.rounds.blue}`);
+    else this.sys('🤝 Round draw — no point awarded.');
+    if (f.rounds.red >= FPS_ROUNDS_TO_WIN || f.rounds.blue >= FPS_ROUNDS_TO_WIN) {
+      const champ = f.rounds.red >= FPS_ROUNDS_TO_WIN ? 'red' : 'blue';
+      f.phase = 'over'; f.overT = 8;
+      const iWon = champ === f.team;
+      this.showBig(iWon ? '🏆 YOUR TEAM WINS THE MATCH!' : `🏆 ${champ.toUpperCase()} TEAM WINS`, 6000);
+      this.sys(`🏆 ${champ.toUpperCase()} team wins Strike Arena, ${f.rounds.red}–${f.rounds.blue}!`);
+      if (iWon) { this.send({ t: 'win' }); sfx.win(); } else sfx.oof();
+    } else if (winner) won ? sfx.win() : sfx.oof();
+    this.updateFpsHUD();
+  }
+  nextFpsRound() {
+    const f = this.fps;
+    f.round++; f.score = { red: 0, blue: 0 }; f.timeLeft = FPS_ROUND_MS / 1000; f.capV = 0; f.owner = null; f.phase = 'playing';
+    for (const k of Object.keys(f.ammo)) f.ammo[k] = RIVALS_WEAPONS[k].mag;
+    f.reloading = false;
+    this.health = 100;
+    this.respawnAtBase();
+    for (const b of this._fpsBots) this.respawnFpsBot(b);
+    this.showBig(`ROUND ${f.round}`, 1800);
+    this.updateFpsHUD();
+  }
+  resetFpsMatch() {
+    const keepTeam = this.fps.team;
+    this.fps = this.newFpsState();
+    this.fps.team = keepTeam;
+    this.health = 100;
+    this.respawnAtBase();
+    for (const b of this._fpsBots) this.respawnFpsBot(b);
+    this.sys('🎯 New Strike Arena match — capture the point, first to 5 rounds!');
+    this.updateFpsHUD();
+  }
   ownedVehicle() {
     const inv = this.me?.inventory || [];
     const sel = this.me?.avatar?.vehicle;
@@ -559,6 +944,7 @@ export class Game {
       dir.x += (Math.random() - 0.5) * w.spread * 2; dir.y += (Math.random() - 0.5) * w.spread * 2; dir.z += (Math.random() - 0.5) * w.spread * 2;
       dir.normalize();
       const ray = new THREE.Raycaster(this.camera.position.clone(), dir, 0.5, w.range);
+      ray.camera = this.camera; // sprites (name tags) need raycaster.camera set, else raycast throws
       const targets = [];
       for (const p of this.players.values()) { p.char.updateMatrixWorld(); targets.push(p.char); }
       const hits = ray.intersectObjects(targets, true);
@@ -1455,6 +1841,7 @@ export class Game {
   }
   useGear() {
     if (this.rivals) { this.fireRivals(); return; }
+    if (this.fps) { this.fireFps(); return; }
     const id = this.me.avatar?.gear;
     if (!id || id === 'gear_none' || this.dead || this.o.test) return;
     const now = this.t;
@@ -1553,7 +1940,7 @@ export class Game {
     }
   }
   spawn(first = false) {
-    const p = this.checkpoint ? this.checkpoint.clone() : findSpawn(this.world);
+    const p = this.fps?.team ? this.fpsSpawnPoint(this.fps.team) : this.checkpoint ? this.checkpoint.clone() : findSpawn(this.world);
     this.pos.copy(p).add(new THREE.Vector3((Math.random() - 0.5) * 2, 0.2, (Math.random() - 0.5) * 2));
     this.vel.set(0, 0, 0); this.dead = false; this.health = 100;
     this.jumpBuf = 0; this.coyote = 0; this.jumping = false;
@@ -1593,8 +1980,9 @@ export class Game {
       if (down && !e.repeat && e.code === 'F4' && this.isStaff()) { e.preventDefault(); this.toggleFunPanel(); return; }
       if (down && !e.repeat && e.code === 'KeyV') { this.toggleVehicle(); return; }
       if (down && !e.repeat && e.code === 'KeyE' && this.vehicleId) { this.exitVehicle(); return; }
-      if (down && !e.repeat && /^Digit[1-9]$/.test(e.code)) { if (this.rivals && +e.code.slice(5) <= 2) this.rivalsSwitch(+e.code.slice(5)); return; }
+      if (down && !e.repeat && /^Digit[1-9]$/.test(e.code)) { if (this.rivals && +e.code.slice(5) <= 2) this.rivalsSwitch(+e.code.slice(5)); else if (this.fps && +e.code.slice(5) <= 3) this.fpsSwitch(+e.code.slice(5)); return; }
       if (down && !e.repeat && e.code === 'KeyR' && this.rivals) { this.rivalsReload(); return; }
+      if (down && !e.repeat && e.code === 'KeyR' && this.fps) { this.fpsReload(); return; }
       this.keys[e.code] = down;
       if (down && !e.repeat && e.code === 'KeyW') { const now = performance.now(); if (now - (this.lastW || 0) < 280) this.sprinting = true; this.lastW = now; }
       if (!down && e.code === 'KeyW') this.sprinting = false;
@@ -1683,8 +2071,8 @@ export class Game {
         this.myId = m.id; this.me.club = !!m.club; this.me.badge = m.badge; this.hideLoading(); this.setMoney(m);
         for (const p of m.players) this.addPlayer(p);
         this.updateLeaderboard();
-      } else if (m.t === 'joined') { this.addPlayer(m); this.updateLeaderboard(); }
-      else if (m.t === 'left') { const p = this.players.get(m.id); if (p) { this.scene.remove(p.char); if (p.pet) this.scene.remove(p.pet); this.players.delete(m.id); } this.updateLeaderboard(); }
+      } else if (m.t === 'joined') { this.addPlayer(m); this.updateLeaderboard(); this.maybeSpawnBots(); }
+      else if (m.t === 'left') { const p = this.players.get(m.id); if (p) { this.scene.remove(p.char); if (p.pet) this.scene.remove(p.pet); this.players.delete(m.id); } this.updateLeaderboard(); this.maybeSpawnBots(); }
       else if (m.t === 'S') {
         for (const s of m.p) { if (s[0] === this.myId) continue; const p = this.players.get(s[0]); if (p) p.target = s; }
       } else if (m.t === 'chat') this.onChat(m);
@@ -1705,6 +2093,7 @@ export class Game {
         else { stopJam(); this.sys(`🎵 ${nm} stopped the jam`); }
       }
       else if (m.t === 'gearHit' && this.rivals && m.dmg) { this.applyRivalsDamage(m.dmg, m.from); }
+      else if (m.t === 'gearHit' && this.fps && m.dmg) { this.applyFpsDamage(m.dmg, m.from); }
       else if (m.t === 'gearHit') { if (!this.dead) this.die(); }
       else if (m.t === 'scriptTpDo') { this.pos.set(Number(m.x) || 0, Number(m.y) || 10, Number(m.z) || 0); this.vel.set(0, 0, 0); }
       else if (m.t === 'tp') { this.pos.set(m.x, m.y, m.z); this.vel.set(0, 0, 0); this.sys('Teleported by a moderator'); }
@@ -1957,6 +2346,7 @@ export class Game {
       this.updateDynamics();
       this.physics(dt * (this.fpSlowMo ? 0.5 : this.fpFastFwd ? 1.5 : 1));
       if (this.firing && this.rivals && this.rivalsWeapon().auto) this.fireRivals();
+      if (this.firing && this.fps && this.fpsWeapon().auto) this.fireFps();
       this.char.position.copy(this.pos);
       let dy = (this.facing ?? 0) - this.char.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       this.char.rotation.y += dy * Math.min(1, dt * 14);
@@ -2000,6 +2390,8 @@ export class Game {
     if (this.stealablob) { try { this.stealablob.tick(dt, this.t); } catch (e) { console.warn('stealablob tick error:', e); } }
     // Tag mode
     if (this.world?.tag) { try { this.tagTick(dt); this.updateTagHUD(); } catch (e) { console.warn('tag tick error:', e); } }
+    // Strike Arena FPS mode
+    if (this.world?.fps) { try { this.fpsTick(dt); } catch (e) { console.warn('fps tick error:', e); } }
     // gear swing animation
     if (this.gearSwingT > 0 && !this.dead) {      this.gearSwingT -= dt;
       const rarm = this.char.userData.limbs?.rarm;
@@ -2093,6 +2485,8 @@ export class Game {
   destroy() {
     stopJam();
     this.stealablob?.destroy();
+    this.removeFpsBots();
+    if (this._fpsRing) { this.scene.remove(this._fpsRing); this._fpsRing = null; }
     this.destroyed = true; cancelAnimationFrame(this.raf);
     removeEventListener('keydown', this.onKey); removeEventListener('keyup', this.onKey); removeEventListener('resize', this.onResize);
     if (document.pointerLockElement) document.exitPointerLock();

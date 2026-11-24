@@ -995,7 +995,51 @@ export function crystalDash() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge, tagArena, crystalDash };
+export function strikeArena() {
+  // Strike Arena: a multi-lane FPS map. Red base north, blue base south,
+  // a mid control point to capture, cover crates and barriers down three
+  // lanes, and two flank platforms for high-ground plays.
+  const w = startWorld('#2e3d5c');
+  w.shooter = true;
+  w.fps = true;
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  P(0, -0.5, 0, 84, 1, 84, '#3d4451', { name: 'StrikeFloor' });
+  const wh = 8;
+  P(0, wh / 2, -42, 84, wh, 2, '#232936', { name: 'WallN' });
+  P(0, wh / 2, 42, 84, wh, 2, '#232936', { name: 'WallS' });
+  P(-42, wh / 2, 0, 2, wh, 84, '#232936', { name: 'WallW' });
+  P(42, wh / 2, 0, 2, wh, 84, '#232936', { name: 'WallE' });
+  // Team bases (red north, blue south) with team spawn pads.
+  P(0, 0, -34, 16, 1, 12, '#c62828', { name: 'RedBase' });
+  P(-4, 0.25, -34, 6, 0.5, 6, '#ef5350', { name: 'SpawnRed', k: 'spawn', m: 'spawn' });
+  P(4, 0.25, -34, 6, 0.5, 6, '#ef5350', { name: 'SpawnRed', k: 'spawn', m: 'spawn' });
+  P(0, 0, 34, 16, 1, 12, '#1565c0', { name: 'BlueBase' });
+  P(-4, 0.25, 34, 6, 0.5, 6, '#42a5f5', { name: 'SpawnBlue', k: 'spawn', m: 'spawn' });
+  P(4, 0.25, 34, 6, 0.5, 6, '#42a5f5', { name: 'SpawnBlue', k: 'spawn', m: 'spawn' });
+  // Mid control point — the objective. Gold pad + corner posts.
+  P(0, 0.25, 0, 14, 0.5, 14, '#ffd400', { name: 'ControlPoint', m: 'neon' });
+  for (const [x, z] of [[-7.5, -7.5], [7.5, -7.5], [-7.5, 7.5], [7.5, 7.5]])
+    P(x, 2, z, 1, 4, 1, '#ffd400', { name: 'PointPost', m: 'neon' });
+  // Cover at the point (just outside the pad so the zone stays open).
+  P(-9, 1.5, 0, 2, 3, 6, '#78909c', { name: 'PointWall' });
+  P(9, 1.5, 0, 2, 3, 6, '#78909c', { name: 'PointWall' });
+  // Lane cover — crates and barriers break sightlines without closing lanes.
+  for (const [x, z] of [[-12, -12], [12, -12], [-12, 12], [12, 12], [-24, -8], [24, 8], [-8, 24], [8, -24], [-24, 16], [24, -16]])
+    P(x, 2, z, 4, 4, 4, '#a1887f', { name: 'Crate', m: 'wood' });
+  P(-16, 1.5, -20, 8, 3, 2, '#ffd54f', { name: 'Barrier' });
+  P(16, 1.5, 20, 8, 3, 2, '#ffd54f', { name: 'Barrier' });
+  P(-16, 1.5, 20, 2, 3, 8, '#ffd54f', { name: 'Barrier' });
+  P(16, 1.5, -20, 2, 3, 8, '#ffd54f', { name: 'Barrier' });
+  // Flank platforms — high ground, reachable by jumping (2 high).
+  P(-26, 2, 0, 10, 1, 10, '#5c6bc0', { name: 'FlankPlatform' });
+  P(26, 2, 0, 10, 1, 10, '#5c6bc0', { name: 'FlankPlatform' });
+  // Coins to grab between fights.
+  for (const [x, z] of [[-18, -18], [18, -18], [-18, 18], [18, 18], [-30, 0], [30, 0]])
+    P(x, 1.5, z, 1.5, 1.5, 1.5, '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' });
+  return w;
+}
+
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge, tagArena, crystalDash, strikeArena };
 Object.assign(templates, genTemplates);
 export { GEN_GAMES };
 
