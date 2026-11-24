@@ -148,7 +148,7 @@ function shade(hex, f) {
 }
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
 // Rounded box — same blocky proportions, softened edges that catch the light.
-function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
+function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
 function attachExtras(root, avatar, opts = {}) {
   const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
   if (petSpec) {
@@ -393,12 +393,12 @@ function buildSlimeHead(g) {
 }
 // Visible soft rounding for blocky characters (u137): R6 blocks read as
 // soft/rounded while staying clearly blocky; same radius for both rigs.
-const ROUND_BEV = 0.22;
+const ROUND_BEV = 0.08;
 const HEADS = {
   head_bugs: { h: 1.3, custom: buildBugsHead },
   head_daffy: { h: 1.3, custom: buildDaffyHead },
   head_slimebody: { h: 1.35, custom: buildSlimeHead },
-  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new RoundedBoxGeometry(1.24, 1.2, 1.24, 4, ROUND_BEV) },
+  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new RoundedBoxGeometry(1.24, 1.2, 1.24, 2, ROUND_BEV) },
   head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },
   head_tall: { h: 1.6, fz: 0.56, fw: 0.95, hs: 0.9, geo: () => new THREE.CylinderGeometry(0.55, 0.55, 1.6, 24) },
@@ -467,7 +467,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   // complex 3D garment in solid colors (no copied textures): torso + collar + placket + buttons + hem
   const clothPart = (w, h, d, material) => {
     const r = Math.max(0.01, Math.min(bev, Math.min(w, h, d) / 2 - 0.01));
-    const g = smooth ? new RoundedBoxGeometry(w, h, d, 4, r) : new THREE.BoxGeometry(w, h, d);
+    const g = smooth ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d);
     const m = new THREE.Mesh(g, material);
     m.castShadow = true; m.receiveShadow = true;
     return m;
@@ -555,7 +555,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     // unit-box parameters, so test by class — head_classic is already rounded.)
     if (smooth && head.geometry instanceof THREE.BoxGeometry && !(head.geometry instanceof RoundedBoxGeometry)) {
       const p = head.geometry.parameters;
-      head.geometry = new RoundedBoxGeometry(p.width, p.height, p.depth, 4, Math.min(bev, Math.min(p.width, p.height, p.depth) / 2 - 0.01));
+      head.geometry = new RoundedBoxGeometry(p.width, p.height, p.depth, 2, Math.min(bev, Math.min(p.width, p.height, p.depth) / 2 - 0.01));
     }
     head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
     const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
