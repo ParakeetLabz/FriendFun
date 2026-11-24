@@ -675,6 +675,46 @@ function safetyContractPage() {
     <p class="muted small">This draft is written in plain language on purpose so every player can understand it. It is not legal advice.</p>`);
 }
 
+// Safety (Phase 1): existing players must agree to the Safety Contract to
+// keep their account. Full-screen and not dismissible — no X, no close, no
+// backdrop-click close. The only way through is checking the box and tapping
+// agree. New signups agree at signup, so they never see this.
+let contractGateOpen = false;
+function showContractGate() {
+  if (contractGateOpen || document.querySelector('.contract-gate-bg')) return;
+  contractGateOpen = true;
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg contract-gate-bg';
+  bg.innerHTML = `
+  <div class="modal modal-wide contract-gate" role="dialog" aria-modal="true" aria-label="FunTopia Safety Contract">
+    <h2>FunTopia Safety Contract</h2>
+    <p class="muted">To keep your account open, please read the Safety Contract and agree to follow it. Every player on FunTopia agrees to this — it is how we keep everyone safe.</p>
+    <div class="contract-body contract-gate-body">${SAFETY_CONTRACT_HTML}</div>
+    <label class="auth-contract contract-gate-check"><input type="checkbox" class="contract-gate-box"> I have read the Safety Contract and I agree to follow it.</label>
+    <div class="contract-gate-err auth-err"></div>
+    <div class="modal-actions"><button class="btn-primary big contract-gate-agree" disabled>I agree — keep my account</button></div>
+  </div>`;
+  document.body.appendChild(bg);
+  const box = bg.querySelector('.contract-gate-box');
+  const btn = bg.querySelector('.contract-gate-agree');
+  const errEl = bg.querySelector('.contract-gate-err');
+  box.onchange = () => { btn.disabled = !box.checked; };
+  btn.onclick = async () => {
+    if (!box.checked) return;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      await api('POST', '/api/me/contract');
+      me.contractAgreed = true;
+      contractGateOpen = false;
+      bg.remove();
+      route();
+    } catch (e) {
+      errEl.textContent = e.message || 'Could not save — please try again.';
+      btn.disabled = false; btn.textContent = 'I agree — keep my account';
+    }
+  };
+}
+
 // ---------- pages ----------
 function loginPage() {
   app.className = 'landing';
@@ -1831,6 +1871,9 @@ async function route() {
   if (!token && seg[0] !== 'horror' && seg[0] !== 'safety-qa') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); showIntro(); return loginPage(); }
   try {
     if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
+    // Safety (Phase 1): existing players must agree to the Safety Contract
+    // before the lobby (or any page) mounts. Agreeing re-runs route().
+    if (!me.contractAgreed) { showContractGate(); return; }
     applyTheme();
     showIntro();
     if (my !== routing) return;

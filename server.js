@@ -178,6 +178,7 @@ async function seed() {
     g('g5', 'Classic Baseplate', 'funtopia', 'The classic. A big grey baseplate.', 'baseplate', 210987, 1500, 90),
     g('g_tag', '🏷️ Tag!', 'funtopia', 'You are IT! Chase your friends and tag them before the timer runs out — bounce pads to escape, speed pads to catch up!', 'tagArena', 0, 0, 0, 30),
     g('g_crystaldash', '💎 Crystal Dash', 'funtopia', 'Race the crystal course! Sprint the straights, hop the stones over the void, ride the moving ferry, dodge the spike strips and touch the big crystal to win!', 'crystalDash', 0, 0, 0, 30),
+    g('g_strikearena', '🎯 Strike Arena', 'funtopia', 'Capture the mid point, hold it to score, and outgun the other team — first to 5 rounds wins Strike Arena!', 'strikeArena', 0, 0, 0, 30),
     g('g_voicelounge', '🎤 Voice Lounge', 'funtopia', 'Call your friends and hang out — voice chat lives here.', 'voiceLounge', 0, 0, 0, 50),
   ];
 
@@ -479,6 +480,16 @@ app.post('/api/me/birthday', auth, async (req, res) => {
   const { error } = await supabase.from('users').update({ birthday: bd }).eq('name', req.user.name);
   if (error) return res.status(500).json({ error: 'Could not save your birthday' });
   res.json({ birthday: bd, ageGroup: ageGroupOf({ birthday: bd }) });
+});
+
+// Safety (Phase 1): existing players agree to the Safety Contract to keep
+// their account — accounts made before the contract existed never agreed.
+app.post('/api/me/contract', auth, async (req, res) => {
+  if (!(await safetyCols())) return res.status(500).json({ error: 'Safety features are not set up yet — the owner needs to run the safety SQL in Supabase' });
+  if (req.user.contract_agreed) return res.json({ ok: true, contractAgreed: true });
+  const { error } = await supabase.from('users').update({ contract_agreed: true }).eq('name', req.user.name);
+  if (error) return res.status(500).json({ error: 'Could not save your agreement' });
+  res.json({ ok: true, contractAgreed: true });
 });
 
 // Safety (Phase 1): adults (18+ by birthday) confirm "I am 18 or older" to

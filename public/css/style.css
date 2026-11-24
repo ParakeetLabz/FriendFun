@@ -1392,6 +1392,13 @@ body.glitching .glitch-overlay { animation: glitchFlicker .1s steps(2) infinite;
 .contract-body h3:first-child { margin-top: 0; }
 .contract-body p, .contract-body li { font-size: 14px; line-height: 1.5; }
 .contract-body ul { padding-left: 20px; margin: 4px 0; }
+/* Safety Contract gate (Phase 1): the contract scrolls inside the modal so
+   the checkbox and agree button stay visible; big touch targets for iPad. */
+.contract-gate-body { max-height: 46vh; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 12px 0; background: var(--card); }
+.contract-gate-check { margin: 12px 0 4px; }
+.modal .contract-gate-check { display: flex; gap: 10px; align-items: flex-start; }
+.contract-gate-check input { width: 22px; height: 22px; }
+.contract-gate-agree { min-height: 44px; }
 /* FunTopia Phase 2 — Parent View (#/parent). Append to public/css/style.css.
    Reuses existing classes (ut-img, friends-row, user-tile, sec-h) where
    possible; only the parent-specific layout is new. */
