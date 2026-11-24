@@ -304,6 +304,16 @@ function settingsPage() {
       <input type="password" class="set-newpw" placeholder="New password (4+ characters)" maxlength="64" autocomplete="new-password">
       <button class="btn-primary set-pw-btn">Update password</button>
     </section>
+    <section class="admin-section"><h3><span class="ic">${icons.shield}</span> Safety</h3>
+      <p class="muted small">Age group: <b>${me.ageGroup === 'adult' ? 'Adult (18+)' : me.ageGroup === 'child' ? 'Child (under 18)' : 'Not set yet'}</b>${me.adultVerified ? ' — adult chat unlocked ✓' : ''}</p>
+      ${me.ageGroup !== 'adult' && me.ageGroup !== 'child' ? `<p class="muted small">Add your birthday so FunTopia knows whether you are a child or an adult. You can only set it once.</p>
+      <label class="set-row"><span>Birthday</span><input type="date" class="set-bday"></label>
+      <button class="btn-primary set-bday-btn">Save my birthday</button>` : ''}
+      ${me.ageGroup === 'adult' && !me.adultVerified ? `<p class="muted small">Adults can confirm "I am 18 or older" to unlock seeing other verified adults' swearing. Kids always see swearing as hashtags.</p>
+      <button class="btn-primary set-adult-btn">I am 18 or older</button>` : ''}
+      ${me.ageGroup === 'child' ? `<p class="muted small">Swearing is hidden for you — yours and anyone else's. Adults cannot message you unless you are in the same family.</p>` : ''}
+      <a class="set-row set-link" href="#/safety-contract"><span><span class="ic">${icons.shield}</span> FunTopia Safety Contract</span><span class="muted">›</span></a>
+    </section>
     <section class="admin-section"><h3>More</h3>
       <a class="set-row set-link" href="#/funai"><span><span class="ic">${icons.sparkles}</span> FunAI — game maker AI</span><span class="muted">›</span></a>
       <a class="set-row set-link" href="#/skinmaker"><span><span class="ic">${icons.palette}</span> AI Skin Maker — FunAI outfits</span><span class="muted">›</span></a>
@@ -343,6 +353,26 @@ function settingsPage() {
       try {
         await api('POST', '/api/me/password', { current: cur, password: nw });
         toast('Password updated'); settingsPage();
+      } catch (e) { toast(e.message, true); }
+    };
+    // Safety (Phase 1): birthday for accounts that don't have one yet, and
+    // the "I am 18 or older" confirmation for adults.
+    const bdayBtn = app.querySelector('.set-bday-btn');
+    if (bdayBtn) bdayBtn.onclick = async () => {
+      const v = app.querySelector('.set-bday').value;
+      if (!v) { toast('Pick your birthday', true); return; }
+      try {
+        const r = await api('POST', '/api/me/birthday', { birthday: v });
+        me.birthday = r.birthday; me.ageGroup = r.ageGroup;
+        toast('Birthday saved'); settingsPage();
+      } catch (e) { toast(e.message, true); }
+    };
+    const adultBtn = app.querySelector('.set-adult-btn');
+    if (adultBtn) adultBtn.onclick = async () => {
+      try {
+        await api('POST', '/api/me/adult-verify', {});
+        me.adultVerified = true;
+        toast('Adult chat unlocked'); settingsPage();
       } catch (e) { toast(e.message, true); }
     };
   });
@@ -595,6 +625,54 @@ function dailyToast(r) {
   }
 }
 
+// ---------- FunTopia Safety Contract (Phase 1) ----------
+// Plain-language draft — the same text as the Safety Contract PDF.
+// No liability shield for the platform, no parent verification at signup.
+const SAFETY_CONTRACT_HTML = `
+<h3>1. Our promise: a safe place for everyone</h3>
+<p>FunTopia is for everyone who follows these rules. You should be able to play, create, and talk with friends without being scared, tricked, or hurt. If something feels wrong, it is not your fault for speaking up. Telling us is always the right thing to do.</p>
+<h3>2. The rules: what you must never do</h3>
+<p>By making an account, you promise you will never:</p>
+<ul>
+<li><b>Act like a predator.</b> Trying to trick, pressure, scare, or take advantage of another player, especially a younger player.</li>
+<li><b>Ask anyone for personal information.</b> Never ask for a real name, home address, school, phone number, password, or where someone lives.</li>
+<li><b>Ask anyone for photos or videos</b> of themselves, and never send photos or videos that someone did not want.</li>
+<li><b>Bully anyone.</b> No mean messages, threats, teasing that will not stop, leaving someone out on purpose to hurt them, or getting others to gang up on a player.</li>
+<li><b>Try to move a chat off FunTopia to trick someone.</b> Never ask a player to talk on another app, in texts, or anywhere else so you can hide what you are doing.</li>
+<li><b>Pretend to be someone else</b> — another player, a parent, or a FunTopia team member.</li>
+</ul>
+<p><b>Not sure if something breaks a rule?</b> Ask yourself: would this scare, trick, or hurt someone? If yes, do not do it.</p>
+<h3>3. If you break the rules</h3>
+<ul>
+<li><b>Your account is removed.</b> You lose your account and you are not welcome back on FunTopia.</li>
+<li><b>What you did is your responsibility alone.</b> You have full liability for what you have done. It is not blamed on the player you hurt, and it is not blamed on other players.</li>
+<li><b>You can be taken to court.</b> The person you hurt, and their family, can take you to court as an individual for what you did.</li>
+<li><b>You cannot sue FunTopia</b> for removing you or for reporting what you did.</li>
+</ul>
+<p>FunTopia will keep a record of serious reports and, when the law says to, will share them with the police or other people whose job is to keep kids safe.</p>
+<h3>4. FunTopia's promise to you</h3>
+<p>Safety is not just your job. It is our job too. FunTopia promises to:</p>
+<ul>
+<li><b>Fix safety problems.</b> When we find a problem, we will work to fix it — not ignore it and not hide it.</li>
+<li><b>Show that FunTopia is safe.</b> We will be open about how we keep players safe, so players and parents can see it and trust it.</li>
+<li><b>Have real people checking for predators.</b> FunTopia has a safety team — real people whose job is to look for predatory behavior, read reports, and act fast.</li>
+<li><b>Act on reports.</b> When a report comes in, the safety team will look at it and take action when the rules were broken.</li>
+</ul>
+<h3>5. Accounts: verification and email</h3>
+<p>Making a FunTopia account is not quick on purpose. A harder sign-up helps keep bad actors out. Every account needs <b>verification</b> — you have to prove you are a real person before you can play. Every account needs a <b>real email address</b> — we need it so we can contact the account holder, and so safety reports and warnings have somewhere to go. Keep your password secret. Never share it, not even with a friend.</p>
+<h3>6. Parent accounts</h3>
+<p>A parent can have a <b>parent account</b> linked to their child's account. A parent account can <b>view what the child's account is doing</b> on FunTopia — the games they play, who they talk to, and the reports linked to their account. Parents can use what they see to talk with their child and to report anything that worries them.</p>
+<h3>7. How to report someone</h3>
+<p>If someone breaks the rules, scares you, or asks you for personal information or photos: <b>tap Report — it only takes one tap.</b> You can report a player, a message, or a game. Your report goes <b>straight to the FunTopia safety team</b>. You will not get in trouble for making a report in good faith, even if the team finds no rule was broken. If you ever feel in danger right now, tell a parent, a trusted adult, or the police right away. Do not wait for FunTopia.</p>
+<p><b>Agreeing to this contract:</b> when you create a FunTopia account and tap Agree, you are saying: I have read this contract, I understand it, and I will follow it.</p>`;
+
+function safetyContractPage() {
+  mount('settings', `<h1>FunTopia Safety Contract</h1>
+    <p class="muted">The agreement every player agrees to when they create a FunTopia account. <span class="tag">DRAFT</span></p>
+    <div class="contract-body">${SAFETY_CONTRACT_HTML}</div>
+    <p class="muted small">This draft is written in plain language on purpose so every player can understand it. It is not legal advice.</p>`);
+}
+
 // ---------- pages ----------
 function loginPage() {
   app.className = 'landing';
@@ -611,6 +689,12 @@ function loginPage() {
       <form class="auth-form">
         <label>Username<input name="username" autocomplete="username" placeholder="Don't use your real name" required></label>
         <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="At least 4 characters" required></label>
+        <div class="auth-signup-fields">
+          <label>Email<input name="email" type="email" autocomplete="email" placeholder="Needed for safety reports"></label>
+          <label>Birthday<input name="birthday" type="date"></label>
+          <details class="contract-details"><summary>Read the FunTopia Safety Contract</summary><div class="contract-body">${SAFETY_CONTRACT_HTML}</div></details>
+          <label class="auth-contract"><input type="checkbox" name="contract"> I have read the Safety Contract and I agree to follow it.</label>
+        </div>
         <div class="auth-err"></div>
         <button class="btn-primary big" type="submit">Sign Up</button>
         <p class="auth-fine">Start with ${ECON.START_TIX} FunTix free!</p>
@@ -622,11 +706,27 @@ function loginPage() {
   app.querySelectorAll('.auth-tabs button').forEach(b => b.onclick = () => {
     mode = b.dataset.m; app.querySelectorAll('.auth-tabs button').forEach(x => x.classList.toggle('active', x === b));
     form.querySelector('button[type=submit]').textContent = mode === 'signup' ? 'Sign Up' : 'Log In';
+    // Safety (Phase 1): email, birthday + contract agreement are signup-only.
+    form.querySelector('.auth-signup-fields').style.display = mode === 'signup' ? '' : 'none';
   });
   form.onsubmit = async e => {
     e.preventDefault();
     try {
-      const r = await api('POST', mode === 'signup' ? '/api/signup' : '/api/login', { username: form.username.value.trim(), password: form.password.value });
+      const body = { username: form.username.value.trim(), password: form.password.value };
+      if (mode === 'signup') {
+        // Safety (Phase 1): validate email + birthday + contract before the
+        // server ever sees the request (the server validates again too).
+        const errEl = form.querySelector('.auth-err');
+        const email = form.email.value.trim();
+        const birthday = form.birthday.value;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'Enter a real email address — safety reports need somewhere to go'; return; }
+        if (!birthday) { errEl.textContent = 'Enter your birthday'; return; }
+        const bd = new Date(birthday + 'T00:00:00Z');
+        if (isNaN(bd.getTime()) || bd > new Date()) { errEl.textContent = 'Enter a real birthday'; return; }
+        if (!form.contract.checked) { errEl.textContent = 'You have to read and agree to the Safety Contract to play'; return; }
+        Object.assign(body, { email, birthday, contractAgreed: true });
+      }
+      const r = await api('POST', mode === 'signup' ? '/api/signup' : '/api/login', body);
       token = r.token; localStorage.setItem('ff_token', token);
       me = await api('GET', '/api/me');
       addAccount(me.name, token);
@@ -1713,7 +1813,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', '2ui', 'trades', 'trade', 'pets', 'tokens']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', '2ui', 'trades', 'trade', 'pets', 'tokens', 'safety-contract']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -1763,6 +1863,7 @@ async function route() {
       case 'club': return clubPage();
       case 'admin': if (me && me.owner) { location.hash = '#/owner'; return; } return await adminPage();
       case 'settings': return settingsPage();
+      case 'safety-contract': return safetyContractPage();
       case 'owner': return await ownerPage();
       case 'hacker': if (me && me.owner) { try { if (!hackMod) hackMod = await import('./hacker.js?v=bbfe7e93'); hackMod.openHackerPanel({ api, toast, me }); } catch {} } history.replaceState(null, '', '#/home'); if (overlayMode) window.__clearOverlayApp(); return renderLobby(); // phone alt to typing "hack" (unlinked; non-owners land on home)
 

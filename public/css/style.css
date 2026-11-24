@@ -1380,3 +1380,15 @@ body.glitching .glitch-overlay { animation: glitchFlicker .1s steps(2) infinite;
 /* Studded texture: subtle raised-dot pattern on the lobby panel + game cards. */
 .lb-panel, .game-card { background-image: radial-gradient(circle at 50% 50%, rgba(0,0,0,.055) 2.5px, transparent 3px); background-size: 20px 20px; }
 .lb-feat-thumb { background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,.22) 3px, transparent 3.5px); background-size: 22px 22px; }
+
+/* FunTopia Safety (Phase 1): signup contract + contract page. */
+.auth-signup-fields { display: grid; gap: 0; }
+.auth-contract { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; font-size: 14px; line-height: 1.4; }
+.auth-contract input { width: auto; margin-top: 2px; flex-shrink: 0; }
+.contract-details { border: 1px solid #c8c8c8; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 13px; background: #fff; }
+.contract-details summary { font-weight: 800; cursor: pointer; }
+.contract-details .contract-body { max-height: 260px; overflow-y: auto; margin-top: 10px; }
+.contract-body h3 { margin: 14px 0 4px; font-size: 16px; }
+.contract-body h3:first-child { margin-top: 0; }
+.contract-body p, .contract-body li { font-size: 14px; line-height: 1.5; }
+.contract-body ul { padding-left: 20px; margin: 4px 0; }

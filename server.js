@@ -10,6 +10,7 @@ import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
 import { createFamily } from './family.js';
+import { BAD, ageYears, ageGroupOf, isAdultUser, isChildUser, canSwear, safetyFilter, chatFilter, validEmail, validBirthday, adultChildBlocked } from './safety.js';
 import { createVersion } from './version.js';
 import { createTrade } from './trade.js';
 import { createTwoUi } from './twoui.js';
@@ -251,11 +252,48 @@ function gameSummary(g) {
   let playing = 0; for (const [k, r] of rooms) if (k === g.id || k.startsWith(g.id + ':')) playing += r.players.size;
   return { id: g.id, name: g.name, creator: g.creator, visits: g.visits, likes: g.likes, dislikes: g.dislikes, playing, thumbnail: g.thumbnail, updated: g.updated, sky: g.world?.sky, maxPlayers: g.max_players || 30, featured: !!g.featured || featuredGames.has(g.id), is2ui: !!g.world?.twoUi };
 }
-const BAD = ['damn', 'hell', 'stupid', 'idiot', 'dumb', 'crap', 'shut up', 'loser'];
 function filter(text) {
-  let t = String(text).slice(0, 200);
+  // Links + addresses are stripped for everyone, everywhere (safety first);
+  // swearing stays per-recipient — see chatFilter() in safety.js.
+  let t = safetyFilter(String(text).slice(0, 200));
   for (const w of BAD) t = t.replace(new RegExp('\\b' + w + '\\b', 'gi'), m => '#'.repeat(m.length));
   return t;
+}
+
+// ---------- FunTopia Safety (Phase 1) ----------
+// New users-table columns (email, birthday, adult_verified, contract_agreed)
+// need supabase_funtopia_safety_p1.sql run in Supabase. Until then the
+// server keeps working without them (signup still validates, just doesn't
+// persist the new fields) and logs a warning — a deploy must never break
+// signup while the owner runs the SQL.
+let safetyColsOk = null, safetyColsAt = 0;
+async function safetyCols() {
+  if (safetyColsOk !== null && Date.now() - safetyColsAt < 60000) return safetyColsOk;
+  const { error } = await supabase.from('users').select('email,birthday,adult_verified,contract_agreed').limit(1);
+  safetyColsOk = !error; safetyColsAt = Date.now();
+  if (!safetyColsOk) console.warn('[safety] users table is missing safety columns (email, birthday, adult_verified, contract_agreed) — run supabase_funtopia_safety_p1.sql in Supabase');
+  return safetyColsOk;
+}
+// Family lookup, cached 60s: the "trusted friend" link for adult/child chat.
+// A mom in the same family as her kid can talk to them; strangers cannot.
+// (FunTopia never asks anyone — especially kids — for a home address.)
+const familyCache = new Map();
+async function familyIdOf(username) {
+  const k = key(username);
+  const hit = familyCache.get(k);
+  if (hit && Date.now() - hit.at < 60000) return hit.id;
+  let id = null;
+  try {
+    const { data } = await supabase.from('families').select('id').contains('members', [k]).maybeSingle();
+    id = data?.id || null;
+  } catch { id = null; }
+  familyCache.set(k, { id, at: Date.now() });
+  return id;
+}
+async function sameFamily(a, b) {
+  const fa = await familyIdOf(a);
+  if (!fa) return false;
+  return fa === await familyIdOf(b);
 }
 
 // http
@@ -281,9 +319,15 @@ async function auth(req, res, next) {
 }
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, email, birthday, contractAgreed } = req.body || {};
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username || '')) return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or _' });
   if (!password || password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  // Safety (Phase 1): an email so safety reports have somewhere to go, a
+  // birthday so we know who is a child and who is an adult, and the Safety
+  // Contract must be agreed to. No parent verification at signup.
+  if (!validEmail(email)) return res.status(400).json({ error: 'Enter a real email address — safety reports need somewhere to go' });
+  if (!validBirthday(birthday)) return res.status(400).json({ error: 'Enter your real birthday' });
+  if (contractAgreed !== true) return res.status(400).json({ error: 'You have to read and agree to the Safety Contract to play' });
   const { data: existing } = await supabase.from('users').select('name').eq('name', key(username)).maybeSingle();
   if (existing) return res.status(400).json({ error: 'That username is taken' });
 
@@ -294,6 +338,8 @@ app.post('/api/signup', async (req, res) => {
     friends: [], requests: [], favorites: [], recent: [], earnedBadges: [], bio: '',
     clubForever: false, clubUntil: 0,
   };
+  // Stored only once the safety columns exist (see safetyCols above).
+  if (await safetyCols()) Object.assign(userData, { email: String(email).trim().toLowerCase(), birthday: String(birthday).trim(), adult_verified: false, contract_agreed: true });
   const { data: user, error: uErr } = await supabase.from('users').insert(userData).select().single();
   if (uErr) return res.status(500).json({ error: uErr.message });
 
@@ -413,7 +459,30 @@ app.get('/api/me', auth, async (req, res) => {
     if (u.avatar?.head === 'head_slimebody') { u.avatar = { ...u.avatar, head: 'head_classic' }; upd.avatar = u.avatar; }
     await supabase.from('users').update(upd).eq('name', u.name);
   }
-  res.json({ ...await publicUser(u), daily, streak: streak || 0, newBadges, funtix: u.funtix, inventory: u.inventory, requests: u.requests, friendList: u.friends, favorites: u.favorites, recent: u.recent, clubUntil: u.clubUntil || 0, clubForever: isAdmin(u) || !!u.clubForever, aiAccess: isOwner(u) || isAdmin(u) || !!u.aiAccess });
+  res.json({ ...await publicUser(u), daily, streak: streak || 0, newBadges, funtix: u.funtix, inventory: u.inventory, requests: u.requests, friendList: u.friends, favorites: u.favorites, recent: u.recent, clubUntil: u.clubUntil || 0, clubForever: isAdmin(u) || !!u.clubForever, aiAccess: isOwner(u) || isAdmin(u) || !!u.aiAccess, birthday: u.birthday || null, ageGroup: ageGroupOf(u), adultVerified: !!u.adult_verified, contractAgreed: !!u.contract_agreed });
+});
+
+// Safety (Phase 1): existing players set a birthday once — age-gating needs
+// it, and accounts made before signup asked for it don't have one yet.
+app.post('/api/me/birthday', auth, async (req, res) => {
+  if (!(await safetyCols())) return res.status(500).json({ error: 'Safety features are not set up yet — the owner needs to run the safety SQL in Supabase' });
+  if (req.user.birthday) return res.status(400).json({ error: 'Your birthday is already set' });
+  const bd = String(req.body?.birthday || '').trim();
+  if (!validBirthday(bd)) return res.status(400).json({ error: 'Enter your real birthday' });
+  const { error } = await supabase.from('users').update({ birthday: bd }).eq('name', req.user.name);
+  if (error) return res.status(500).json({ error: 'Could not save your birthday' });
+  res.json({ birthday: bd, ageGroup: ageGroupOf({ birthday: bd }) });
+});
+
+// Safety (Phase 1): adults (18+ by birthday) confirm "I am 18 or older" to
+// unlock seeing other verified adults' swearing. Children can never verify.
+app.post('/api/me/adult-verify', auth, async (req, res) => {
+  if (!(await safetyCols())) return res.status(500).json({ error: 'Safety features are not set up yet' });
+  if (!isAdultUser(req.user)) return res.status(400).json({ error: 'Only players 18 or older can verify as an adult' });
+  if (req.user.adult_verified) return res.json({ adultVerified: true });
+  const { error } = await supabase.from('users').update({ adult_verified: true }).eq('name', req.user.name);
+  if (error) return res.status(500).json({ error: 'Could not save that' });
+  res.json({ adultVerified: true });
 });
 
 // Change own password
@@ -1748,7 +1817,7 @@ app.get('/api/dms', auth, async (req, res) => {
     if (!convos.has(other)) convos.set(other, { name: other, lastText: m.text, lastCreated: m.created, unread: 0 });
     if (m.recipient === me && !m.read) convos.get(other).unread++;
   }
-  res.json([...convos.values()]);
+  res.json([...convos.values()].map(c => ({ ...c, lastText: chatFilter(c.lastText, req.user) })));
 });
 
 app.get('/api/dm/:name', auth, async (req, res) => {
@@ -1760,16 +1829,22 @@ app.get('/api/dm/:name', auth, async (req, res) => {
     .or(`and(sender.eq.${me},recipient.eq.${other}),and(sender.eq.${other},recipient.eq.${me})`)
     .order('created', { ascending: true }).limit(200);
   await supabase.from('dms').update({ read: true }).eq('recipient', me).eq('sender', other).eq('read', false);
-  res.json(data || []);
+  // Safety (Phase 1): each reader sees swearing filtered for THEM.
+  res.json((data || []).map(m => ({ ...m, text: chatFilter(m.text, req.user) })));
 });
 
 app.post('/api/dm/:name', auth, async (req, res) => {
   const me = req.user.name;
   if (muteState(req.user)) return res.status(403).json({ error: 'You are muted and cannot send messages right now.' });
-  const text = String(req.body?.text || '').trim().slice(0, 500);
+  // Safety (Phase 1): links + addresses are stripped before the message is
+  // stored; swearing is filtered per reader when the message is read.
+  const text = safetyFilter(String(req.body?.text || '').trim().slice(0, 500));
   if (!text) return res.status(400).json({ error: 'Empty message' });
-  const { data: u } = await supabase.from('users').select('name').eq('name', key(req.params.name)).maybeSingle();
+  const { data: u } = await supabase.from('users').select('name,birthday').eq('name', key(req.params.name)).maybeSingle();
   if (!u || u.name === me) return res.status(400).json({ error: 'Invalid user' });
+  // Safety (Phase 1): adults cannot message children unless they are in the
+  // same family (trusted friend). Unknown birthday = treated as a child.
+  if (adultChildBlocked(req.user, u, await sameFamily(me, u.name))) return res.status(403).json({ error: 'Adults cannot message children unless you are in the same family' });
   const { data, error } = await supabase.from('dms').insert({ sender: me, recipient: u.name, text, created: Date.now() }).select().single();
   if (error) return res.status(500).json({ error: 'Could not send' });
   notify(u.name, 'dm', `${me} sent you a message`, `#/messages/${encodeURIComponent(me)}`);
@@ -1892,7 +1967,7 @@ createFunAI({ app, auth });
 createSuggestions({ app, auth, modOnly, isMod, supabase, filter, logMod });
 createCalling({ app, auth, supabase, notify });
 createVerify({ app, auth, supabase, isOwner, logMod });
-createFamily({ app, auth, supabase, filter, notify, key });
+createFamily({ app, auth, supabase, filter, notify, key, chatFilter, safetyFilter });
 createVersion({ app, auth, supabase, isOwner });
 createTrade({ app, auth, supabase, notify, key });
 createTwoUi({ app, auth, supabase, key });
@@ -1956,8 +2031,18 @@ wss.on('connection', (ws) => {
     else if (m.t === 'chat' && typeof m.text === 'string' && m.text.trim()) {
       const mi = muteState(player.user);
       if (mi) return send(ws, { t: 'error', error: `You are muted${mi.reason ? ': ' + mi.reason : ''}` });
-      const text = filter(m.text.trim());
-      broadcast(room, { t: 'chat', id: player.id, name: player.name, displayName: player.user.display_name || '', text, club: isClub(player.user), badge: badgeOf(player.user), role: roleOf(player.user) });
+      const raw = m.text.trim().slice(0, 500);
+      // Safety (Phase 1): chat is delivered per recipient, not broadcast.
+      // Each player sees the message filtered for THEM (children see all
+      // swearing as hashtags; verified adults see other verified adults'
+      // swearing), and adults cannot talk to children in the room unless
+      // they are in the same family (trusted friend).
+      const senderAdult = isAdultUser(player.user);
+      for (const p of room.players.values()) {
+        if (p.ws.readyState !== 1) continue;
+        if (senderAdult && p !== player && isChildUser(p.user) && !(await sameFamily(player.name, p.name))) continue;
+        send(p.ws, { t: 'chat', id: player.id, name: player.name, displayName: player.user.display_name || '', text: chatFilter(raw, p.user), club: isClub(player.user), badge: badgeOf(player.user), role: roleOf(player.user) });
+      }
     }
     else if (m.t === 'ping') send(ws, { t: 'pong', id: m.id });
     else if (m.t === 'coin' && typeof m.part === 'string') {

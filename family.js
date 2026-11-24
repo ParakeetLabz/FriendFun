@@ -11,7 +11,7 @@ const FAMILY_COLORS = ['#7c3aed', '#e2231a', '#0284c7', '#16a34a', '#ec4899', '#
 const FAMILY_ICONS = ['🏠', '👨‍👩‍👧‍👦', '⭐', '❤️', '🔥', '🌈', '👑', '🎮'];
 
 export function createFamily(D) {
-  const { app, auth, supabase, filter, notify, key } = D;
+  const { app, auth, supabase, filter, notify, key, chatFilter, safetyFilter } = D;
   const norm = n => String(n || '').trim().toLowerCase();
   const cleanStr = (s, max) => String(s || '').trim().replace(/\s+/g, ' ').slice(0, max);
   const genCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -163,7 +163,8 @@ export function createFamily(D) {
     const f = await myFamily(req.user.name);
     if (!f) return res.status(400).json({ error: 'You are not in a family' });
     const { data } = await supabase.from('family_messages').select('*').eq('family_id', f.id).order('created', { ascending: true }).limit(100);
-    res.json((data || []).map(m => ({ id: m.id, username: m.username, text: m.text, created: m.created })));
+    // Safety (Phase 1): each reader sees swearing filtered for THEM.
+    res.json((data || []).map(m => ({ id: m.id, username: m.username, text: chatFilter(m.text, req.user), created: m.created })));
   });
 
   // Family chat: send a message (members only).
@@ -171,11 +172,13 @@ export function createFamily(D) {
     if (!(await checkTables())) return res.status(500).json({ error: 'FunTopia Family is not set up yet' });
     const f = await myFamily(req.user.name);
     if (!f) return res.status(400).json({ error: 'You are not in a family' });
-    const text = filter(String(req.body?.text || '').trim().slice(0, MAX_CHAT_LEN));
+    // Safety (Phase 1): links + addresses are stripped before storing;
+    // swearing is filtered per reader when the message is read.
+    const text = safetyFilter(String(req.body?.text || '').trim().slice(0, MAX_CHAT_LEN));
     if (!text) return res.status(400).json({ error: 'Write a message first' });
     const { data, error } = await supabase.from('family_messages').insert({ family_id: f.id, username: key(req.user.name), text, created: new Date().toISOString() }).select().single();
     if (error) return res.status(500).json({ error: 'Could not send the message' });
-    res.json({ id: data.id, username: data.username, text: data.text, created: data.created });
+    res.json({ id: data.id, username: data.username, text: chatFilter(data.text, req.user), created: data.created });
   });
 
   // Display name: set my own (2–24 characters, empty clears it back to my username).
