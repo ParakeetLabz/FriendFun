@@ -3,7 +3,7 @@ import { CLUB } from './ui.js?v=a89886d1';
 // App themes — FriendClub exclusive. 'funtopia' is the default (no body class).
 // A theme only applies when the user is a FriendClub member (enforced in applyTheme).
 export const THEMES = [
-  { id: 'funtopia', name: 'FunTopia', desc: 'The classic blocky look — light panels, red and blue.', colors: ['#e2231a', '#0057a8', '#f2f2f2', '#1a1a1a'] },
+  { id: 'funtopia', name: 'FunTopia', desc: 'The classic violet + cyan look.', colors: ['#7c3aed', '#22d3ee', '#17112e', '#f4f1ff'] },
   { id: 'roblox', name: 'Classic Roblox', desc: 'Old-school Roblox — bright red, blue and white.', colors: ['#e2231a', '#0057a8', '#f2f2f2', '#1a1a1a'] },
   { id: 'rock', name: 'Rock', desc: 'Black, blood red and fire orange. Turn it up.', colors: ['#c8102e', '#ff6b00', '#0a0a0a', '#f5f5f5'] },
   { id: 'ocean', name: 'Ocean', desc: 'Deep blues and teal, calm and cool.', colors: ['#0284c7', '#22d3ee', '#062a3a', '#e0f7ff'] },

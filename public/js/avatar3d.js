@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=90a4da23';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=d52f8dae';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -148,7 +148,7 @@ function shade(hex, f) {
 }
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
 // Rounded box — same blocky proportions, softened edges that catch the light.
-function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
+function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
 function attachExtras(root, avatar, opts = {}) {
   const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
   if (petSpec) {
@@ -391,11 +391,14 @@ function buildSlimeHead(g) {
   const hi = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.45 }));
   hi.position.set(-0.32, 0.92, 0.5); hi.scale.set(1, 1.5, 0.5); g.add(hi);
 }
+// Visible soft rounding for blocky characters (u137): R6 blocks read as
+// soft/rounded while staying clearly blocky; same radius for both rigs.
+const ROUND_BEV = 0.22;
 const HEADS = {
   head_bugs: { h: 1.3, custom: buildBugsHead },
   head_daffy: { h: 1.3, custom: buildDaffyHead },
   head_slimebody: { h: 1.35, custom: buildSlimeHead },
-  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) },
+  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new RoundedBoxGeometry(1.24, 1.2, 1.24, 4, ROUND_BEV) },
   head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
   head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },
   head_tall: { h: 1.6, fz: 0.56, fw: 0.95, hs: 0.9, geo: () => new THREE.CylinderGeometry(0.55, 0.55, 1.6, 24) },
@@ -438,7 +441,7 @@ const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody
 // no separate hands/shoes). R15 (rig 'r15'): modern Roblox-style — the
 // same blocky language and total height, but arms and legs are two
 // segments with elbow/knee pivots plus a hand/foot at the end.
-// smooth=true softens the finish (tiny edge bevel + glossier material). Both rigs build smooth by default now.
+// smooth=true softens the finish (visible soft edge rounding + glossier material). Both rigs build smooth by default now.
 function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const C = { ...avatar.colors };
   const suitColor = BODY_SUITS[avatar.head];
@@ -448,8 +451,10 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const root = new THREE.Group();
   // Both rigs get the same soft, glossy finish now — R15 used to be
   // built sharp (smooth=false) while R6 got the rounded look, which is
-  // why R15 looked worse. Same bevel + gloss for both.
-  const bev = 0.08;
+  // why R15 looked worse. Same rounding + gloss for both; the radius is
+  // big enough to read as soft/rounded at a glance, while the parts stay
+  // clearly blocky (classic R6 look, not human proportions).
+  const bev = ROUND_BEV;
   const gls = 0.45;
   const part = smooth
     ? (w, h, d, color) => rbox(w, h, d, color, bev, gls)
@@ -462,7 +467,7 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   // complex 3D garment in solid colors (no copied textures): torso + collar + placket + buttons + hem
   const clothPart = (w, h, d, material) => {
     const r = Math.max(0.01, Math.min(bev, Math.min(w, h, d) / 2 - 0.01));
-    const g = smooth ? new RoundedBoxGeometry(w, h, d, 2, r) : new THREE.BoxGeometry(w, h, d);
+    const g = smooth ? new RoundedBoxGeometry(w, h, d, 4, r) : new THREE.BoxGeometry(w, h, d);
     const m = new THREE.Mesh(g, material);
     m.castShadow = true; m.receiveShadow = true;
     return m;
@@ -545,45 +550,38 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   if (H.custom) { H.custom(headPivot); }
   else {
     const head = new THREE.Mesh(H.geo(), smooth ? new THREE.MeshStandardMaterial({ color: H.color || C.head, roughness: 0.4, metalness: 0.05 }) : mat(H.color || C.head));
+    // Rounded head: plain box heads get the same soft bevel as the body blocks.
+    // (RoundedBoxGeometry reports type 'BoxGeometry' in three r160 and keeps
+    // unit-box parameters, so test by class — head_classic is already rounded.)
+    if (smooth && head.geometry instanceof THREE.BoxGeometry && !(head.geometry instanceof RoundedBoxGeometry)) {
+      const p = head.geometry.parameters;
+      head.geometry = new RoundedBoxGeometry(p.width, p.height, p.depth, 4, Math.min(bev, Math.min(p.width, p.height, p.depth) / 2 - 0.01));
+    }
     head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
     const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
     const face = H.round
       ? new THREE.Mesh(new THREE.SphereGeometry(H.r + 0.01, 24, 16, Math.PI / 2 - 0.75, 1.5, Math.PI / 2 - 0.75, 1.5), faceMat)
       : new THREE.Mesh(new THREE.PlaneGeometry(H.fw, H.fw), faceMat);
     face.position.set(0, H.h / 2, H.round ? 0 : H.fz); headPivot.add(face);
-    // Refined ears + nose: small blocky pieces in the head's own color,
-    // sized from the head mesh's real bounding box so they sit proud of
-    // every head shape (classic, tall, wide, sphere, TV...) instead of
-    // floating or sinking. Same silhouette, just more finished.
-    const skin = H.color || C.head;
-    const hb = new THREE.Box3().setFromObject(head);
-    const earY = (hb.min.y + hb.max.y) / 2 + 0.05;
-    for (const sx of [-1, 1]) {
-      const ear = part(0.14, 0.34, 0.3, skin);
-      ear.position.set(sx * (hb.max.x + 0.05), earY, 0);
-      headPivot.add(ear);
-    }
-    const nose = part(0.18, 0.22, 0.14, shade(skin, 0.88));
-    nose.position.set(0, (hb.min.y + hb.max.y) / 2 - 0.04, hb.max.z + 0.04);
-    headPivot.add(nose);
+    // No ears or nose — classic R6 heads are just the block + face.
   }
   const hatIt = ITEM[avatar.hat];
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
   else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
   // Limbs. R6: ONE rigid block per limb, pivot at the top.
   const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.userData.w = w; const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
-  // R15: a two-segment limb — upper + lower with an elbow/knee pivot,
-  // plus a hand/foot at the end. Returns { upper, lower, end } pivots.
-  // Same blocky language and same total height (hips at y=2, shoulders
-  // at y=4, feet at y=0); the end piece is a hand (arms) or a foot
-  // (legs: longer in z, pushed forward).
+  // R15: a two-segment limb — upper + lower with an elbow/knee pivot.
+  // No hands or feet: the lower segment extends to the ground instead.
+  // Returns { upper, lower, end } pivots (end is kept as an empty pivot
+  // so gear anchoring and animation code keep working). Same blocky
+  // language and same total height (hips at y=2, shoulders at y=4,
+  // limb ends at y=0).
   const limb2 = (x, y, color, wUp, hUp, wLow, hLow, endW, endH, endD, endZ = 0, endColor = null) => {
     const upper = new THREE.Group(); upper.position.set(x, y, 0); upper.userData.w = wUp;
     const um = part(wUp, hUp, wUp, color); um.position.y = -hUp / 2; upper.add(um); root.add(upper);
     const lower = new THREE.Group(); lower.position.set(0, -hUp, 0); lower.userData.w = wLow;
-    const lm = part(wLow, hLow, wLow, color); lm.position.y = -hLow / 2; lower.add(lm); upper.add(lower);
-    const end = new THREE.Group(); end.position.set(0, -hLow, 0);
-    const em = part(endW, endH, endD, endColor || color); em.position.set(0, -endH / 2, endZ); end.add(em); lower.add(end);
+    const lm = part(wLow, hLow + endH, wLow, color); lm.position.y = -(hLow + endH) / 2; lower.add(lm); upper.add(lower);
+    const end = new THREE.Group(); end.position.set(0, -hLow, 0); lower.add(end);
     return { upper, lower, end };
   };
   let larm, rarm, lleg, rleg, larmLow, rarmLow, lhand, rhand, llegLow, rlegLow, lfoot, rfoot;
@@ -628,10 +626,6 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   } else if (isBugs) {
     larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
     lleg = limb(-0.45, 2, C.lleg, 0.9); rleg = limb(0.45, 2, C.rleg, 0.9);
-    for (const leg of [lleg, rleg]) {
-      const foot = part(0.95, 0.45, 1.7, '#9e9e9e');
-      foot.position.set(0, -1.85, 0.45); foot.castShadow = true; leg.add(foot);
-    }
     const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
     tail.position.set(0, 2.3, -0.62); tail.castShadow = true; root.add(tail);
     const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
@@ -639,10 +633,6 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   } else if (isDaffy) {
     larm = limb(-1.35, 4, C.larm, 0.75); rarm = limb(1.35, 4, C.rarm, 0.75);
     lleg = limb(-0.4, 2, '#ff9800', 0.55); rleg = limb(0.4, 2, '#ff9800', 0.55);
-    for (const leg of [lleg, rleg]) {
-      const foot = part(1.15, 0.28, 1.5, '#ff9800');
-      foot.position.set(0, -1.9, 0.5); foot.castShadow = true; leg.add(foot);
-    }
     for (let i = -1; i <= 1; i++) {
       const f = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), mat('#212121'));
       f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
@@ -775,11 +765,12 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
 // the fallback (buildCharacterR6 below).
 // R6 always gets the smooth finish now — same six rigid parts, softer
 // edges and a glossier plastic. R15 keeps its look (the advanced-graphics
-// toggle still smooths it via buildCharacterSmooth).
-export function buildCharacter(avatar, opts = {}) { const r6 = avatar?.rig === 'r6'; return buildRig(avatar, opts, true, r6 ? 'r6' : 'r15'); }
+// toggle still smooths it via buildCharacterSmooth). R6 is the default
+// rig: an avatar with no rig set builds as classic blocky R6.
+export function buildCharacter(avatar, opts = {}) { const r15 = avatar?.rig === 'r15'; return buildRig(avatar, opts, true, r15 ? 'r15' : 'r6'); }
 
-// Advanced graphics: same R15 shapes, smoother finish (slight bevel + gloss).
-export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r6' ? 'r6' : 'r15'); }
+// Advanced graphics: same R15 shapes, smoother finish (soft rounding + gloss).
+export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r15' ? 'r15' : 'r6'); }
 
 // The old one-piece R6 rig, kept as a fallback.
 export function buildCharacterR6(avatar, opts = {}) { return buildRig(avatar, opts, true, 'r6'); }

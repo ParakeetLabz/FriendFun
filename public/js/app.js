@@ -1,7 +1,7 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { startPepperCracks, stopPepperCracks, applyPepperBranding, PEPPER_CAN } from './pepper.js?v=57beac3a';
-import { THEME_IDS, themesPage } from './themes.js?v=8011d716';
+import { THEME_IDS, themesPage } from './themes.js?v=3780b96a';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -26,7 +26,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=a3b315a0').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=6b96b7c6').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -67,7 +67,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=90a4da23';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=d52f8dae';
 import { templates, GEN_GAMES } from './worlds.js?v=b8058d58';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -153,7 +153,7 @@ async function fillThumbs(root = app) {
     } catch {}
   }
 }
-const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><rect width="16" height="9" fill="#e8e8e8"/></svg>');
+const PLACEHOLDER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 9"><rect width="16" height="9" fill="#393b3d"/></svg>');
 function gameCard(g) {
   return `<a class="game-card" href="#/games/${g.id}">
     <div class="gc-thumb"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`} alt="">${g.icon ? `<span class="gc-icon">${esc(g.icon)}</span>` : ''}${g.is2ui ? `<span class="gc-2ui">2UI</span>` : ''}</div>
@@ -580,7 +580,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=b4350ee5');
+  const m = await import('./lobby.js?v=9a83fff0');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -661,7 +661,7 @@ const SAFETY_CONTRACT_HTML = `
 <li><b>Act on reports.</b> When a report comes in, the safety team will look at it and take action when the rules were broken.</li>
 </ul>
 <h3>5. Accounts: verification and email</h3>
-<p>Making a FunTopia account is not quick on purpose. A harder sign-up helps keep bad actors out. Every account needs <b>verification</b> — you have to prove you are a real person before you can play. Every account needs a <b>real email address</b> — we need it so we can contact the account holder, and so safety reports and warnings have somewhere to go. Keep your password secret. Never share it, not even with a friend.</p>
+<p>Making a FunTopia account is not quick on purpose. A harder sign-up helps keep bad actors out. Every account needs <b>verification</b> — you have to prove you are a real person before you can play. Every account needs a <b>real email address</b> — we need it so we can contact the account holder. Keep your password secret. Never share it, not even with a friend.</p>
 <h3>6. Parent accounts</h3>
 <p>A parent can have a <b>parent account</b> linked to their child's account. A parent account can <b>view what the child's account is doing</b> on FunTopia — the games they play, who they talk to, and the reports linked to their account. Parents can use what they see to talk with their child and to report anything that worries them.</p>
 <h3>7. How to report someone</h3>
@@ -692,7 +692,7 @@ function loginPage() {
         <label>Username<input name="username" autocomplete="username" placeholder="Don't use your real name" required></label>
         <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="At least 4 characters" required></label>
         <div class="auth-signup-fields">
-          <label>Email<input name="email" type="email" autocomplete="email" placeholder="Needed for safety reports"></label>
+          <label>Email<input name="email" type="email" autocomplete="email" placeholder="Email"></label>
           <label>Birthday<input name="birthday" type="date"></label>
           <details class="contract-details"><summary>Read the FunTopia Safety Contract</summary><div class="contract-body">${SAFETY_CONTRACT_HTML}</div></details>
           <p class="muted small">New here? Read the <a href="#/safety-qa">Safety Q&amp;A</a> to see how FunTopia keeps you safe.</p>
@@ -722,7 +722,7 @@ function loginPage() {
         const errEl = form.querySelector('.auth-err');
         const email = form.email.value.trim();
         const birthday = form.birthday.value;
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'Enter a real email address — safety reports need somewhere to go'; return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'Enter a real email address'; return; }
         if (!birthday) { errEl.textContent = 'Enter your birthday'; return; }
         const bd = new Date(birthday + 'T00:00:00Z');
         if (isNaN(bd.getTime()) || bd > new Date()) { errEl.textContent = 'Enter a real birthday'; return; }
@@ -869,7 +869,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=c7f46c96');
+  const { Game } = await import('./game.js?v=0326a1a3');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -881,7 +881,7 @@ async function playPage(id, server, autoVoice) {
 const SKIN = ['#f5cd30', '#ffcc99', '#e8b98a', '#c68e5b', '#8d5524', '#5c3a1e', '#ffffff', '#a3a2a5', '#1b2a35', '#0d69ac', '#6e99ca', '#2f8cff', '#a4bd47', '#4b974b', '#287f47', '#c4281c', '#ff66cc', '#8a4bd8', '#da8541', '#ffd400', '#000000', '#7c5c46'];
 async function avatarPage(tab = 'body') {
   try { await ensureAvatar3d(); } catch {}
-  const av = structuredClone(me.avatar); av.head ??= 'head_classic'; av.rig ??= 'r15';
+  const av = structuredClone(me.avatar); av.head ??= 'head_classic'; av.rig ??= 'r6';
   let part = 'all';
   mount('avatar', `
     <h1>Avatar Editor</h1><button class="btn-secondary av-random"><span class="ic">${icons.dice}</span> Randomize outfit</button> <a class="btn-secondary" href="#/skinmaker"><span class="ic">${icons.palette}</span> AI Skin Maker</a>
@@ -1453,7 +1453,7 @@ async function createPage() {
     <h1>Create</h1>
     <div class="av-tabs"><button class="active"><span class="ic">${icons.gamepad}</span> Experiences</button><button data-goto="#/ugc"><span class="ic">${icons.palette}</span> UGC Studio</button><button data-goto="#/funai"><span class="ic">${icons.sparkles}</span> FunAI</button></div>
     <a href="#/funai" style="display:block;text-decoration:none;background:var(--grad);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px;box-shadow:var(--glow)"><span style="font-weight:900;font-size:18px"><span class="ic">${icons.sparkles}</span> Make a game with FunAI</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">Describe any game — FunAI builds it as a Studio world you can edit + publish →</span></a>
-    <a href="#/2ui/new" style="display:block;text-decoration:none;background:linear-gradient(135deg,#e2231a,#0057a8);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px"><span style="font-weight:900;font-size:18px">🖥️ Make a 2UI Game</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">A GUI-only game — buttons, coins and labels, no 3D world. Players build their own and everyone can play them →</span></a>
+    <a href="#/2ui/new" style="display:block;text-decoration:none;background:linear-gradient(135deg,#ec4899,#7c3aed);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:16px"><span style="font-weight:900;font-size:18px">🖥️ Make a 2UI Game</span><span style="display:block;font-size:13px;font-weight:600;opacity:.9">A GUI-only game — buttons, coins and labels, no 3D world. Players build their own and everyone can play them →</span></a>
     <section><div class="sec-h"><h2>Start a New Experience</h2></div><div class="tpl-grid">${tpls.map(([k, n, d]) => `
       <a class="tpl" href="#/studio/new/${k}"><div class="gc-thumb"><img data-tpl="${k}" src="${PLACEHOLDER}"></div><b>${n}</b><span class="muted small">${d}</span></a>`).join('')}</div></section>
     <section><div class="sec-h"><h2>Generated Worlds (${GEN_GAMES.length})</h2></div>
@@ -1482,13 +1482,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=360cc4e8');
+  const { Studio } = await import('./studio.js?v=3e9cf239');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=c7f46c96');
+      const { Game: GameClass } = await import('./game.js?v=0326a1a3');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1873,7 +1873,7 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=b6288385'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=f6f15849'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case 'parent': { const m = await import('./parent.js?v=parentp2'); if (seg[1]) return m.parentChildPage(parentDeps, decodeURIComponent(seg[1])); return m.parentPage(parentDeps); }
@@ -1884,10 +1884,10 @@ async function route() {
       }
       case 'safety-qa': { const m = await import('./forums.js?v=p3forums1'); return m.safetyQaPage(forumsDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
-      case 'trades': { const m = await import('./trade.js?v=dac4b7ef'); return m.tradePage(tradeDeps); }
-      case 'trade': { const m = await import('./trade.js?v=dac4b7ef'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
-      case 'pets': { const m = await import('./pets.js?v=953ffc37'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=64c7e236'); return m.tokensPage(tokensDeps); }
+      case 'trades': { const m = await import('./trade.js?v=3693d8e7'); return m.tradePage(tradeDeps); }
+      case 'trade': { const m = await import('./trade.js?v=3693d8e7'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
+      case 'pets': { const m = await import('./pets.js?v=efc8c3e6'); return m.petsPage(petsDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=de1f740d'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
@@ -1903,7 +1903,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=bd8e88de'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=b837c817'); return m.skinmakerPage(skinmakerDeps); }
       case 'themes': return themesPage(themesDeps);
       default: location.hash = '#/home'; return;
     }

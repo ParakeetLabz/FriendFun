@@ -7,7 +7,7 @@
 // as the child. Same-family access is enforced server-side (403 otherwise).
 import { icons } from './icons.js?v=1aa0a4d3';
 import { displayNameOf, badgeIcon, tix } from './ui.js?v=a89886d1';
-import { BADGES } from './catalog.js?v=90a4da23';
+import { BADGES } from './catalog.js?v=d52f8dae';
 
 export async function parentPage(D) {
   const me = D.me;

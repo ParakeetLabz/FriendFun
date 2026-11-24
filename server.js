@@ -332,7 +332,7 @@ app.post('/api/signup', async (req, res) => {
   // Safety (Phase 1): an email so safety reports have somewhere to go, a
   // birthday so we know who is a child and who is an adult, and the Safety
   // Contract must be agreed to. No parent verification at signup.
-  if (!validEmail(email)) return res.status(400).json({ error: 'Enter a real email address — safety reports need somewhere to go' });
+  if (!validEmail(email)) return res.status(400).json({ error: 'Enter a real email address' });
   if (!validBirthday(birthday)) return res.status(400).json({ error: 'Enter your real birthday' });
   if (contractAgreed !== true) return res.status(400).json({ error: 'You have to read and agree to the Safety Contract to play' });
   const { data: existing } = await supabase.from('users').select('name').eq('name', key(username)).maybeSingle();
@@ -516,7 +516,7 @@ app.put('/api/me/avatar', auth, async (req, res) => {
   const colors = {};
   for (const k of Object.keys(DEFAULT_AVATAR.colors)) colors[k] = hex.test(a.colors?.[k]) ? a.colors[k] : req.user.avatar.colors[k];
   const pick = (slot) => (a[slot] && (a[slot] === slot + '_none' || req.user.inventory.includes(a[slot])) && itemDef(a[slot])?.type === slot) ? a[slot] : req.user.avatar[slot];
-  const avatar = { colors, hat: pick('hat'), face: pick('face'), shirt: pick('shirt'), head: pick('head') || DEFAULT_AVATAR.head, pet: pick('pet') || DEFAULT_AVATAR.pet, gear: pick('gear') || DEFAULT_AVATAR.gear, vehicle: pick('vehicle') || 'vehicle_none', rig: (a.rig === 'r6' || a.rig === 'r15') ? a.rig : (req.user.avatar.rig === 'r6' ? 'r6' : 'r15') };
+  const avatar = { colors, hat: pick('hat'), face: pick('face'), shirt: pick('shirt'), head: pick('head') || DEFAULT_AVATAR.head, pet: pick('pet') || DEFAULT_AVATAR.pet, gear: pick('gear') || DEFAULT_AVATAR.gear, vehicle: pick('vehicle') || 'vehicle_none', rig: (a.rig === 'r6' || a.rig === 'r15') ? a.rig : (req.user.avatar.rig === 'r15' ? 'r15' : 'r6') };
   // Only ONE ability-granting item can be equipped at a time. Keep the one in
   // the slot that just changed (vs the stored avatar); if none changed, keep
   // the highest-priority slot (gear > shirt > hat > head > face).

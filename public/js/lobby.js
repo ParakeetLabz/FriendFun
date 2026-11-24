@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=a3b315a0';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=6b96b7c6';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=a89886d1';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
@@ -72,30 +72,38 @@ export async function lobbyPage(D) {
     <nav class="lb-rail" aria-label="Lobby menu">
       <a class="lb-item lb-play-item active" href="#/discover"><span class="ic">${PLAY_LOGO}</span>PLAY</a>
       <div class="lb-rail-group" data-group="create">
-        <span class="lb-rail-label">Create</span>
-        <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
-        <a class="lb-item" href="#/2ui"><span class="ic">${icons.grid}</span>2UI</a>
+        <button class="lb-item lb-rail-group-btn" type="button" aria-expanded="false"><span class="ic">${icons.create}</span>Create<span class="ic lb-chev">${icons.chevron}</span></button>
+        <div class="lb-rail-sub">
+          <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
+          <a class="lb-item" href="#/2ui"><span class="ic">${icons.grid}</span>2UI</a>
+        </div>
       </div>
       <div class="lb-rail-group" data-group="stuff">
-        <span class="lb-rail-label">Your stuff</span>
-        <a class="lb-item" href="#/avatar"><span class="ic">${icons.avatar}</span>LOCKER</a>
-        <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
-        <a class="lb-item" href="#/pets"><span class="ic">${icons.heart}</span>PETS</a>
-        <a class="lb-item" href="#/tokens"><span class="ic">${icons.zap}</span>TOKENS</a>
+        <button class="lb-item lb-rail-group-btn" type="button" aria-expanded="false"><span class="ic">${icons.avatar}</span>Your Stuff<span class="ic lb-chev">${icons.chevron}</span></button>
+        <div class="lb-rail-sub">
+          <a class="lb-item" href="#/avatar"><span class="ic">${icons.avatar}</span>LOCKER</a>
+          <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
+          <a class="lb-item" href="#/pets"><span class="ic">${icons.heart}</span>PETS</a>
+          <a class="lb-item" href="#/tokens"><span class="ic">${icons.zap}</span>TOKENS</a>
+        </div>
       </div>
       <div class="lb-rail-group" data-group="social">
-        <span class="lb-rail-label">Friends</span>
-        <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
-        <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
-        <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
+        <button class="lb-item lb-rail-group-btn" type="button" aria-expanded="false"><span class="ic">${icons.people}</span>Friends<span class="ic lb-chev">${icons.chevron}</span></button>
+        <div class="lb-rail-sub">
+          <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
+          <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
+          <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
+        </div>
       </div>
       <div class="lb-rail-group" data-group="more">
-        <span class="lb-rail-label">More</span>
-        <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
-      <a class="lb-item" href="#/forums"><span class="ic">${icons.chat}</span>FORUMS</a>
-        <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
-        ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
-        ${me.admin && !me.owner ? `<a class="lb-item" href="#/admin"><span class="ic">${icons.shield}</span>ADMIN</a>` : ''}
+        <button class="lb-item lb-rail-group-btn" type="button" aria-expanded="false"><span class="ic">${icons.more}</span>More<span class="ic lb-chev">${icons.chevron}</span></button>
+        <div class="lb-rail-sub">
+          <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
+          <a class="lb-item" href="#/forums"><span class="ic">${icons.chat}</span>FORUMS</a>
+          <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
+          ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
+          ${me.admin && !me.owner ? `<a class="lb-item" href="#/admin"><span class="ic">${icons.shield}</span>ADMIN</a>` : ''}
+        </div>
       </div>
     </nav>
     <aside class="lb-panel">
@@ -191,6 +199,19 @@ export async function lobbyPage(D) {
   });
   overlay.querySelector('.lb-ov-close').onclick = closeOverlay;
   playBtn.onclick = () => { if (feat) openOverlay('#/play/' + feat.id); };
+
+  // Accordion rail groups (u137): one open at a time; tap the open group again to collapse.
+  app.querySelectorAll('.lb-rail-group-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = btn.closest('.lb-rail-group');
+      const wasOpen = group.classList.contains('open');
+      app.querySelectorAll('.lb-rail-group.open').forEach(g => {
+        g.classList.remove('open');
+        g.querySelector('.lb-rail-group-btn').setAttribute('aria-expanded', 'false');
+      });
+      if (!wasOpen) { group.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
+    });
+  });
 
   // ---------- 3D stage ----------
   const holder = app.querySelector('.lb-3d');
