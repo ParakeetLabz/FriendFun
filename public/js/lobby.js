@@ -1,7 +1,7 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=24aeaab1';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=a3b315a0';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=a89886d1';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
@@ -69,21 +69,34 @@ export async function lobbyPage(D) {
       </div>
     </header>
     ${party.active ? `<a class="lb-party-banner" href="#/play/g_party100"><span>🎉</span><b>100 Players Party is LIVE!</b> Free Neon Party Hat + disco plaza ›</a>` : ''}
-    <nav class="lb-rail">
-      <a class="lb-item active" href="#/discover"><span class="ic">${PLAY_LOGO}</span>PLAY</a>
-      <a class="lb-item" href="#/avatar"><span class="ic">${icons.avatar}</span>LOCKER</a>
-      <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
-      <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
-      <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
-      <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
-      <a class="lb-item" href="#/2ui"><span class="ic">${icons.grid}</span>2UI</a>
-      <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
-      <a class="lb-item" href="#/pets"><span class="ic">${icons.heart}</span>PETS</a>
-      <a class="lb-item" href="#/tokens"><span class="ic">${icons.zap}</span>TOKENS</a>
-      <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
-      <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
-      ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
-      ${me.admin && !me.owner ? `<a class="lb-item" href="#/admin"><span class="ic">${icons.shield}</span>ADMIN</a>` : ''}
+    <nav class="lb-rail" aria-label="Lobby menu">
+      <a class="lb-item lb-play-item active" href="#/discover"><span class="ic">${PLAY_LOGO}</span>PLAY</a>
+      <div class="lb-rail-group" data-group="create">
+        <span class="lb-rail-label">Create</span>
+        <a class="lb-item" href="#/create"><span class="ic">${icons.create}</span>CREATE</a>
+        <a class="lb-item" href="#/2ui"><span class="ic">${icons.grid}</span>2UI</a>
+      </div>
+      <div class="lb-rail-group" data-group="stuff">
+        <span class="lb-rail-label">Your stuff</span>
+        <a class="lb-item" href="#/avatar"><span class="ic">${icons.avatar}</span>LOCKER</a>
+        <a class="lb-item" href="#/catalog"><span class="ic">${icons.shop}</span>ITEM SHOP</a>
+        <a class="lb-item" href="#/pets"><span class="ic">${icons.heart}</span>PETS</a>
+        <a class="lb-item" href="#/tokens"><span class="ic">${icons.zap}</span>TOKENS</a>
+      </div>
+      <div class="lb-rail-group" data-group="social">
+        <span class="lb-rail-label">Friends</span>
+        <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
+        <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
+        <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
+      </div>
+      <div class="lb-rail-group" data-group="more">
+        <span class="lb-rail-label">More</span>
+        <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
+      <a class="lb-item" href="#/forums"><span class="ic">${icons.chat}</span>FORUMS</a>
+        <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
+        ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
+        ${me.admin && !me.owner ? `<a class="lb-item" href="#/admin"><span class="ic">${icons.shield}</span>ADMIN</a>` : ''}
+      </div>
     </nav>
     <aside class="lb-panel">
       <div class="lb-mode-label">FEATURED MODE</div>
@@ -211,20 +224,31 @@ export async function lobbyPage(D) {
   const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
   camera.position.set(0, 4.1, 13.8);
   camera.lookAt(0, 2.1, 0);
-  scene.add(new THREE.HemisphereLight(0x9db4ff, 0x2a0f14, 0.85));
-  const key = new THREE.DirectionalLight(0xfff1d6, 1.6); key.position.set(4, 9, 7); scene.add(key);
+  scene.add(new THREE.HemisphereLight(0x9db4ff, 0x2a0f14, 1.05));
+  const key = new THREE.DirectionalLight(0xfff1d6, 1.9); key.position.set(4, 9, 7); scene.add(key);
+  // soft cool fill from the back-left so the character is never half in shadow
+  const fill = new THREE.DirectionalLight(0xbfd4ff, 0.55); fill.position.set(-6, 5, -6); scene.add(fill);
   const rimR = new THREE.PointLight(STAGE.rimR, 60, 30); rimR.position.set(-7, 3.5, -4); scene.add(rimR);
   const rimV = new THREE.PointLight(STAGE.rimV, 55, 30); rimV.position.set(7, 2.5, -5); scene.add(rimV);
+  // warm wash from above the stage + a low front glow so the podium reads clearly
+  const accentLight = new THREE.PointLight(STAGE.a, 42, 20); accentLight.position.set(0, 6.5, 1); scene.add(accentLight);
+  const glowLight = new THREE.PointLight(STAGE.c, 18, 14); glowLight.position.set(0, 1.4, 4.5); scene.add(glowLight);
   const floor = new THREE.Mesh(new THREE.CircleGeometry(26, 48), new THREE.MeshStandardMaterial({ color: 0x101017, roughness: 0.35, metalness: 0.35 }));
   floor.rotation.x = -Math.PI / 2; floor.position.y = -0.5; scene.add(floor);
+  // soft pool of accent light on the floor under the stage
+  const floorGlow = new THREE.Mesh(new THREE.CircleGeometry(5.2, 48), regAccent(new THREE.MeshBasicMaterial({ color: STAGE.a, transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false }), 'a'));
+  floorGlow.rotation.x = -Math.PI / 2; floorGlow.position.y = -0.49; scene.add(floorGlow);
   // glowing rings flat on the floor
+  const pulseMats = [];
   const floorRing = (r, role, op) => {
     const c = STAGE[role];
-    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.06, 8, 64), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2, transparent: true, opacity: op }), role));
-    m.rotation.x = Math.PI / 2; m.position.y = -0.48; scene.add(m); return m;
+    const mat = regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.2, transparent: true, opacity: op }), role);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.06, 8, 64), mat);
+    m.rotation.x = Math.PI / 2; m.position.y = -0.48; scene.add(m); pulseMats.push({ mat, base: 1.2 }); return m;
   };
   floorRing(8, 'a', 0.8);
   floorRing(12, 'b', 0.4);
+  floorRing(16, 'c', 0.25);
   // top spotlight washing the stage
   const spot = new THREE.SpotLight(0xfff1d6, 60, 30, 0.55, 0.6, 1);
   spot.position.set(0, 12, 4); spot.target.position.set(0, 0, 0); scene.add(spot); scene.add(spot.target);
@@ -237,11 +261,15 @@ export async function lobbyPage(D) {
   tier2.position.y = -0.25; stage.add(tier2);
   const glowRing = (r, y, role) => {
     const c = STAGE[role];
-    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 10, 64), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.8 }), role));
-    m.rotation.x = Math.PI / 2; m.position.y = y; stage.add(m); return m;
+    const mat = regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.8 }), role);
+    const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.07, 10, 64), mat);
+    m.rotation.x = Math.PI / 2; m.position.y = y; stage.add(m); pulseMats.push({ mat, base: 1.8 }); return m;
   };
   glowRing(3.4, -0.48, 'a');
   glowRing(2.5, 0.02, 'c');
+  // trim on the tier bases so the two levels read as separate steps
+  glowRing(3.7, -0.98, 'b');
+  glowRing(2.7, -0.48, 'b');
   const podium = (x, z, r, role) => {
     const g = new THREE.Group();
     const disc = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.15, 0.5, 40), new THREE.MeshStandardMaterial({ color: 0x1c1e28, roughness: 0.4, metalness: 0.5 }));
@@ -257,7 +285,7 @@ export async function lobbyPage(D) {
   const halo = (x, y, z, r, role) => {
     const c = STAGE[role];
     const m = new THREE.Mesh(new THREE.TorusGeometry(r, 0.05, 8, 48), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.4, transparent: true, opacity: 0.9 }), role));
-    m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.5 + Math.random() * 0.4, phase: Math.random() * 6.28, spin: 0.3 }); return m;
+    m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.35 + Math.random() * 0.25, phase: Math.random() * 6.28, spin: 0.2 }); return m;
   };
   halo(-4.2, 3.2, -2.5, 0.9, 'a');
   halo(4.2, 3.8, -2.5, 0.9, 'b');
@@ -265,12 +293,27 @@ export async function lobbyPage(D) {
   const crystal = (x, y, z, s, role) => {
     const c = STAGE[role];
     const m = new THREE.Mesh(new THREE.OctahedronGeometry(s), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.9, roughness: 0.2, metalness: 0.6 }), role));
-    m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.6 + Math.random() * 0.5, phase: Math.random() * 6.28, spin: 0.5 }); return m;
+    m.position.set(x, y, z); stage.add(m); floaters.push({ m, baseY: y, speed: 0.4 + Math.random() * 0.3, phase: Math.random() * 6.28, spin: 0.35 }); return m;
   };
   crystal(-3.4, 2.2, 1.8, 0.35, 'a');
   crystal(3.4, 2.6, 1.8, 0.35, 'b');
   crystal(-6.5, 3.0, -3.5, 0.28, 'c');
   crystal(6.5, 2.4, -3.5, 0.28, 'a');
+  // backdrop pillars framing the stage (static — they don't spin with it)
+  const pillar = (x, z, role) => {
+    const c = STAGE[role];
+    const g = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 7.5, 12), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.1, roughness: 0.3, metalness: 0.4 }), role));
+    pole.position.y = 3.25; g.add(pole);
+    const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.32), regAccent(new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.6, roughness: 0.2, metalness: 0.5 }), role));
+    tip.position.y = 7.3; g.add(tip);
+    g.position.set(x, -0.5, z); scene.add(g); return g;
+  };
+  pillar(-8.5, -6.5, 'a'); pillar(8.5, -6.5, 'b');
+  // one big slow halo ring tilted over the center stage
+  const bigHalo = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.045, 8, 80), regAccent(new THREE.MeshStandardMaterial({ color: STAGE.c, emissive: STAGE.c, emissiveIntensity: 1.3, transparent: true, opacity: 0.85 }), 'c'));
+  bigHalo.position.set(0, 3.1, 0); bigHalo.rotation.x = Math.PI / 2.4; stage.add(bigHalo);
+  pulseMats.push({ mat: bigHalo.material, base: 1.3 });
   // floating dust / stars
   const pGeo = new THREE.BufferGeometry();
   const pCount = 220;
@@ -283,11 +326,25 @@ export async function lobbyPage(D) {
   pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
   const stars = new THREE.Points(pGeo, regAccent(new THREE.PointsMaterial({ color: STAGE.c, size: 0.09, transparent: true, opacity: 0.8 }), 'c'));
   scene.add(stars);
+  // golden sparkles drifting in a band around the stage
+  const sGeo = new THREE.BufferGeometry();
+  const sCount = 120;
+  const sPos = new Float32Array(sCount * 3);
+  for (let i = 0; i < sCount; i++) {
+    const a = Math.random() * Math.PI * 2, r = 3.5 + Math.random() * 5.5;
+    sPos[i * 3] = Math.cos(a) * r;
+    sPos[i * 3 + 1] = 0.5 + Math.random() * 5.5;
+    sPos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
+  const sparkles = new THREE.Points(sGeo, regAccent(new THREE.PointsMaterial({ color: STAGE.b, size: 0.13, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }), 'b'));
+  scene.add(sparkles);
   // light beams from above
+  const beams = [];
   const beam = (x, z, role) => {
     const c = STAGE[role];
-    const m = new THREE.Mesh(new THREE.ConeGeometry(1.6, 9, 24, 1, true), regAccent(new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.05, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), role));
-    m.position.set(x, 4.5, z); scene.add(m); return m;
+    const m = new THREE.Mesh(new THREE.ConeGeometry(1.6, 9, 24, 1, true), regAccent(new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.04, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }), role));
+    m.position.set(x, 4.5, z); scene.add(m); beams.push(m); return m;
   };
   beam(0, 0, 'a');
   beam(-5.7, -0.9, 'b');
@@ -298,6 +355,8 @@ export async function lobbyPage(D) {
     scene.fog.color.setHex(STAGE.fog);
     rimR.color.setHex(STAGE.rimR);
     rimV.color.setHex(STAGE.rimV);
+    accentLight.color.setHex(STAGE.a);
+    glowLight.color.setHex(STAGE.c);
     for (const { mat, role } of stageMats) {
       mat.color.setHex(STAGE[role]);
       if (mat.emissive) mat.emissive.setHex(STAGE[role]);
@@ -334,11 +393,19 @@ export async function lobbyPage(D) {
     raf = requestAnimationFrame(tick);
     const dt = Math.min(0.05, clock.getDelta()), t = clock.elapsedTime;
     let rm = false; try { rm = localStorage.getItem('ff_reduce_motion') === '1'; } catch {}
-    if (!dragging && !rm) targetSpin += dt * 0.12;
+    if (!dragging && !rm) targetSpin += dt * 0.08;
     spin += (targetSpin - spin) * Math.min(1, dt * 6);
     stage.rotation.y = spin;
-    floaters.forEach(f => { f.m.position.y = f.baseY + Math.sin(t * f.speed + f.phase) * 0.35; f.m.rotation.y += dt * f.spin; f.m.rotation.x += dt * f.spin * 0.5; });
+    floaters.forEach(f => { f.m.position.y = f.baseY + Math.sin(t * f.speed + f.phase) * 0.22; f.m.rotation.y += dt * f.spin; f.m.rotation.x += dt * f.spin * 0.5; });
+    if (!rm) {
+      pulseMats.forEach(p => { p.mat.emissiveIntensity = p.base + Math.sin(t * 1.4) * 0.25; });
+      stars.material.opacity = 0.55 + Math.sin(t * 0.9) * 0.25;
+      sparkles.material.opacity = 0.65 + Math.sin(t * 1.1 + 1.5) * 0.25;
+    }
+    bigHalo.rotation.z += dt * 0.15;
+    beams.forEach((b, i) => { b.rotation.z = Math.sin(t * 0.35 + i * 1.3) * 0.06; });
     stars.rotation.y = t * 0.02;
+    sparkles.rotation.y = -t * 0.03;
     if (myEmote !== 'idle' && t >= emoteEnd) { myEmote = 'idle'; app.querySelectorAll('.lb-emotes button').forEach(x => x.classList.remove('on')); }
     chars.forEach((c, i) => { animateCharacter(c, i === 0 ? myEmote : 'idle', t + i * 1.7, dt); const p = c.userData.pet; if (p) p.position.y = Math.abs(Math.sin(t * 2.5 + i * 1.7)) * 0.18; });
     renderer.render(scene, camera);

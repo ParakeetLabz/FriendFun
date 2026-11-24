@@ -1392,3 +1392,84 @@ body.glitching .glitch-overlay { animation: glitchFlicker .1s steps(2) infinite;
 .contract-body h3:first-child { margin-top: 0; }
 .contract-body p, .contract-body li { font-size: 14px; line-height: 1.5; }
 .contract-body ul { padding-left: 20px; margin: 4px 0; }
+/* FunTopia Phase 2 — Parent View (#/parent). Append to public/css/style.css.
+   Reuses existing classes (ut-img, friends-row, user-tile, sec-h) where
+   possible; only the parent-specific layout is new. */
+.parent-note { background: var(--surface-muted, #f1f5f9); border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+.parent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+.parent-card { display: flex; gap: 12px; align-items: center; background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 12px; padding: 12px; text-decoration: none; color: inherit; }
+.parent-card:hover { border-color: var(--accent, #7c3aed); }
+.parent-overview { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.parent-overview .ut-img { width: 96px; height: 96px; }
+.parent-facts { display: grid; gap: 6px; font-size: 14px; }
+.parent-badge-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.parent-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-muted, #f1f5f9); border: 1px solid var(--border, #e2e8f0); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+.parent-games { display: grid; gap: 8px; }
+.parent-game { display: flex; flex-direction: column; background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 10px 12px; text-decoration: none; color: inherit; }
+.parent-game:hover { border-color: var(--accent, #7c3aed); }
+/* FunTopia Forums + Safety Q&A (Phase 3) — append to public/css/style.css.
+   Mirrors the existing Suggestion Box (.sg-*) styles so the forums look
+   like the rest of the site. Uses the site's own variables; no new colors. */
+.fm-form { display: flex; flex-direction: column; gap: 10px; max-width: 640px; }
+.fm-form input, .fm-form textarea { background: var(--card); border: 1px solid var(--line); color: var(--text); padding: 12px 14px; border-radius: 12px; font-size: 15px; font-family: inherit; }
+.fm-form textarea { resize: vertical; }
+.fm-form input:focus, .fm-form textarea:focus { outline: none; border-color: var(--blue2); box-shadow: var(--glow); }
+.fm-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+.fm-head { font-size: 17px; margin-bottom: 4px; }
+.fm-head a { color: var(--text); text-decoration: none; }
+.fm-head a:hover { text-decoration: underline; }
+.fm-body { margin: 10px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fm-thread { border-width: 2px; }
+.fm-reply { margin-left: 16px; }
+.fm-warn { background: #ffd4001a; border: 1px solid #ffd40066; border-radius: 12px; padding: 12px 16px; }
+/* Safety Q&A page */
+.qa-intro { font-size: 17px; }
+.qa-list { max-width: 720px; }
+.qa-item { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin-bottom: 12px; }
+.qa-item h2 { margin: 0 0 8px; font-size: 18px; }
+.qa-item p { margin: 0 0 8px; }
+.qa-item p:last-child { margin-bottom: 0; }
+/* Lobby remake (bundle) — append to public/css/style.css AFTER the existing
+   lobby rules. Groups the rail into labeled sections and makes PLAY a hero
+   button. Mobile keeps the existing horizontal in-flow row below the 3D scene
+   (the <700px rules in style.css still own that layout); these rules only
+   flatten the groups into that one scrollable row. */
+
+/* --- Grouped rail (desktop) --- */
+.lobby .lb-rail { gap: 12px; }
+.lb-rail-group { display: flex; flex-direction: column; gap: 6px; }
+.lb-rail-label {
+  font-size: 11px; letter-spacing: 2px; font-weight: 800;
+  text-transform: uppercase; color: var(--muted);
+  padding: 0 4px; user-select: none;
+}
+/* PLAY hero: gold like the big PLAY button in the panel, always first */
+.lb-rail .lb-item.lb-play-item {
+  background: linear-gradient(135deg, #ffd32a, #ffa502);
+  border-color: transparent; color: #1a1a1a;
+  font-size: 16px; padding: 12px 16px;
+  box-shadow: 0 4px 16px rgba(255, 165, 2, .35);
+}
+.lb-rail .lb-item.lb-play-item:hover { color: #1a1a1a; filter: brightness(1.06); }
+.lb-rail .lb-item.lb-play-item.active {
+  background: linear-gradient(135deg, #ffd32a, #ffa502);
+  border-color: transparent; color: #1a1a1a;
+}
+
+/* --- Tablet (<=900px): icon-only column, labels hidden --- */
+@media (max-width: 900px) {
+  .lb-rail-label { display: none; }
+  .lb-rail-group { display: contents; }
+  .lobby .lb-rail { gap: 6px; }
+}
+
+/* --- Phones (<=700px): groups flatten into the single horizontal
+   scrollable row below the 3D scene; PLAY stays first and tappable --- */
+@media (max-width: 700px) {
+  .lb-rail-group { display: contents; }
+  .lb-rail-label { display: none; }
+  .lb-rail .lb-item.lb-play-item {
+    flex: none; min-height: 44px;
+    padding: 8px 14px; font-size: 14px; white-space: nowrap;
+  }
+}

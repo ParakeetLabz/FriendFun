@@ -1,7 +1,7 @@
 // trade.js — Trading: offer your items for a friend's items.
 // One-shot offers: pick what you give + what you want, send it, they Accept
 // (items swap on the server) or Decline. Max 4 items per side.
-import { ITEM } from './catalog.js?v=843f2486';
+import { ITEM } from './catalog.js?v=90a4da23';
 
 const MAX_ITEMS = 4;
 const tradeable = it => it && !it.free && !it.limited && !String(it.id).endsWith('_none');

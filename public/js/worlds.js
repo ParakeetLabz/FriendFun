@@ -930,7 +930,72 @@ export function tagArena() {
   return w;
 }
 
-export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge, tagArena };
+// Crystal Dash: a linear checkpoint race. Sprint the straights, hop the
+// stepping stones over the crystal void, ride the moving platform, dodge
+// the spike strips on the final bridge, and touch the big crystal to win.
+// Uses only the existing win-pad flow (game.js) — no new handlers.
+export function crystalDash() {
+  const w = startWorld('#a5e8ff');
+  const P = (x, y, z, sx, sy, sz, c, extra = {}) => w.parts.push(part([x, y, z], [sx, sy, sz], c, extra));
+  const coin = (x, y, z) => P(x, y, z, 1.2, 1.2, 1.2, '#ffd400', { name: 'Coin', k: 'coin', m: 'neon' });
+  const crystal = (x, y, z, s, c) => P(x, y, z, s, s * 1.6, s, c, { name: 'Crystal', m: 'neon', sh: 'cone' });
+
+  // ---- the crystal void (fall in = back to your last checkpoint) ----
+  P(0, -30, -27, 120, 1, 150, '#7c4dff', { name: 'CrystalVoid', k: 'kill', m: 'neon' });
+
+  // ---- start platform ----
+  P(0, 0, 18, 16, 1, 16, '#b3e5fc', { name: 'StartPlatform' });
+  P(0, 1.25, 20, 6, 0.5, 6, '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' });
+  P(6, 2, 16, 2, 4, 2, '#00e5ff', { name: 'Crystal Guide', k: 'npc', dialog: 'Race to the big crystal! Grab coins, hit the pads, and mind the gaps!' });
+  P(-4, 0.75, 12, 4, 0.5, 4, '#ff9800', { name: 'SpeedPad', k: 'speed', m: 'neon' });
+  crystal(-7, 1.5, 24, 1.6, '#00e5ff'); crystal(7, 1.5, 24, 1.6, '#ff2d95');
+  coin(-3, 2.5, 14); coin(3, 2.5, 14); coin(0, 2.5, 10);
+
+  // ---- straightaway + Checkpoint 1 ----
+  P(0, 0, 2, 12, 1, 16, '#e1f5fe', { name: 'Straightaway' });
+  P(0, 0.75, -2, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint1', k: 'checkpoint', m: 'neon' });
+  coin(-3, 2.5, 4); coin(3, 2.5, 0); coin(0, 2.5, -4);
+  crystal(-5.5, 1.5, 6, 1.4, '#00e5ff'); crystal(5.5, 1.5, -6, 1.4, '#ff2d95');
+
+  // ---- gap 1: stepping stones over the void (short, level hops) ----
+  P(-3, 0, -10, 5, 1, 5, '#90caf9', { name: 'StepStone1' });
+  P(3, 0, -14, 5, 1, 5, '#90caf9', { name: 'StepStone2' });
+  P(-3, 0, -18, 5, 1, 5, '#90caf9', { name: 'StepStone3' });
+  coin(-3, 2.5, -10); coin(3, 2.5, -14); coin(-3, 2.5, -18);
+
+  // ---- mid platform + Checkpoint 2 (bounce pad = shortcut over gap 2) ----
+  P(0, 0, -26, 16, 1, 12, '#b3e5fc', { name: 'MidPlatform' });
+  P(0, 0.75, -26, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint2', k: 'checkpoint', m: 'neon' });
+  P(-5, 0.75, -29, 4, 0.5, 4, '#22ff88', { name: 'BouncePad', k: 'bounce', m: 'neon' });
+  coin(4, 2.5, -24); coin(-4, 2.5, -28);
+  crystal(-7, 1.5, -22, 1.6, '#ff2d95'); crystal(7, 1.5, -30, 1.6, '#00e5ff');
+
+  // ---- gap 2: the moving crystal ferry ----
+  P(0, 0, -38, 6, 1, 6, '#26c6da', { name: 'CrystalFerry', m: 'concrete', mv: { a: 'x', d: 6, s: 1 } });
+  coin(0, 2.5, -38);
+
+  // ---- home stretch + Checkpoint 3 (heal + speed for the final sprint) ----
+  P(0, 0, -50, 16, 1, 12, '#e1f5fe', { name: 'HomeStretch' });
+  P(0, 0.75, -50, 5, 0.5, 5, '#2ec4ff', { name: 'Checkpoint3', k: 'checkpoint', m: 'neon' });
+  P(-4, 0.75, -46, 4, 0.5, 4, '#ff9800', { name: 'SpeedPad', k: 'speed', m: 'neon' });
+  P(4, 0.75, -54, 4, 0.5, 4, '#ff9800', { name: 'SpeedPad', k: 'speed', m: 'neon' });
+  P(6, 0.75, -48, 5, 0.5, 5, '#69f0ae', { name: 'HealPad', k: 'heal', m: 'neon' });
+  coin(-3, 2.5, -48); coin(3, 2.5, -52);
+
+  // ---- final bridge: dodge the spike strips, then the big crystal ----
+  P(0, 0, -62, 8, 1, 12, '#b3e5fc', { name: 'FinalBridge' });
+  P(-2, 0.75, -60, 3, 0.5, 2, '#ff2020', { name: 'SpikeStrip', k: 'kill', m: 'neon' });
+  P(2, 0.75, -64, 3, 0.5, 2, '#ff2020', { name: 'SpikeStrip', k: 'kill', m: 'neon' });
+  P(0, 0, -72, 14, 1, 10, '#ffd700', { name: 'WinPlatform', m: 'neon' });
+  P(0, 0.75, -72, 8, 0.5, 8, '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' });
+  P(0, 4.5, -76, 4, 6, 4, '#00e5ff', { name: 'BigCrystal', m: 'neon', sh: 'cone' });
+  P(-5, 3, -76, 2, 3, 2, '#ff2d95', { name: 'Crystal', m: 'neon', sh: 'cone' });
+  P(5, 3, -76, 2, 3, 2, '#7c4dff', { name: 'Crystal', m: 'neon', sh: 'cone' });
+  for (let k = 0; k < 4; k++) coin(Math.cos(k * Math.PI / 2 + Math.PI / 4) * 5, 2.5, -72 + Math.sin(k * Math.PI / 2 + Math.PI / 4) * 3);
+  return w;
+}
+
+export const templates = { baseplate, obby, hangout, tower, coinRush, shooterArena, shooterFort, shooterRooftop, soccerField, mysteryMansion, garden, stealablob, gauntlet, skyIslands, raceTrack, volcanoEscape, snowPeak, heistCity, whodunit, hauntedHotel, bedBattle, forestCamp, petHatchery, lostTemple, skyPirates, dungeonQuest, partyPlaza, voiceLounge, tagArena, crystalDash };
 Object.assign(templates, genTemplates);
 export { GEN_GAMES };
 

@@ -10,6 +10,9 @@ import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
 import { createFamily } from './family.js';
+import { createParent } from './parent.js';
+import { createGameVerify } from './gameverify.js';
+import { createForums } from './forums.js';
 import { BAD, ageYears, ageGroupOf, isAdultUser, isChildUser, canSwear, safetyFilter, chatFilter, validEmail, validBirthday, adultChildBlocked } from './safety.js';
 import { createVersion } from './version.js';
 import { createTrade } from './trade.js';
@@ -142,7 +145,10 @@ async function discoverGames(q) {
   };
   let { data, error } = await run(true);
   if (error) ({ data } = await run(false));
-  return (data || []).filter(g => !g.unpublished).map(gameSummary);
+  // Phase 2: only approved games are public. Rows made before the status
+  // column existed have status === undefined and stay public (the SQL
+  // backfills them to 'approved').
+  return (data || []).filter(g => !g.unpublished && (g.status === undefined || g.status === 'approved')).map(gameSummary);
 }
 
 const ADDONS = [
@@ -162,7 +168,7 @@ const getAddonSettings = u => (u.addons && typeof u.addons === 'object') ? u.add
 async function seed() {
   const now = Date.now();
   const g = (id, name, creator, desc, tpl, visits, likes, dislikes, max_players = 30) =>
-    ({ id, name, creator, description: desc, world: templates[tpl](), visits, likes, dislikes, max_players, created: now, updated: now, thumbnail: null });
+    ({ id, name, creator, description: desc, world: templates[tpl](), visits, likes, dislikes, max_players, created: now, updated: now, thumbnail: null, status: 'approved' });
 
   const games = [
     g('g1', 'Mega Fun Obby', 'funtopia', 'Jump, dodge and bounce through 10 stages of obstacles!', 'obby', 1543210, 8912, 412),
@@ -171,6 +177,7 @@ async function seed() {
     g('g4', 'Coin Rush Islands', 'funtopia', 'Hop between floating islands and grab every coin!', 'coinRush', 432100, 3999, 155),
     g('g5', 'Classic Baseplate', 'funtopia', 'The classic. A big grey baseplate.', 'baseplate', 210987, 1500, 90),
     g('g_tag', '🏷️ Tag!', 'funtopia', 'You are IT! Chase your friends and tag them before the timer runs out — bounce pads to escape, speed pads to catch up!', 'tagArena', 0, 0, 0, 30),
+    g('g_crystaldash', '💎 Crystal Dash', 'funtopia', 'Race the crystal course! Sprint the straights, hop the stones over the void, ride the moving ferry, dodge the spike strips and touch the big crystal to win!', 'crystalDash', 0, 0, 0, 30),
     g('g_voicelounge', '🎤 Voice Lounge', 'funtopia', 'Call your friends and hang out — voice chat lives here.', 'voiceLounge', 0, 0, 0, 50),
   ];
 
@@ -187,7 +194,7 @@ async function seed() {
     await supabase.from('games').insert({
       id: gg.id, name: gg.name, creator: 'funtopia', description: gg.desc,
       world: templates[gg.key](), visits: 50 + (gg.seed % 900), likes: 5 + (gg.seed % 80),
-      dislikes: 0, max_players: 30, created: now, updated: now, thumbnail: null,
+      dislikes: 0, max_players: 30, created: now, updated: now, thumbnail: null, status: 'approved',
     });
   }
 }
@@ -1575,12 +1582,15 @@ app.get('/api/games', auth, async (req, res) => {
 
 app.get('/api/mygames', auth, async (req, res) => {
   const { data: games } = await supabase.from('games').select('*').ilike('creator', key(req.user.name));
-  res.json((games || []).map(g => ({ ...gameSummary(g), unpublished: !!g.unpublished })));
+  res.json((games || []).map(g => ({ ...gameSummary(g), unpublished: !!g.unpublished, status: g.status || 'pending' })));
 });
 
-app.get('/api/games/:id', auth, async (req, res) => {
+app.get('/api/games/:id', auth, async (req, res, next) => {
+  if (req.params.id === 'pending') return next(); // let /api/games/pending (gameverify.js) handle it
   const { data: g, error: gErr } = await supabase.from('games').select('*').eq('id', req.params.id).single();
   if (gErr || !g) return res.status(404).json({ error: 'Game not found' });
+  // Phase 2: a pending/rejected game is visible only to its creator and to moderators.
+  if ((g.status === 'pending' || g.status === 'rejected') && key(g.creator) !== key(req.user.name) && !isMod(req.user)) return res.status(404).json({ error: 'Game not found' });
   const vote = g.votes?.[key(req.user.name)] || 0;
   res.json({ ...gameSummary(g), description: g.description, max_players: g.max_players || 30, created: g.created, world: g.world, event: g.event || null, unpublished: !!g.unpublished, vote, favorited: (req.user.favorites || []).includes(g.id), favorites: g.favorite_count || 0 });
 });
@@ -1589,15 +1599,16 @@ app.post('/api/games', auth, async (req, res) => {
   const { name, description, world, thumbnail, publish, icon } = req.body || {};
   const id = `g_${crypto.randomUUID()}`;
   const game = {
-    id, name: filter(name || 'Untitled Game').slice(0, 50), creator: req.user.name, description: filter(description || '').slice(0, 1000), world: sanitizeWorld(world), visits: 0, likes: 0, dislikes: 0, max_players: 30, created: Date.now(), updated: Date.now(), thumbnail: validThumb(thumbnail), unpublished: !publish
+    id, name: filter(name || 'Untitled Game').slice(0, 50), creator: req.user.name, description: filter(description || '').slice(0, 1000), world: sanitizeWorld(world), visits: 0, likes: 0, dislikes: 0, max_players: 30, created: Date.now(), updated: Date.now(), thumbnail: validThumb(thumbnail), unpublished: !publish, status: 'pending'
   };
   const ic = validIcon(icon);
   if (ic === null) return res.status(400).json({ error: 'Icon must be a single emoji' });
   if (ic) game.icon = ic;
   let { data, error } = await supabase.from('games').insert(game).select().single();
   if (error && game.icon && /icon/i.test(error.message)) { delete game.icon; ({ data, error } = await supabase.from('games').insert(game).select().single()); }
+  if (error && game.status && /status/i.test(error.message)) { delete game.status; ({ data, error } = await supabase.from('games').insert(game).select().single()); }
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ id: data.id, ...(game.icon ? {} : { iconIgnored: !!ic }) });
+  res.json({ id: data.id, status: data.status || 'pending', ...(game.icon ? {} : { iconIgnored: !!ic }) });
 });
 
 app.put('/api/games/:id', auth, async (req, res) => {
@@ -1968,6 +1979,9 @@ createSuggestions({ app, auth, modOnly, isMod, supabase, filter, logMod });
 createCalling({ app, auth, supabase, notify });
 createVerify({ app, auth, supabase, isOwner, logMod });
 createFamily({ app, auth, supabase, filter, notify, key, chatFilter, safetyFilter });
+createParent({ app, auth, supabase, key, list, notify, logMod });
+createGameVerify({ app, auth, modOnly, supabase, key, logMod, notify });
+createForums({ app, auth, modOnly, supabase, chatFilter, safetyFilter, logMod });
 createVersion({ app, auth, supabase, isOwner });
 createTrade({ app, auth, supabase, notify, key });
 createTwoUi({ app, auth, supabase, key });

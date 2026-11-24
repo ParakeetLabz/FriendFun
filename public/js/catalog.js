@@ -316,6 +316,17 @@ export const CATALOG = [
   { id: 'gear_pumpkinsword', type: 'gear', name: 'Pumpkin Sword', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
   { id: 'pet_pumpkin', type: 'pet', name: 'Pumpkin Pup', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
   { id: 'shirt_pumpkin', type: 'shirt', name: 'Pumpkin Tee', price: 0, limited: true, pumpkin: true, emoji: '🎃', color: '#ff6d00' },
+  // ---- Bundle: better avatar items (10 new, all original, all buyable) ----
+  { id: 'hat_tiara', type: 'hat', name: 'Sparkle Tiara', price: 350, color: '#80deea' },
+  { id: 'hat_sunflower', type: 'hat', name: 'Sunflower Hat', price: 220, color: '#fdd835' },
+  { id: 'hat_crown_emerald', type: 'hat', name: 'Emerald Crown', price: 850, color: '#2e7d32' },
+  { id: 'face_bubbles', type: 'face', name: 'Bubble Pop', price: 60 },
+  { id: 'face_giggle', type: 'face', name: 'Giggles', price: 90 },
+  { id: 'face_wow', type: 'face', name: 'Wow!', price: 70 },
+  { id: 'shirt_comet', type: 'shirt', name: 'Comet Tee', price: 140, color: '#1a237e' },
+  { id: 'shirt_bubble', type: 'shirt', name: 'Bubble Tee', price: 120, color: '#b3e5fc' },
+  { id: 'gear_magicwand', type: 'gear', name: 'Magic Wand', price: 500, emoji: '🪄', color: '#7b1fa2' },
+  { id: 'gear_watergun', type: 'gear', name: 'Splash Blaster', price: 450, emoji: '💦', color: '#29b6f6' },
 ];
 // boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at ground, faces +z.
 // ---------- pet voxel models (shared by game.js 3D pets and app.js 2D previews) ----------
@@ -758,6 +769,22 @@ export const GEAR_MODELS = {
     [0, 0.7, -1, 0.35, 0.35, 0.15, '#558b2f'],
     [0, 0.3, -0.2, 0.2, 0.4, 0.4, '#5d4037'],
     [0, 1, 0.3, 0.1, 0.15, 0.3, '#212121'],
+  ] },
+  gear_magicwand: { boxes: [
+    [0, 0.5, 0, 0.14, 1.0, 0.14, '#5d4037'],
+    [0, 1.05, 0, 0.2, 0.14, 0.2, '#ffd400'],
+    [0, 1.5, 0, 0.34, 0.34, 0.1, '#ffd400'],
+    [0.2, 1.5, 0, 0.14, 0.14, 0.1, '#ffd400'],
+    [-0.2, 1.5, 0, 0.14, 0.14, 0.1, '#ffd400'],
+    [0, 1.7, 0, 0.14, 0.14, 0.1, '#fff176'],
+    [0, 1.3, 0, 0.14, 0.14, 0.1, '#ffca28'],
+  ] },
+  gear_watergun: { boxes: [
+    [0, 0.6, 0, 0.35, 0.45, 1.0, '#29b6f6'],
+    [0, 0.95, 0.1, 0.3, 0.25, 0.6, '#4fc3f7'],
+    [0, 0.65, 0.65, 0.18, 0.18, 0.4, '#0277bd'],
+    [0, 0.2, -0.1, 0.2, 0.45, 0.25, '#01579b'],
+    [0, 0.6, -0.45, 0.12, 0.12, 0.3, '#ffca28'],
   ] },
 };
 export const ECON = { START_TIX: 100, DAILY_TIX: 25, PLAY_TIX: 2, PLAY_TIX_EVERY: 60000, COIN_TIX: 1, WIN_TIX: 25,

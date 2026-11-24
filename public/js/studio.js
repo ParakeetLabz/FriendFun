@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=88ba247e';
-import { CATALOG } from './catalog.js?v=843f2486';
+import { CATALOG } from './catalog.js?v=90a4da23';
 import { icons } from './icons.js?v=1aa0a4d3';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
@@ -818,10 +818,11 @@ export class Studio {
   async save(extra = {}) {
     const body = { name: this.name, description: this.description, world: this.world, icon: this.icon || '', ...extra };
     try {
+      let createdStatus = null;
       if (this.gameId) await this.o.api('PUT', '/api/games/' + this.gameId, body);
-      else { const r = await this.o.api('POST', '/api/games', body); this.gameId = r.id; this.o.onCreated?.(r.id); }
+      else { const r = await this.o.api('POST', '/api/games', body); this.gameId = r.id; createdStatus = r.status || 'pending'; this.o.onCreated?.(r.id); }
       this.dirty = false; this.c.querySelector('.st-dirty').textContent = '';
-      this.o.toast(extra.publish ? 'Published! Your game is live.' : 'Saved');
+      this.o.toast(extra.publish ? (createdStatus === 'pending' ? 'Sent for review! Your game will appear in Discover once a moderator approves it.' : 'Published! Your game is live.') : 'Saved');
       return true;
     } catch (e) { this.o.toast(e.message, true); return false; }
   }

@@ -26,7 +26,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=24aeaab1').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=a3b315a0').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -67,8 +67,8 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=6f0f1eed';
-import { templates, GEN_GAMES } from './worlds.js?v=cbbe33e5';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=90a4da23';
+import { templates, GEN_GAMES } from './worlds.js?v=b8058d58';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
 import { sfx } from './sound.js?v=music27';
@@ -313,6 +313,8 @@ function settingsPage() {
       <button class="btn-primary set-adult-btn">I am 18 or older</button>` : ''}
       ${me.ageGroup === 'child' ? `<p class="muted small">Swearing is hidden for you — yours and anyone else's. Adults cannot message you unless you are in the same family.</p>` : ''}
       <a class="set-row set-link" href="#/safety-contract"><span><span class="ic">${icons.shield}</span> FunTopia Safety Contract</span><span class="muted">›</span></a>
+      <a class="set-row set-link" href="#/parent"><span><span class="ic">${icons.shield}</span> Parent View — see what your child does on FunTopia</span><span class="muted">›</span></a>
+      <a class="set-row set-link" href="#/safety-qa"><span><span class="ic">${icons.shield}</span> Safety Q&amp;A</span><span class="muted">›</span></a>
     </section>
     <section class="admin-section"><h3>More</h3>
       <a class="set-row set-link" href="#/funai"><span><span class="ic">${icons.sparkles}</span> FunAI — game maker AI</span><span class="muted">›</span></a>
@@ -578,7 +580,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=b6487be4');
+  const m = await import('./lobby.js?v=b4350ee5');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -693,6 +695,7 @@ function loginPage() {
           <label>Email<input name="email" type="email" autocomplete="email" placeholder="Needed for safety reports"></label>
           <label>Birthday<input name="birthday" type="date"></label>
           <details class="contract-details"><summary>Read the FunTopia Safety Contract</summary><div class="contract-body">${SAFETY_CONTRACT_HTML}</div></details>
+          <p class="muted small">New here? Read the <a href="#/safety-qa">Safety Q&amp;A</a> to see how FunTopia keeps you safe.</p>
           <label class="auth-contract"><input type="checkbox" name="contract"> I have read the Safety Contract and I agree to follow it.</label>
         </div>
         <div class="auth-err"></div>
@@ -866,7 +869,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=d8e7b882');
+  const { Game } = await import('./game.js?v=c7f46c96');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1460,7 +1463,7 @@ async function createPage() {
       <p class="muted">Got a <b>.fun</b> game file? It holds the game's scripts and a JSON with its name — load it and it opens as a new experience you can edit in Studio.</p>
       <div class="row"><button class="btn-secondary" id="funImportBtn"><span class="ic">${icons.upload}</span> Choose a .fun file…</button><input type="file" id="funImport" accept=".fun,application/json" hidden></div></section>
     <section><div class="sec-h"><h2>My Experiences (${mine.length})</h2></div>
-      <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${g.icon ? esc(g.icon) + ' ' : ''}${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
+      <div class="my-games">${mine.map(g => `<div class="my-game"><img ${g.thumbnail ? `src="${g.thumbnail}"` : `src="${PLACEHOLDER}" data-thumb="${g.id}"`}><div class="mg-info"><b>${g.icon ? esc(g.icon) + ' ' : ''}${esc(g.name)}</b><span class="muted small">${g.unpublished ? 'Private (not published)' : 'Public'}${g.status === 'pending' ? ' · ⏳ Awaiting review — moderators check new games before they go public' : g.status === 'rejected' ? ' · Rejected by moderators — it stays hidden' : ''} &middot; ${fmt(g.visits)} visits &middot; ${fmt(g.playing)} playing</span></div>
         <a class="btn-secondary" href="#/${g.is2ui ? '2ui' : 'studio'}/${g.id}">Edit</a><a class="btn-secondary" href="#/games/${g.id}">View</a><button class="btn-danger" data-del="${g.id}">Delete</button></div>`).join('') || '<p class="muted">You haven\'t made anything yet. Pick a template above to open Funtopia Studio!</p>'}</div></section>`, () => {
     app.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => location.hash = b.dataset.goto);
     setTimeout(() => app.querySelectorAll('img[data-tpl]').forEach(img => { img.src = tplThumb(img.dataset.tpl); }), 30);
@@ -1479,13 +1482,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=0ff0a978');
+  const { Studio } = await import('./studio.js?v=360cc4e8');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=d8e7b882');
+      const { Game: GameClass } = await import('./game.js?v=c7f46c96');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1541,12 +1544,13 @@ function reportModal(target, type = 'user') {
 async function moderationPage() {
   const mods = await api('GET', '/api/moderators').catch(() => []);
   const isMod = !!(me?.moderator || me?.admin);
-  let queue = [], pending = [], log = [], ugcPending = [];
+  let queue = [], pending = [], log = [], ugcPending = [], gamesPending = [];
   if (isMod) {
     queue = await api('GET', '/api/mod/queue').catch(() => []);
     pending = await api('GET', '/api/mod/ban/pending').catch(() => []);
     log = await api('GET', '/api/mod/log').catch(() => []);
     ugcPending = await api('GET', '/api/ugc/pending').catch(() => []);
+    gamesPending = await api('GET', '/api/games/pending').catch(() => []);
     for (const u of ugcPending) if (!ITEM[u.id]) ITEM[u.id] = { id: u.id, type: u.type, name: u.name, price: u.price, color: u.color, template: u.template, model_url: u.model_url || null, model_transform: u.model_transform || null, creator: u.creator, ugc: true };
   }
   const badge = l => l === 'urgent' ? '<span class="mod-urgent">URGENT</span>' : l === 'review' ? '<span class="mod-review">REVIEW</span>' : '<span class="mod-clear">CLEAR</span>';
@@ -1583,6 +1587,16 @@ async function moderationPage() {
           <button class="btn-primary btn-small" data-ugc-ok="${u.id}">Approve</button>
           <button class="btn-danger btn-small" data-ugc-no="${u.id}">Reject</button>
         </div></div>`).join('') || '<p class="muted">No UGC awaiting review.</p>'}</section>
+    <section><div class="sec-h"><h2>Game Review (${gamesPending.length})</h2></div>
+      ${gamesPending.map(g => `<div class="mod-report">
+        <div class="mod-report-body"><b>${esc(g.name)}</b><div>by ${esc(g.creator)} · ${g.visits || 0} visits</div>
+        <div class="muted small">${esc((g.description || '').slice(0, 200))}</div>
+        <div class="muted small">Created ${g.created ? new Date(g.created).toLocaleString() : ''}</div></div>
+        <div class="mod-report-actions">
+          <a class="btn-secondary btn-small" href="#/games/${encodeURIComponent(g.id)}">View</a>
+          <button class="btn-primary btn-small" data-game-ok="${g.id}">Approve</button>
+          <button class="btn-danger btn-small" data-game-no="${g.id}">Reject</button>
+        </div></div>`).join('') || '<p class="muted">No games awaiting review.</p>'}</section>
     <section><div class="sec-h"><h2>Action Log</h2></div>
       <div>${log.map(e => `<div class="mod-log-row"><span class="muted small">${new Date(e.t).toLocaleString()}</span><b>${esc(e.by)}</b><span class="mod-act">${esc(e.action)}</span><span>${esc(e.target)}</span><span class="muted small">${esc(e.reason || '')}</span></div>`).join('') || '<p class="muted">No actions yet.</p>'}</div></section>` : ''}`,
   () => {
@@ -1620,6 +1634,14 @@ async function moderationPage() {
     });
     app.querySelectorAll('[data-ugc-no]').forEach(b => b.onclick = async () => {
       try { await api('POST', '/api/ugc/' + b.dataset.ugcNo + '/reject'); toast('UGC item rejected'); reload(); }
+      catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('[data-game-ok]').forEach(b => b.onclick = async () => {
+      try { await api('POST', '/api/games/' + b.dataset.gameOk + '/approve'); toast('Game approved — it is now public'); reload(); }
+      catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('[data-game-no]').forEach(b => b.onclick = async () => {
+      try { await api('POST', '/api/games/' + b.dataset.gameNo + '/reject'); toast('Game rejected — it stays hidden'); reload(); }
       catch (e) { toast(e.message, true); }
     });
     app.querySelectorAll('[data-ugc-view]').forEach(b => b.onclick = () => {
@@ -1666,7 +1688,9 @@ const adminDeps = { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CL
 const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAvatar3d, ugcCardImg, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
 const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
+const forumsDeps = { api, mount, esc, toast, get me() { return me; } };
 const familyDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
+const parentDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
 const twoUiDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const tradeDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
@@ -1804,7 +1828,7 @@ async function route() {
   if (cleanup) { const c = cleanup; cleanup = null; c(); }
   const [path, query] = location.hash.slice(1).split('?');
   const seg = (path || '/home').split('/').filter(Boolean);
-  if (!token && seg[0] !== 'horror') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); showIntro(); return loginPage(); }
+  if (!token && seg[0] !== 'horror' && seg[0] !== 'safety-qa') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); showIntro(); return loginPage(); }
   try {
     if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
     applyTheme();
@@ -1813,7 +1837,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', '2ui', 'trades', 'trade', 'pets', 'tokens', 'safety-contract']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', 'parent', '2ui', 'trades', 'trade', 'pets', 'tokens', 'safety-contract', 'forums', 'safety-qa']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -1849,14 +1873,21 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=65eda775'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=b6288385'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
+      case 'parent': { const m = await import('./parent.js?v=parentp2'); if (seg[1]) return m.parentChildPage(parentDeps, decodeURIComponent(seg[1])); return m.parentPage(parentDeps); }
+      case 'forums': {
+        const m = await import('./forums.js?v=p3forums1');
+        if (seg[1]) return m.forumThreadPage(forumsDeps, decodeURIComponent(seg[1]));
+        return m.forumsPage(forumsDeps);
+      }
+      case 'safety-qa': { const m = await import('./forums.js?v=p3forums1'); return m.safetyQaPage(forumsDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
-      case 'trades': { const m = await import('./trade.js?v=05bc1a3c'); return m.tradePage(tradeDeps); }
-      case 'trade': { const m = await import('./trade.js?v=05bc1a3c'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
-      case 'pets': { const m = await import('./pets.js?v=a6d6af28'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=66afc4ed'); return m.tokensPage(tokensDeps); }
+      case 'trades': { const m = await import('./trade.js?v=dac4b7ef'); return m.tradePage(tradeDeps); }
+      case 'trade': { const m = await import('./trade.js?v=dac4b7ef'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
+      case 'pets': { const m = await import('./pets.js?v=953ffc37'); return m.petsPage(petsDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=64c7e236'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
@@ -1872,7 +1903,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=5dd26373'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=bd8e88de'); return m.skinmakerPage(skinmakerDeps); }
       case 'themes': return themesPage(themesDeps);
       default: location.hash = '#/home'; return;
     }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=843f2486';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=90a4da23';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -23,7 +23,9 @@ function faceTexture(id) {
     case 'shock': eyes(22); g.beginPath(); g.ellipse(64, 90, 10, 14, 0, 0, Math.PI * 2); g.fill(); break;
     case 'mad': eyes(14); g.beginPath(); g.moveTo(32, 32); g.lineTo(54, 42); g.moveTo(96, 32); g.lineTo(74, 42); g.stroke(); g.beginPath(); g.arc(64, 104, 22, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke(); break;
     case 'buckteeth': eyes(); g.beginPath(); g.moveTo(30, 72); g.quadraticCurveTo(64, 114, 98, 72); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(50, 78, 13, 28); g.fillRect(65, 78, 13, 28); g.fillStyle = '#e8e8e8'; g.fillRect(50, 78, 13, 7); g.fillRect(65, 78, 13, 7); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(50, 78, 13, 28); g.strokeRect(65, 78, 13, 28); g.beginPath(); g.moveTo(64, 78); g.lineTo(64, 106); g.stroke(); break;
-    case 'beak': eyes(); g.fillStyle = '#ff9800'; g.beginPath(); g.ellipse(64, 84, 31, 14, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fb8c00'; g.beginPath(); g.ellipse(64, 91, 31, 8, 0, 0, Math.PI); g.fill(); g.strokeStyle = '#e65100'; g.lineWidth = 4; g.beginPath(); g.moveTo(35, 86); g.quadraticCurveTo(64, 93, 93, 86); g.stroke(); g.fillStyle = '#e65100'; g.beginPath(); g.ellipse(52, 78, 3.2, 4.5, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(76, 78, 3.2, 4.5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffe0b2'; g.beginPath(); g.ellipse(48, 76, 6, 3, -0.4, 0, Math.PI * 2); g.fill(); break;
+    case 'bubbles': eyes(); smile(); g.fillStyle = '#4fc3f7'; for (const [x, y, r] of [[104, 28, 9], [112, 46, 5], [22, 30, 7], [30, 48, 4]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#fff'; for (const [x, y, r] of [[101, 25, 3], [20, 27, 2.5]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } break;
+    case 'giggle': closedHappy(); g.beginPath(); g.ellipse(64, 88, 18, 14, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f48fb1'; g.beginPath(); g.roundRect(56, 88, 16, 14, 7); g.fill(); g.fillStyle = '#111'; break;
+    case 'wow': g.beginPath(); g.ellipse(44, 50, 10, 14, 0, 0, Math.PI * 2); g.ellipse(84, 50, 10, 14, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(47, 46, 3, 0, Math.PI * 2); g.arc(87, 46, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.lineWidth = 6; g.beginPath(); g.ellipse(64, 88, 8, 11, 0, 0, Math.PI * 2); g.stroke(); break;
     case '3dglasses': g.fillStyle = '#e53935'; g.fillRect(28, 40, 32, 20); g.fillStyle = '#26c6da'; g.fillRect(68, 40, 32, 20); g.strokeStyle = '#111'; g.lineWidth = 4; g.strokeRect(28, 40, 32, 20); g.strokeRect(68, 40, 32, 20); smile(); break;
     case 'alien': g.beginPath(); g.ellipse(40, 48, 10, 18, -0.4, 0, Math.PI * 2); g.ellipse(88, 48, 10, 18, 0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(64, 92, 12, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); break;
     case 'angel': closedHappy(); smile(72, 18); g.strokeStyle = '#ffd400'; g.lineWidth = 5; g.beginPath(); g.arc(64, 22, 16, 0, Math.PI * 2); g.stroke(); break;
@@ -66,7 +68,7 @@ function faceTexture(id) {
     case 'sparkle': eyes(); smile(); g.fillStyle = '#fff'; const sp = (x, y, r) => { g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); }; g.fillStyle = '#fdd835'; sp(28, 30, 10); sp(100, 28, 8); sp(108, 78, 7); break;
     case 'glitch': g.fillStyle = '#e53935'; g.fillRect(36, 44, 16, 12); g.fillStyle = '#26c6da'; g.fillRect(44, 44, 16, 12); g.fillStyle = '#e53935'; g.fillRect(76, 44, 16, 12); g.fillStyle = '#26c6da'; g.fillRect(68, 44, 16, 12); g.fillStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(40, 86); g.lineTo(52, 80); g.lineTo(64, 88); g.lineTo(76, 80); g.lineTo(88, 86); g.stroke(); break;
     case 'kitty': eyes(); g.fillStyle = '#f48fb1'; g.beginPath(); g.moveTo(58, 66); g.lineTo(70, 66); g.lineTo(64, 72); g.closePath(); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 3; for (const y of [64, 70, 76]) { g.beginPath(); g.moveTo(24, y); g.lineTo(52, y + 2); g.moveTo(104, y); g.lineTo(76, y + 2); g.stroke(); } g.beginPath(); g.moveTo(64, 72); g.lineTo(64, 78); g.moveTo(64, 78); g.quadraticCurveTo(56, 86, 48, 82); g.moveTo(64, 78); g.quadraticCurveTo(72, 86, 80, 82); g.stroke(); break;
-    case 'smile': default: eyes(); smile(); break;
+    case 'smile': default: eyes(); smile(); g.fillStyle = 'rgba(244,143,177,0.45)'; g.beginPath(); g.arc(30, 66, 8, 0, Math.PI * 2); g.arc(98, 66, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; break;
     case 'stareyes': g.fillStyle = '#fdd835'; const star2 = (x, y) => { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 5 : 11; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); g.fill(); }; star2(44, 50); star2(84, 50); g.fillStyle = '#111'; smile(); break;
     case 'sus': g.beginPath(); g.ellipse(44, 52, 9, 6, 0, 0, Math.PI * 2); g.ellipse(84, 52, 9, 6, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(46, 50, 2.5, 0, Math.PI * 2); g.arc(86, 50, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(48, 88); g.lineTo(80, 88); g.stroke(); break;
     case 'terminator': g.fillStyle = '#e53935'; g.beginPath(); g.arc(44, 50, 9, 0, Math.PI * 2); g.fill(); g.fillStyle = '#78909c'; g.fillRect(70, 42, 26, 16); g.fillStyle = '#111'; for (let x = 74; x <= 92; x += 9) g.fillRect(x, 78, 5, 14); g.beginPath(); g.moveTo(44, 86); g.lineTo(60, 86); g.stroke(); break;
@@ -122,6 +124,8 @@ function shirtTexture(id) {
     case 'checker': for (let y = 0; y < 128; y += 32) for (let x = 0; x < 128; x += 32) { g.fillStyle = ((x + y) / 32) % 2 ? '#111' : '#fff'; g.fillRect(x, y, 32, 32); } break;
     case 'plaid': g.fillStyle = '#2e7d32'; g.fillRect(0, 0, 128, 128); g.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 0; x < 128; x += 32) g.fillRect(x, 0, 8, 128); for (let y = 0; y < 128; y += 32) g.fillRect(0, y, 128, 8); g.fillStyle = 'rgba(255,235,59,.5)'; for (let x = 16; x < 128; x += 32) g.fillRect(x, 0, 3, 128); break;
     case 'denim': g.fillStyle = '#1e5aa8'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#ffeb3b'; g.lineWidth = 3; g.strokeRect(28, 44, 30, 34); g.strokeRect(70, 44, 30, 34); g.beginPath(); g.moveTo(0, 96); g.lineTo(128, 96); g.stroke(); g.fillStyle = 'rgba(255,255,255,.18)'; for (let y = 8; y < 128; y += 24) g.fillRect(0, y, 128, 2); break;
+    case 'comet': g.fillStyle = '#fff'; star(64, 56, 26, 11); g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 5; g.lineCap = 'round'; for (const [x1, y1, x2, y2] of [[28, 96, 50, 76], [18, 108, 44, 84], [44, 104, 60, 88]]) { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); } g.fillStyle = '#fff176'; star(96, 30, 10, 4); break;
+    case 'bubble': g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 4; for (const [x, y, r] of [[30, 40, 14], [92, 30, 10], [64, 72, 18], [102, 92, 12], [26, 96, 9]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); } g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.arc(25, 35, 4, 0, Math.PI * 2); g.arc(59, 66, 5, 0, Math.PI * 2); g.fill(); break;
     case 'galaxy': g.fillStyle = '#1a1033'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#7b1fa2'; g.beginPath(); g.arc(40, 50, 26, 0, Math.PI * 2); g.arc(90, 90, 20, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; for (const [x, y, r] of [[20, 24, 2], [60, 30, 3], [100, 40, 2], [30, 90, 2], [80, 60, 3], [110, 100, 2], [50, 110, 2]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } break;
 
   }
@@ -135,6 +139,13 @@ export function shirtDesignImage(id) {
 }
 
 function mat(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.75 }); }
+// Darken (f < 1) or lighten (f > 1) a hex color — used for soles, cuffs,
+// grooves and noses so detail reads as a shade of the part it sits on.
+function shade(hex, f) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v * f)));
+  return '#' + [c((n >> 16) & 255), c((n >> 8) & 255), c(n & 255)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
 function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
 // Rounded box — same blocky proportions, softened edges that catch the light.
 function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
@@ -224,7 +235,7 @@ function attachUgcGlb(parent, url, targetSize, y = 0, t = null) {
 function hatStyle(id) {
   if (id.startsWith('ugc_')) { const u = ITEM[id]; return u && u.template ? hatStyle(u.template) : 'cap'; }
   const s = id.slice(4);
-  const styles = ['tophat', 'clubhat', 'bunnyears', 'ducktuft', 'catears', 'bearears', 'foxears', 'wolfears', 'flowercrown', 'propeller', 'beanie', 'crown', 'wizard', 'pirate', 'cowboy', 'santa', 'party', 'sombrero', 'ninja', 'chef', 'ushanka', 'beret', 'detective', 'visor', 'sun', 'fez', 'frog', 'shark', 'chicken', 'pizza', 'burger', 'taco', 'donut', 'icecream', 'popcorn', 'helm', 'cap', 'cone', 'horns', 'halo', 'headphones', 'witch', 'scarecrow', 'devilhorns'];
+  const styles = ['tophat', 'clubhat', 'bunnyears', 'ducktuft', 'catears', 'bearears', 'foxears', 'wolfears', 'flowercrown', 'propeller', 'beanie', 'crown', 'wizard', 'pirate', 'cowboy', 'santa', 'party', 'sombrero', 'ninja', 'chef', 'ushanka', 'beret', 'detective', 'visor', 'sun', 'fez', 'frog', 'shark', 'chicken', 'pizza', 'burger', 'taco', 'donut', 'icecream', 'popcorn', 'helm', 'cap', 'cone', 'horns', 'halo', 'headphones', 'witch', 'scarecrow', 'devilhorns', 'tiara', 'sunflower'];
   for (const k of styles) if (s === k || s.startsWith(k + '_')) return k;
   return 'cap';
 }
@@ -237,6 +248,18 @@ function buildHat(id) {
   switch (st) {
     case 'cap': add(new THREE.SphereGeometry(0.68, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0.05); add(new THREE.BoxGeometry(1.1, 0.08, 0.6), C, 0, 0.05, 0.75); break;
     case 'tophat': add(new THREE.CylinderGeometry(0.95, 0.95, 0.08, 24), C); add(new THREE.CylinderGeometry(0.55, 0.55, 1.1, 24), C, 0, 0.55); add(new THREE.CylinderGeometry(0.56, 0.56, 0.18, 24), it.band || '#b71c1c', 0, 0.15); break;
+    case 'tiara': {
+      add(new THREE.CylinderGeometry(0.58, 0.58, 0.22, 24, 1, true), C, 0, 0.14);
+      for (let i = 0; i < 3; i++) { const a = -0.5 + i * 0.5; add(new THREE.ConeGeometry(0.09, 0.3 - Math.abs(i - 1) * 0.08, 6), C, Math.sin(a) * 0.56, 0.36, Math.cos(a) * 0.56); }
+      add(new THREE.SphereGeometry(0.1), '#f48fb1', 0, 0.48, 0.56);
+      add(new THREE.SphereGeometry(0.07), '#4fc3f7', -0.5, 0.3, 0.34);
+      add(new THREE.SphereGeometry(0.07), '#4fc3f7', 0.5, 0.3, 0.34);
+      break; }
+    case 'sunflower': {
+      const ring = add(new THREE.TorusGeometry(0.6, 0.08, 8, 24), '#43a047', 0, 0.28); ring.rotation.x = Math.PI / 2;
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const p = add(new THREE.SphereGeometry(0.13, 8, 6), '#fdd835', Math.cos(a) * 0.62, 0.3, Math.sin(a) * 0.62); p.scale.set(1.5, 0.45, 1); }
+      add(new THREE.SphereGeometry(0.24, 12, 10), '#6d4c41', 0, 0.44);
+      break; }
     case 'crown': add(new THREE.CylinderGeometry(0.62, 0.62, 0.35, 24, 1, true), C, 0, 0.15); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; add(new THREE.ConeGeometry(0.13, 0.35, 8), C, Math.cos(a) * 0.6, 0.48, Math.sin(a) * 0.6); } add(new THREE.SphereGeometry(0.1), '#e53935', 0, 0.15, 0.63); break;
     case 'horns': { const l = add(new THREE.ConeGeometry(0.14, 0.6, 12), C, -0.38, 0.22); l.rotation.z = 0.4; const r = add(new THREE.ConeGeometry(0.14, 0.6, 12), C, 0.38, 0.22); r.rotation.z = -0.4; break; }
     case 'halo': { const h = add(new THREE.TorusGeometry(0.5, 0.07, 8, 32), C, 0, 0.55); h.rotation.x = Math.PI / 2; h.material.emissive = new THREE.Color('#fff176'); break; }
@@ -528,6 +551,21 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
       ? new THREE.Mesh(new THREE.SphereGeometry(H.r + 0.01, 24, 16, Math.PI / 2 - 0.75, 1.5, Math.PI / 2 - 0.75, 1.5), faceMat)
       : new THREE.Mesh(new THREE.PlaneGeometry(H.fw, H.fw), faceMat);
     face.position.set(0, H.h / 2, H.round ? 0 : H.fz); headPivot.add(face);
+    // Refined ears + nose: small blocky pieces in the head's own color,
+    // sized from the head mesh's real bounding box so they sit proud of
+    // every head shape (classic, tall, wide, sphere, TV...) instead of
+    // floating or sinking. Same silhouette, just more finished.
+    const skin = H.color || C.head;
+    const hb = new THREE.Box3().setFromObject(head);
+    const earY = (hb.min.y + hb.max.y) / 2 + 0.05;
+    for (const sx of [-1, 1]) {
+      const ear = part(0.14, 0.34, 0.3, skin);
+      ear.position.set(sx * (hb.max.x + 0.05), earY, 0);
+      headPivot.add(ear);
+    }
+    const nose = part(0.18, 0.22, 0.14, shade(skin, 0.88));
+    nose.position.set(0, (hb.min.y + hb.max.y) / 2 - 0.04, hb.max.z + 0.04);
+    headPivot.add(nose);
   }
   const hatIt = ITEM[avatar.hat];
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
@@ -612,6 +650,81 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   } else {
     larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
     lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
+  }
+  // ---- Additive character detail (same silhouette, same height) ----
+  // Collar on a bare torso, finger grooves on R15 hands, toe grooves +
+  // shoe soles on R15 feet, wrist cuffs when no shirt covers the arms.
+  // Every piece is a child of a limb pivot, so animations move it for
+  // free. R6 gets the same treatment on its one-piece limbs (grooves +
+  // sole ride on the rigid part — no new parts, rig stays 6-part).
+  // Sizes come from bounding boxes, not geometry internals, so this
+  // works for rounded and sharp parts alike.
+  const endMesh = (g) => g && g.children.find(c => c.isMesh);
+  const meshHex = (m) => '#' + m.material.color.getHexString();
+  const meshSize = (m) => new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+  const detailMat = (color, rough = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: rough });
+  const frontGrooves = (parent, m, y, color) => {
+    const s = meshSize(m);
+    for (const sx of [-1, 1]) {
+      const gr = new THREE.Mesh(new THREE.BoxGeometry(0.05, Math.min(0.3, s.y * 0.7), 0.02), detailMat(shade(color, 0.78)));
+      gr.position.set(m.position.x + sx * s.x * 0.22, y, m.position.z + s.z / 2 + 0.011);
+      parent.add(gr);
+    }
+  };
+  const shoeSole = (parent, m, color) => {
+    const s = meshSize(m);
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(s.x + 0.06, 0.08, s.z + 0.06), detailMat(shade(color, 0.55), 0.8));
+    sole.position.set(m.position.x, m.position.y - s.y / 2 + 0.04, m.position.z);
+    sole.castShadow = true;
+    parent.add(sole);
+  };
+  // Neckline collar on a bare torso (shirts already bring their own).
+  if (!avatar.shirt || avatar.shirt === 'shirt_none') {
+    const collar = part(torsoW + 0.04, 0.14, 1.04, shade(meshHex(torso), 0.85));
+    collar.position.y = 0.94;
+    torso.add(collar);
+  }
+  if (rig === 'r15') {
+    if (lhand && rhand) {
+      frontGrooves(lhand, endMesh(lhand), endMesh(lhand).position.y, meshHex(endMesh(lhand)));
+      frontGrooves(rhand, endMesh(rhand), endMesh(rhand).position.y, meshHex(endMesh(rhand)));
+    }
+    if (lfoot && rfoot) {
+      frontGrooves(lfoot, endMesh(lfoot), endMesh(lfoot).position.y, meshHex(endMesh(lfoot)));
+      frontGrooves(rfoot, endMesh(rfoot), endMesh(rfoot).position.y, meshHex(endMesh(rfoot)));
+      shoeSole(lfoot, endMesh(lfoot), meshHex(endMesh(lfoot)));
+      shoeSole(rfoot, endMesh(rfoot), meshHex(endMesh(rfoot)));
+    }
+    // Wrist cuffs on bare arms (shirt sleeves already add cuffs).
+    if (!shirtOn && larmLow && rarmLow) {
+      for (const low of [larmLow, rarmLow]) {
+        const m = endMesh(low); if (!m) continue;
+        const s = meshSize(m);
+        const cuff = part(s.x + 0.06, 0.2, s.x + 0.06, shade(meshHex(m), 0.82));
+        cuff.position.y = -s.y + 0.1;
+        low.add(cuff);
+      }
+    }
+  } else {
+    // R6: grooves near the wrist/ankle ends of the one-piece limbs.
+    // (Arm grooves sit just above the wrist cuff so both stay visible.)
+    frontGrooves(larm, endMesh(larm), -1.6, meshHex(endMesh(larm)));
+    frontGrooves(rarm, endMesh(rarm), -1.6, meshHex(endMesh(rarm)));
+    if (!isBugs && !isDaffy) {
+      frontGrooves(lleg, endMesh(lleg), -1.85, meshHex(endMesh(lleg)));
+      frontGrooves(rleg, endMesh(rleg), -1.85, meshHex(endMesh(rleg)));
+      shoeSole(lleg, endMesh(lleg), meshHex(endMesh(lleg)));
+      shoeSole(rleg, endMesh(rleg), meshHex(endMesh(rleg)));
+    }
+    if (!shirtOn) {
+      for (const arm of [larm, rarm]) {
+        const m = endMesh(arm); if (!m) continue;
+        const s = meshSize(m);
+        const cuff = part(s.x + 0.06, 0.25, s.x + 0.06, shade(meshHex(m), 0.82));
+        cuff.position.y = -1.85;
+        arm.add(cuff);
+      }
+    }
   }
   if (shirtOn && GL.arch !== 'vest') {
     // sleeves riding the arm pivots, so they swing with every animation.
