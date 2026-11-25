@@ -379,18 +379,23 @@ async function auth(req, res, next) {
 }
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password, email, parentEmail, birthday, contractAgreed, faceCheck } = req.body || {};
+  const { username, password, email, parentEmail, contractAgreed, faceCheck } = req.body || {};
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username || '')) return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or _' });
   if (!password || password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
-  // Safety: a birthday so the SERVER decides who is a child and who is an
-  // adult (ageGroupOf, never a client-sent age group), and the Safety
-  // Contract must be agreed to. Email rule depends on the age group:
-  // adults need their own email; kids do NOT need one (some kids don't
-  // have an email) but MUST give a parent's email instead — that is the
-  // contact address for safety reports. A parent email is contact info,
-  // not verification: kids play immediately, no parent approval gate.
-  if (!validBirthday(birthday)) return res.status(400).json({ error: 'Enter your real birthday' });
-  const group = ageGroupOf({ birthday: String(birthday).trim() });
+  // Safety (u151): the on-device face check (Funtopia Check) is the age
+  // gate at sign-up — no birthday is collected any more. The server
+  // validates the face result's shape and takes the group FROM it (never
+  // a client-sent age group); a missing or invalid result is rejected
+  // outright, so a direct API caller cannot create an account with no
+  // age proof at all. Email rule depends on the face group: adults need
+  // their own email; kids do NOT need one (some kids don't have an
+  // email) but MUST give a parent's email instead — that is the contact
+  // address for safety reports. A parent email is contact info, not
+  // verification: kids play immediately, no parent approval gate. The
+  // Safety Contract must be agreed to.
+  const fc = validFaceCheck(faceCheck);
+  if (!fc) return res.status(400).json({ error: 'Do the face check first — FunTopia needs to know if you are a kid or an adult before you can sign up' });
+  const group = fc.ageGroup;
   const parentEmailNorm = String(parentEmail || '').trim().toLowerCase();
   const emailNorm = String(email || '').trim().toLowerCase();
   if (group === 'adult') {
@@ -399,15 +404,6 @@ app.post('/api/signup', async (req, res) => {
     if (!validEmail(parentEmailNorm)) return res.status(400).json({ error: 'Enter a parent\'s real email address' });
   }
   if (contractAgreed !== true) return res.status(400).json({ error: 'You have to read and agree to the Safety Contract to play' });
-  // Face check (u150): the on-device result travels with the signup — the
-  // client enforces the check, the server validates the shape and stores
-  // ONLY the result (never a photo). Absent is tolerated so older cached
-  // clients can still sign up; a present-but-invalid result is rejected.
-  // A direct API caller can skip any client-side check, so this is a
-  // recorded attestation, not proof — the birthday still decides the group.
-  const fc = faceCheck !== undefined ? validFaceCheck(faceCheck) : null;
-  if (faceCheck !== undefined && !fc) return res.status(400).json({ error: 'That face-check result is not valid — no photo data is ever accepted' });
-  if (fc && fc.ageGroup !== group) console.warn('[facecheck] signup result disagrees with birthday for', key(username), '- face says', fc.ageGroup, ', birthday says', group);
   const { data: existing } = await supabase.from('users').select('name').eq('name', key(username)).maybeSingle();
   if (existing) return res.status(400).json({ error: 'That username is taken' });
 
@@ -419,12 +415,16 @@ app.post('/api/signup', async (req, res) => {
     clubForever: false, clubUntil: 0,
   };
   // Stored only once the safety columns exist (see safetyCols above).
+  // New accounts have NO birthday — the face result is the age proof.
+  // If the face-check columns are missing, the result is simply not
+  // stored (graceful degradation); the account is 'unknown' and treated
+  // as a child, the safe default, until the owner runs the face-check SQL.
   if (await safetyCols()) {
-    Object.assign(userData, { birthday: String(birthday).trim(), adult_verified: false, contract_agreed: true });
+    Object.assign(userData, { adult_verified: false, contract_agreed: true });
     if (group === 'adult') userData.email = emailNorm;
     else if (validEmail(emailNorm)) userData.email = emailNorm; // a kid's own email, only if they gave a real one
     if (group !== 'adult' && await parentEmailCol()) userData.parent_email = parentEmailNorm;
-    if (fc && await faceCheckCols()) Object.assign(userData, { face_verified: true, face_age_group: fc.ageGroup, face_verified_at: fc.verifiedAt });
+    if (await faceCheckCols()) Object.assign(userData, { face_verified: true, face_age_group: fc.ageGroup, face_verified_at: fc.verifiedAt });
   }
   const { data: user, error: uErr } = await supabase.from('users').insert(userData).select().single();
   if (uErr) return res.status(500).json({ error: uErr.message });
@@ -436,13 +436,13 @@ app.post('/api/signup', async (req, res) => {
   // linking only ever ADDS a member, never replaces or unlinks anyone.
   try {
     if (group !== 'adult') {
-      const { data: adults } = await supabase.from('users').select('name,birthday').eq('email', parentEmailNorm);
+      const { data: adults } = await supabase.from('users').select('name,birthday,face_age_group').eq('email', parentEmailNorm);
       for (const a of (adults || [])) {
         if (ageGroupOf(a) !== 'adult') continue;
         if (await linkParentChild(supabase, key, a.name, user.name)) { familyCache.delete(key(a.name)); familyCache.delete(key(user.name)); }
       }
     } else {
-      const { data: kids } = await supabase.from('users').select('name,birthday,parent_email').eq('parent_email', emailNorm);
+      const { data: kids } = await supabase.from('users').select('name,birthday,parent_email,face_age_group').eq('parent_email', emailNorm);
       for (const k of (kids || [])) {
         if (ageGroupOf(k) !== 'child') continue;
         if (await linkParentChild(supabase, key, user.name, k.name)) { familyCache.delete(key(user.name)); familyCache.delete(key(k.name)); }
@@ -602,18 +602,22 @@ app.post('/api/me/contract', auth, async (req, res) => {
   res.json({ ok: true, contractAgreed: true });
 });
 
-// Face check (u150): records ONLY the on-device verification result —
-// the word kid/adult + the timestamp. The photo never leaves the
-// player's device, so there is nothing to store and nothing is accepted:
-// any photo data in the body is rejected outright. The birthday still
-// decides kid vs adult (ageGroupOf); a face result that disagrees is
-// recorded and logged, never trusted over the birthday.
+// Face check (u150; the age gate since u151): records ONLY the
+// on-device verification result — the word kid/adult + the timestamp.
+// The photo never leaves the player's device, so there is nothing to
+// store and nothing is accepted: any photo data in the body is rejected
+// outright. The face result IS the decider for accounts that have one
+// (ageGroupOf reads face_age_group first); a result that disagrees with
+// an old birthday on file is still recorded and logged, never silently
+// trusted over either source.
 app.post('/api/facecheck', auth, async (req, res) => {
   if (forbidActing(req, res, 'facecheck')) return;
   const fc = validFaceCheck(req.body || {});
   if (!fc) return res.status(400).json({ error: 'That face-check result is not valid — no photo data is ever accepted' });
   if (req.user.birthday) {
-    const bg = ageGroupOf(req.user);
+    // Birthday-only group here on purpose: ageGroupOf(req.user) would
+    // read an existing face result first and hide any disagreement.
+    const bg = ageGroupOf({ birthday: req.user.birthday });
     if (bg !== fc.ageGroup) console.warn('[facecheck] result disagrees with birthday for', req.user.name, '- face says', fc.ageGroup, ', birthday says', bg);
   }
   if (!(await faceCheckCols())) return res.json({ ok: true, stored: false, note: 'Face-check columns are not set up yet — the owner needs to run the face-check SQL in Supabase' });
@@ -1975,7 +1979,7 @@ app.post('/api/dm/:name', auth, async (req, res) => {
   // stored; swearing is filtered per reader when the message is read.
   const text = safetyFilter(String(req.body?.text || '').trim().slice(0, 500));
   if (!text) return res.status(400).json({ error: 'Empty message' });
-  const { data: u } = await supabase.from('users').select('name,birthday').eq('name', key(req.params.name)).maybeSingle();
+  const { data: u } = await supabase.from('users').select('name,birthday,face_age_group').eq('name', key(req.params.name)).maybeSingle();
   if (!u || u.name === me) return res.status(400).json({ error: 'Invalid user' });
   // Safety (Phase 1): adults cannot message children unless they are in the
   // same family (trusted friend). Unknown birthday = treated as a child.

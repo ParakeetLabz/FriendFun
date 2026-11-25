@@ -813,7 +813,6 @@ function loginPage() {
         <label>Username<input name="username" autocomplete="username" placeholder="Don't use your real name" required></label>
         <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="At least 4 characters" required></label>
         <div class="auth-signup-fields">
-          <label>Birthday<input name="birthday" type="date"></label>
           <label><span class="auth-email-label">Your email</span><input name="email" type="email" autocomplete="email" placeholder="Email"></label>
           <p class="muted small auth-email-hint" style="display:none">Some kids don't have an email — use a parent's email instead.</p>
           <details class="contract-details"><summary>Read the FunTopia Safety Contract</summary><div class="contract-body">${SAFETY_CONTRACT_HTML}</div></details>
@@ -836,41 +835,29 @@ function loginPage() {
   app.querySelectorAll('.auth-tabs button').forEach(b => b.onclick = () => {
     mode = b.dataset.m; app.querySelectorAll('.auth-tabs button').forEach(x => x.classList.toggle('active', x === b));
     form.querySelector('button[type=submit]').textContent = mode === 'signup' ? 'Sign Up' : 'Log In';
-    // Safety: birthday + contract agreement are signup-only. The email
+    // Safety: face check + contract agreement are signup-only. The email
     // field is your own email for adults, a parent's email for kids.
     form.querySelector('.auth-signup-fields').style.display = mode === 'signup' ? '' : 'none';
   });
-  // Kid sign-up: the birthday decides kid vs adult, and the email field
-  // adapts — kids give a parent's email (their own is not required),
-  // adults give their own. Same 18+ rule as the server (ageGroupOf).
+  // Kid sign-up: the face check decides kid vs adult, and the email
+  // field adapts — kids give a parent's email (their own is not
+  // required), adults give their own. Before the check runs, the field
+  // reads as an adult's email.
   const emailLabel = form.querySelector('.auth-email-label');
   const emailHint = form.querySelector('.auth-email-hint');
-  const ageFromBirthday = bd => {
-    if (!bd) return null;
-    const d = new Date(bd + 'T00:00:00Z');
-    if (isNaN(d.getTime()) || d > new Date()) return null;
-    const now = new Date();
-    let age = now.getUTCFullYear() - d.getUTCFullYear();
-    const m = now.getUTCMonth() - d.getUTCMonth();
-    if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--;
-    return age;
-  };
+  let faceResult = null;
   const syncEmailField = () => {
-    const age = ageFromBirthday(form.birthday.value);
-    const isKid = age !== null && age < 18;
+    const isKid = faceResult?.ageGroup === 'kid';
     if (emailLabel) emailLabel.textContent = isKid ? "A parent's email" : 'Your email';
     form.email.placeholder = isKid ? "A parent's email address" : 'Email';
     if (emailHint) emailHint.style.display = isKid ? '' : 'none';
   };
-  form.birthday.addEventListener('change', syncEmailField);
-  form.birthday.addEventListener('input', syncEmailField);
   syncEmailField();
   // Face check (u150): on-device age check at sign-up. The camera turns
   // on only when the player starts the check, no preview is ever shown,
   // the photo never leaves the device, and only the result is sent with
   // the signup. Uncertain results are retaken inside the check itself;
   // if still uncertain after the retakes it comes back as a kid.
-  let faceResult = null;
   let faceCheckMod = null;
   async function loadFaceCheck() {
     if (!faceCheckMod) faceCheckMod = import('./facecheck.js?v=db372cb2');
@@ -889,6 +876,7 @@ function loginPage() {
           : faceResult.ageGroup === 'adult' ? 'Face check done — verified as an adult.'
           : 'Face check done — verified as a kid.';
       }
+      syncEmailField(); // the email label follows the face-check result
       return faceResult;
     } catch (e) {
       faceResult = null;
@@ -909,29 +897,25 @@ function loginPage() {
     try {
       const body = { username: form.username.value.trim(), password: form.password.value };
       if (mode === 'signup') {
-        // Safety: validate birthday + the right email for the age group +
-        // contract before the server ever sees the request (the server
-        // validates again too — it decides kid vs adult from the birthday).
+        // Safety: the face check decides kid vs adult, then the right
+        // email for the age group + contract are validated before the
+        // server ever sees the request (the server validates again too).
         const errEl = form.querySelector('.auth-err');
         const email = form.email.value.trim();
-        const birthday = form.birthday.value;
-        if (!birthday) { errEl.textContent = 'Enter your birthday'; return; }
-        const bd = new Date(birthday + 'T00:00:00Z');
-        if (isNaN(bd.getTime()) || bd > new Date()) { errEl.textContent = 'Enter a real birthday'; return; }
-        const age = ageFromBirthday(birthday);
-        const isKid = age !== null && age < 18;
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = isKid ? "Enter a parent's real email address" : 'Enter a real email address'; return; }
-        if (!form.contract.checked) { errEl.textContent = 'You have to read and agree to the Safety Contract to play'; return; }
-        // Face check runs after birthday + contract, before the account is
-        // created. No camera, or a refused camera, means no signup — the
-        // check is never silently skipped.
+        // Face check runs before the account is created. No camera, or a
+        // refused camera, means no signup — the check is never silently
+        // skipped.
         if (!faceResult) {
           try { await doFaceCheck(); } catch (err) { errEl.textContent = err.message || 'Face check needs the camera to verify you. Try again.'; return; }
         }
+        const isKid = faceResult.ageGroup === 'kid';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = isKid ? "Enter a parent's real email address" : 'Enter a real email address'; return; }
+        if (!form.contract.checked) { errEl.textContent = 'You have to read and agree to the Safety Contract to play'; return; }
         // Only the word kid/adult + timestamp leaves the device. The
         // estimated age number stays on-device (it only drove the retake
-        // decision) and is never sent, stored, or shown.
-        Object.assign(body, { birthday, contractAgreed: true, faceCheck: { ageGroup: faceResult.ageGroup, verifiedAt: faceResult.verifiedAt } });
+        // decision) and is never sent, stored, or shown. No birthday is
+        // sent — the face check is the age gate now.
+        Object.assign(body, { contractAgreed: true, faceCheck: { ageGroup: faceResult.ageGroup, verifiedAt: faceResult.verifiedAt } });
         if (isKid) body.parentEmail = email; else body.email = email;
       }
       const r = await api('POST', mode === 'signup' ? '/api/signup' : '/api/login', body);

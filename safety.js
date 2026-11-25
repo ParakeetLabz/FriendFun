@@ -23,9 +23,16 @@ export function ageYears(birthday) {
   return age;
 }
 
-// 'adult' (18+), 'child' (under 18), or 'unknown' (no birthday on file).
-// Unknown is treated as a child everywhere it matters — the safe default.
+// 'adult' (18+), 'child' (under 18), or 'unknown' (no age proof on file).
+// Since u151 the on-device face check (Funtopia Check) is the age gate
+// at sign-up, so a recorded face result (face_age_group) is authoritative
+// and wins over any birthday on file. Accounts made before signup asked
+// for a birthday fall back to the birthday rule; with neither, the group
+// is 'unknown'. Unknown is treated as a child everywhere it matters —
+// the safe default.
 export function ageGroupOf(u) {
+  if (u?.face_age_group === 'adult') return 'adult';
+  if (u?.face_age_group === 'kid') return 'child';
   const a = ageYears(u?.birthday);
   if (a === null) return 'unknown';
   return a >= 18 ? 'adult' : 'child';

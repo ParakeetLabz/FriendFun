@@ -228,7 +228,10 @@ export function createParent(D) {
     const target = norm(req.body?.name || req.body?.child || '');
     if (!target) return res.status(400).json({ error: 'Pick a child to open' });
     if (target === key(req.user.name)) return res.status(403).json({ error: 'That is your own account — you are already using it' });
-    const { data: user, error } = await supabase.from('users').select('name,birthday').eq('name', target).single();
+    // face_age_group is selected too: since u151 the face check is the
+    // age gate at sign-up, so a face-verified kid has no birthday on
+    // file and ageGroupOf would otherwise read 'unknown' here.
+    const { data: user, error } = await supabase.from('users').select('name,birthday,face_age_group').eq('name', target).single();
     if (error || !user) return res.status(404).json({ error: 'Player not found' });
     if (ageGroupOf(user) !== 'child') return res.status(403).json({ error: 'You can only open a child\'s account, not an adult\'s' });
     if (ageGroupOf(req.user) !== 'adult') return res.status(403).json({ error: 'Only an adult in the family can open a child\'s account — if your birthday is missing, set it in Settings first' });
