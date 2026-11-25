@@ -1401,7 +1401,7 @@ app.post('/api/mod/kick', auth, modOnly, async (req, res) => {
 app.post('/api/mod/announce', auth, modOnly, async (req, res) => {
   const text = String(req.body?.text || '').slice(0, 200);
   if (!text) return res.status(400).json({ error: 'Empty announcement' });
-  for (const room of rooms.values()) broadcast(room, { t: 'sys', text: '📢 ' + text });
+  for (const room of rooms.values()) broadcast(room, { t: 'sys', text: '📢 ' + filter(text) });
   logMod(req.user.name, 'announce', '-', text);
   res.json({ ok: true });
 });
@@ -1428,7 +1428,7 @@ app.post('/api/mod/send', auth, modOnly, async (req, res) => {
   } else if (kind === 'emote') {
     msg = { t: 'forceEmote', e: String(req.body.emote || 'dance') };
   } else if (kind === 'dm') {
-    msg = { t: 'sys', text: `📩 Staff DM: ${String(req.body.text || '').slice(0, 200)}` };
+    msg = { t: 'sys', text: `📩 Staff DM: ${filter(String(req.body.text || '').slice(0, 200))}` };
   }
   if (!msg) return res.status(400).json({ error: 'Unknown message kind' });
   let n = 0;
@@ -1991,7 +1991,10 @@ app.post('/api/dm/:name', auth, async (req, res) => {
   const { data, error } = await supabase.from('dms').insert(dmRow).select().single();
   if (error) return res.status(500).json({ error: 'Could not send' });
   notify(u.name, 'dm', `${me} sent you a message`, `#/messages/${encodeURIComponent(me)}`);
-  res.json(data);
+  // The sender sees their own message back filtered for them too — the
+  // client renders this response straight into the thread, so returning
+  // the raw row would show the sender their own swearing unmasked.
+  res.json({ ...data, text: chatFilter(data.text, req.user) });
 });
 
 app.delete('/api/dm/:id', auth, async (req, res) => {
@@ -2307,8 +2310,17 @@ wss.on('connection', (ws) => {
       // Boombox: everyone in the room dances for 3 seconds.
       broadcast(room, { t: 'forceEmote', e: 'dance', from: player.name });
     } else if (m.t === 'gearShout') {
-      // Microphone: a big shout everyone in the room sees.
-      broadcast(room, { t: 'shout', name: player.name, text: String(m.text || '').slice(0, 120) });
+      // Microphone: a big shout everyone in the room sees — filtered per
+      // recipient like chat (children see swearing as hashtags; links and
+      // addresses are hashtags for everyone), and adults cannot shout at
+      // children outside the family.
+      const shoutText = String(m.text || '').slice(0, 120);
+      const senderAdult = isAdultUser(player.user);
+      for (const p of room.players.values()) {
+        if (p.ws.readyState !== 1) continue;
+        if (senderAdult && p !== player && isChildUser(p.user) && !(await sameFamily(player.name, p.name))) continue;
+        send(p.ws, { t: 'shout', name: player.name, text: chatFilter(shoutText, p.user) });
+      }
     }
   });
   ws.on('close', () => {
