@@ -1,10 +1,9 @@
 // Fortnite-style lobby: your avatar on a 3D podium, friends beside you,
 // mode select + a giant PLAY button. Funtopia's own art and characters.
 import * as THREE from 'three';
-import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=50421014';
+import { buildCharacter, animateCharacter, makeNameTag } from './avatar3d.js?v=da9aed2d';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { LOGO, displayNameOf, PLAY_LOGO, FAMILY_LOGO } from './ui.js?v=a89886d1';
-import { PEPPER_CAN } from './pepper.js?v=57beac3a';
 
 const escH = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -14,7 +13,6 @@ const CAV_LOGO = `<svg viewBox="0 0 150 48" xmlns="http://www.w3.org/2000/svg" r
 export async function lobbyPage(D) {
   const { api, esc, fmt, toast, avatarImgTag } = D;
   const me = D.me;
-  const hasPepper = (me.inventory || []).includes('theme_drpepper');
   const app = document.getElementById('app');
   app.className = 'fullscreen';
   let games = [], friends = [], party = { active: false }, siteVersion = '1.0';
@@ -47,9 +45,9 @@ export async function lobbyPage(D) {
     <div class="lb-bg"></div>
     <div class="lb-3d"></div>
     <header class="lb-top">
-      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${hasPepper ? PEPPER_CAN : LOGO}</span><span class="lb-logo-word${hasPepper ? ' lb-logo-pepper' : ''}">${hasPepper ? 'Dr Pepper' : 'FUNTOPIA'}</span><span class="lb-beta">Beta ${esc(siteVersion)}</span></a>
+      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span><span class="lb-beta">Beta ${esc(siteVersion)}</span></a>
       <div class="lb-top-right">
-        <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${hasPepper ? PEPPER_CAN : icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
+        <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
         <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>
         <div class="tb-user-wrap">
           <button class="lb-chip" title="Account menu">${avatarImgTag(me.avatar, 'headshot')}<b>${esc(displayNameOf(me))}</b><span>&#9662;</span></button>
@@ -219,10 +217,9 @@ export async function lobbyPage(D) {
   renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
   holder.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
-  // stage theme: each app theme (Club) + Dr. Pepper restyles the whole 3D stage
+  // stage theme: each app theme (Club) restyles the whole 3D stage
   const STAGE_THEMES = {
     default: { fog: 0x0a0a14, rimR: 0xe8112d, rimV: 0x7c4dff, a: 0x7c4dff, b: 0x22d3ee, c: 0xb388ff },
-    pepper: { fog: 0x140505, rimR: 0xe8112d, rimV: 0xffb347, a: 0xffb347, b: 0xe8112d, c: 0xff5a5a },
     roblox: { fog: 0xf2f2f2, rimR: 0x0057a8, rimV: 0xe2231a, a: 0xe2231a, b: 0x0057a8, c: 0xff6b00 },
     rock: { fog: 0x0a0a0a, rimR: 0xff6b00, rimV: 0xc8102e, a: 0xc8102e, b: 0xff6b00, c: 0xff2e2e },
     ocean: { fog: 0x062a3a, rimR: 0x2dd4bf, rimV: 0x0284c7, a: 0x0284c7, b: 0x22d3ee, c: 0x2dd4bf },
@@ -234,7 +231,6 @@ export async function lobbyPage(D) {
     let saved = '';
     try { saved = localStorage.getItem('ff_theme') || ''; } catch {}
     if (me?.club && STAGE_THEMES[saved]) return STAGE_THEMES[saved];
-    if (hasPepper) return STAGE_THEMES.pepper;
     return STAGE_THEMES.default;
   };
   // accent materials, registered by role so a theme change recolors the stage live

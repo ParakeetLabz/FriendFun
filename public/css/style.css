@@ -1,8 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Builder+Sans:wght@400;600;700;800&family=Nunito+Sans:wght@400;600;700;800;900&display=swap');
 :root { --bg: #17112e; --bg2: #1e1740; --card: #241b4d; --card2: #2e2366; --line: #3d2f7a; --text: #f4f1ff; --muted: #b3a8e0; --blue: #22d3ee; --blue2: #7c3aed; --pink: #ff6d9d; --green: #2ed573; --red: #ff4757; --gold: #ffd400; --grad: linear-gradient(135deg, #7c3aed, #06b6d4); --shadow: 0 8px 32px rgba(0,0,0,.45); --glow: 0 0 18px rgba(124,58,237,.4); }
-/* Dr. Pepper theme — granted by owners only (theme_drpepper). Deep cherry red, cream, dark cola. */
-body.theme-drpepper { --bg: #160808; --bg2: #220c0c; --card: #331010; --card2: #421414; --line: #6e2222; --text: #fff3e0; --muted: #d9a49a; --blue: #ffb347; --blue2: #c8102e; --pink: #ff5a5a; --green: #2ed573; --red: #ff2e2e; --gold: #f5c518; --grad: linear-gradient(135deg, #c8102e, #7a0e1e); --shadow: 0 8px 32px rgba(0,0,0,.5); --glow: 0 0 18px rgba(200,16,46,.45); background: radial-gradient(1200px 600px at 80% -10%, #c8102e33 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #f5c51822 0%, transparent 55%), var(--bg); }
-body.theme-drpepper .lb-bg { background: radial-gradient(ellipse at 50% 120%, #2a0a0a 0%, #0a0505 70%); }
 /* App themes — FriendClub exclusive. Each overrides the palette variables. */
 body.theme-roblox { --bg: #f2f2f2; --bg2: #ffffff; --card: #ffffff; --card2: #e8e8e8; --line: #c8c8c8; --text: #1a1a1a; --muted: #666666; --blue: #0057a8; --blue2: #e2231a; --pink: #e2231a; --green: #00a651; --red: #e2231a; --gold: #f5c518; --grad: linear-gradient(135deg, #e2231a, #0057a8); --shadow: 0 8px 32px rgba(0,0,0,.15); --glow: 0 0 18px rgba(226,35,26,.25); background: radial-gradient(1200px 600px at 80% -10%, #e2231a22 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #0057a822 0%, transparent 55%), var(--bg); }
 body.theme-rock { --bg: #0a0a0a; --bg2: #141414; --card: #1a1a1a; --card2: #242424; --line: #3a3a3a; --text: #f5f5f5; --muted: #a0a0a0; --blue: #ff6b00; --blue2: #c8102e; --pink: #ff2e2e; --green: #2ed573; --red: #ff2e2e; --gold: #ffb347; --grad: linear-gradient(135deg, #c8102e, #ff6b00); --shadow: 0 8px 32px rgba(0,0,0,.5); --glow: 0 0 18px rgba(200,16,46,.45); background: radial-gradient(1200px 600px at 80% -10%, #c8102e33 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #ff6b0022 0%, transparent 55%), var(--bg); }
@@ -47,16 +44,6 @@ body.theme-midnight { --bg: #0b0f1a; --bg2: #111827; --card: #1e293b; --card2: #
 .th-badge { position: absolute; top: 10px; right: 10px; background: var(--blue2); color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
 .th-lock { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
 .th-hero { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-/* Dr. Pepper can cracks: pixelated cracked-can bursts that pop up for themed players */
-.pepper-crack { position: fixed; pointer-events: none; z-index: 100; filter: drop-shadow(0 0 10px rgba(255,46,46,.55)); animation: pepperPop .22s ease-out, pepperFade 1s ease-in 4.2s forwards; }
-.pepper-crack .crack-arm { animation: crackDraw .35s ease-out forwards; }
-.pepper-flash { position: absolute; left: 50%; top: 50%; width: 60%; height: 60%; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.9) 0%, rgba(255,46,46,.5) 40%, transparent 70%); pointer-events: none; animation: pepperFlash .45s ease-out forwards; }
-.pepper-bubble { position: absolute; border-radius: 50%; background: rgba(255,243,224,.85); border: 1px solid rgba(255,46,46,.6); pointer-events: none; animation: pepperBubble .9s ease-out forwards; }
-@keyframes pepperPop { from { transform: scale(.45) rotate(var(--r, 0deg)); opacity: 0; } to { transform: scale(1) rotate(var(--r, 0deg)); opacity: 1; } }
-@keyframes pepperFade { to { opacity: 0; } }
-@keyframes crackDraw { to { stroke-dashoffset: 0; } }
-@keyframes pepperFlash { from { opacity: .9; transform: translate(-50%,-50%) scale(.25); } to { opacity: 0; transform: translate(-50%,-50%) scale(1.5); } }
-@keyframes pepperBubble { from { opacity: .95; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-44px) scale(.35); } }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: radial-gradient(1200px 600px at 80% -10%, #7c3aed33 0%, transparent 60%), radial-gradient(900px 500px at 10% 110%, #06b6d433 0%, transparent 55%), var(--bg); color: var(--text); font-family: 'Builder Sans', 'Nunito Sans', 'Segoe UI', Arial, sans-serif; }
 a { color: inherit; text-decoration: none; }
@@ -761,7 +748,6 @@ body.theme-midnight .lb-logo-word { background: linear-gradient(135deg, #60a5fa,
 .lb-logo-mark svg { width: 100%; height: 100%; }
 .lb-beta { font-size: 13px; font-weight: 900; letter-spacing: 1px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
 .lb-logo-word { background: linear-gradient(135deg, #fff, var(--blue2), var(--blue), #fff); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-slide 5s ease infinite; }
-.lb-logo-word.lb-logo-pepper { background: none; -webkit-background-clip: unset; background-clip: unset; color: #ffffff; -webkit-text-fill-color: #ffffff; font-family: 'Lobster', 'Brush Script MT', 'Segoe Script', cursive; font-style: normal; font-weight: 400; letter-spacing: 0; font-size: 26px; animation: none; }
 .lb-top-right { display: flex; align-items: center; gap: 10px; }
 .lb-tix { background: var(--card); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; font-weight: 700; color: var(--text); text-decoration: none; }
 .lb-online { background: var(--card); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; font-weight: 700; display: flex; align-items: center; gap: 6px; color: var(--text); }
@@ -1169,7 +1155,6 @@ button.two-ui-el { cursor: pointer; }
 .ff-intro-logo { width: 110px; height: 110px; animation: ffIntroPop .7s cubic-bezier(.2, 1.6, .4, 1) both .1s; filter: drop-shadow(0 8px 24px rgba(124, 77, 255, .45)); }
 .ff-intro-logo svg { width: 100%; height: 100%; }
 .ff-intro-word { font-size: 44px; font-weight: 900; letter-spacing: 4px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; animation: ffIntroUp .6s ease both .45s; }
-.ff-intro-word.ff-intro-pepper { font-family: Lobster, cursive; letter-spacing: 1px; background: none; -webkit-background-clip: unset; background-clip: unset; color: #fff; font-size: 46px; }
 .ff-intro-beta { font-size: 15px; font-weight: 900; letter-spacing: 1px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; animation: ffIntroUp .6s ease both .65s; }
 .ff-intro-credit { color: var(--muted); font-size: 15px; animation: ffIntroUp .6s ease both .8s; }
 .ff-intro-credit b { color: var(--text); }

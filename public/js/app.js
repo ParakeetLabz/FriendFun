@@ -1,6 +1,5 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
-import { startPepperCracks, stopPepperCracks, applyPepperBranding, PEPPER_CAN } from './pepper.js?v=57beac3a';
 import { THEME_IDS, themesPage } from './themes.js?v=3780b96a';
 
 // Badge definitions
@@ -26,7 +25,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=54b38ed5').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=da9aed2d').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -67,7 +66,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=d52f8dae';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=6e002cc3';
 import { templates, GEN_GAMES } from './worlds.js?v=4abcab1b';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -98,27 +97,16 @@ async function api(method, url, body) {
   if (!r.ok) throw new Error(j.error || 'Request failed');
   return j;
 }
-// App themes (FriendClub exclusive) + Dr. Pepper theme (owner-granted).
+// App themes (FriendClub exclusive).
 // A saved public theme only applies while the user is a Club member;
-// an explicit 'funtopia' pick means plain violet; otherwise a Dr. Pepper
-// holder (no saved theme) sees the Dr. Pepper theme.
+// an explicit 'funtopia' pick means plain violet.
 function applyTheme() {
-  const pepper = !!(me?.inventory || []).includes('theme_drpepper');
   let saved = '';
   try { saved = localStorage.getItem('ff_theme') || ''; } catch {}
   const clubTheme = saved && me?.club && THEME_IDS.has(saved) ? saved : '';
-  document.body.classList.remove('theme-drpepper');
   THEME_IDS.forEach(id => document.body.classList.remove('theme-' + id));
   if (clubTheme) {
     document.body.classList.add('theme-' + clubTheme);
-    applyPepperBranding(false); stopPepperCracks();
-  } else if (saved === 'funtopia') {
-    applyPepperBranding(false); stopPepperCracks();
-  } else if (pepper) {
-    document.body.classList.add('theme-drpepper');
-    applyPepperBranding(true); startPepperCracks();
-  } else {
-    applyPepperBranding(false); stopPepperCracks();
   }
   window.__setLobbyStage?.(); // recolor the live 3D stage if the lobby is up
 }
@@ -127,8 +115,8 @@ export function toast(msg, err = false) {
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
   document.getElementById('toasts').appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3000);
 }
-function logout(silent) { if (!silent && token) api('POST', '/api/logout').catch(() => {}); removeAccount(me?.name); token = null; me = null; localStorage.removeItem('ff_token'); location.hash = '#/login'; route(); }
-function logoutAll() { const accs = getAccounts(); for (const a of accs) { try { fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + a.token } }); } catch {} } localStorage.removeItem('ff_accounts'); localStorage.removeItem('ff_token'); token = null; me = null; location.hash = '#/login'; route(); }
+function logout(silent) { if (!silent && token) api('POST', '/api/logout').catch(() => {}); clearInterval(onlineTimer); clearInterval(partyTimer); onlineTimer = null; partyTimer = null; removeAccount(me?.name); token = null; me = null; localStorage.removeItem('ff_token'); location.hash = '#/login'; route(); }
+function logoutAll() { const accs = getAccounts(); for (const a of accs) { try { fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + a.token } }); } catch {} } clearInterval(onlineTimer); clearInterval(partyTimer); onlineTimer = null; partyTimer = null; localStorage.removeItem('ff_accounts'); localStorage.removeItem('ff_token'); token = null; me = null; location.hash = '#/login'; route(); }
 function getAccounts() { try { return JSON.parse(localStorage.getItem('ff_accounts') || '[]'); } catch { return []; } }
 function saveAccounts(accs) { localStorage.setItem('ff_accounts', JSON.stringify(accs)); }
 function addAccount(name, tok) { const accs = getAccounts().filter(a => a.name.toLowerCase() !== name.toLowerCase()); accs.push({ name, token: tok }); saveAccounts(accs); }
@@ -390,6 +378,7 @@ function updatesPage() {
       </section>`).join('')}</div>`);
 }
 async function refreshPartyBar() {
+  if (!token) return;
   document.querySelector('.party-bar')?.remove();
   if (app.className === 'fullscreen') return;
   try {
@@ -405,6 +394,7 @@ async function refreshPartyBar() {
 let onlineTimer = null;
 let partyTimer = null;
 async function refreshPlayerCount() {
+  if (!token) return;
   try {
     const r = await api('GET', '/api/player-count');
     document.querySelectorAll('.player-count').forEach(el => el.textContent = fmt(r.count));
@@ -414,6 +404,7 @@ async function refreshPlayerCount() {
 // play the glitch → black → DJ transition once per session, then partyfy everything.
 let partyWatchPrev = null;
 async function refreshPartyState() {
+  if (!token) return;
   let p = null;
   try { p = await api('GET', '/api/event/party'); } catch { return; }
   const active = !!p?.active;
@@ -580,7 +571,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=5aaa5a97');
+  const m = await import('./lobby.js?v=da7d551b');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -940,7 +931,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=8633191c');
+  const { Game } = await import('./game.js?v=9fc16c94');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1553,13 +1544,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=3e9cf239');
+  const { Studio } = await import('./studio.js?v=ca57e72f');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=8633191c');
+      const { Game: GameClass } = await import('./game.js?v=9fc16c94');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1771,11 +1762,11 @@ const skinmakerDeps = { api, mount, esc, toast, avatarImgTag, avatarImage, setMo
 const horrorDeps = { avatarImgTag, esc, route, get me() { return me; }, getCleanup: () => cleanup, setCleanup: fn => { cleanup = fn; } };
 const lobbyDeps = { api, esc, fmt, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 async function adminPage(q = '') {
-  const m = await import('./admin.js?v=906222a5');
+  const m = await import('./admin.js?v=8ed74524');
   return m.adminPage(adminDeps, q);
 }
 async function ownerPage(q = '') {
-  const m = await import('./admin.js?v=906222a5');
+  const m = await import('./admin.js?v=8ed74524');
   return m.ownerPage(adminDeps, q);
 }
 
@@ -1863,20 +1854,18 @@ let routing = 0;
 // ---------- splash intro ----------
 // Full-screen FunTopia intro on first load each session: the logo pops in,
 // the wordmark + Beta tag + "Made by BoldPStudios" slide up, then it fades
-// out to reveal the site. Tap anywhere to skip. Themed users (Dr. Pepper)
-// see the pepper can + wordmark, matching their lobby. Plays once per tab
+// out to reveal the site. Tap anywhere to skip. Plays once per tab
 // session (sessionStorage).
 let introShown = false;
 function showIntro() {
   if (introShown) return;
   introShown = true;
   try { if (sessionStorage.getItem('ff_intro_seen')) return; sessionStorage.setItem('ff_intro_seen', '1'); } catch {}
-  const hasPepper = (me?.inventory || []).includes('theme_drpepper');
   const el = document.createElement('div');
   el.id = 'ff-intro';
   el.innerHTML = `<div class="ff-intro-inner">
-    <div class="ff-intro-logo">${hasPepper ? PEPPER_CAN : LOGO}</div>
-    <div class="ff-intro-word${hasPepper ? ' ff-intro-pepper' : ''}">${hasPepper ? 'Dr Pepper' : 'FUNTOPIA'}</div>
+    <div class="ff-intro-logo">${LOGO}</div>
+    <div class="ff-intro-word">FUNTOPIA</div>
     <div class="ff-intro-beta">Beta <span class="ff-intro-ver">…</span></div>
     <div class="ff-intro-credit">Made by <b>BoldPStudios</b></div>
     <div class="ff-intro-skip">Tap to skip</div>
@@ -1947,7 +1936,7 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=f6f15849'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=27b0715e'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case 'parent': { const m = await import('./parent.js?v=parentp2'); if (seg[1]) return m.parentChildPage(parentDeps, decodeURIComponent(seg[1])); return m.parentPage(parentDeps); }
@@ -1958,10 +1947,10 @@ async function route() {
       }
       case 'safety-qa': { const m = await import('./forums.js?v=p3forums1'); return m.safetyQaPage(forumsDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
-      case 'trades': { const m = await import('./trade.js?v=3693d8e7'); return m.tradePage(tradeDeps); }
-      case 'trade': { const m = await import('./trade.js?v=3693d8e7'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
-      case 'pets': { const m = await import('./pets.js?v=efc8c3e6'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=edbbb272'); return m.tokensPage(tokensDeps); }
+      case 'trades': { const m = await import('./trade.js?v=ab62c059'); return m.tradePage(tradeDeps); }
+      case 'trade': { const m = await import('./trade.js?v=ab62c059'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
+      case 'pets': { const m = await import('./pets.js?v=973b9a99'); return m.petsPage(petsDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=7a28080d'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
@@ -1977,7 +1966,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=a9c6d99c'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=b837c817'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=b7af6d55'); return m.skinmakerPage(skinmakerDeps); }
       case 'themes': return themesPage(themesDeps);
       default: location.hash = '#/home'; return;
     }

@@ -460,9 +460,18 @@ app.get('/api/me', auth, async (req, res) => {
     if (repaired) u.funtix = repaired.funtix;
   }
   u.inventory = list(u, 'inventory'); u.requests = list(u, 'requests'); u.friends = list(u, 'friends'); u.favorites = list(u, 'favorites'); u.recent = list(u, 'recent');
+  // Dr. Pepper theme deleted: strip the dead item from any inventory that
+  // still lists it (owner included) the first time that player logs in.
+  // The theme can never apply again (no catalog item, no apply branch), so a
+  // stale entry on an account that never logs in again is inert.
+  if (u.inventory.includes('theme_drpepper')) {
+    const cleanedInv = u.inventory.filter(id => id !== 'theme_drpepper');
+    await supabase.from('users').update({ inventory: cleanedInv }).eq('name', u.name);
+    u.inventory = cleanedInv;
+  }
   if (isClub(u)) {
-    // Admins get every NON-limited item; limited/grant-only items (Dr. Pepper
-    // theme, party hat, etc.) are never auto-granted — the owner gives those.
+    // Admins get every NON-limited item; limited/grant-only items (party
+    // hat, etc.) are never auto-granted — the owner gives those.
     const entitledItems = isAdmin(u) ? CATALOG.filter(it => !it.limited) : CATALOG.filter(it => it.club);
     const miss = entitledItems.filter(it => !u.inventory.includes(it.id));
     if (miss.length) {
@@ -1017,24 +1026,6 @@ app.post('/api/admin/users/:name/command', auth, adminOnly, async (req, res) => 
   }
   const isBanned = !!updated.banned && (!updated.bannedUntil || updated.bannedUntil > Date.now());
   res.json({ ok: true, message, user: { ...await publicUser(updated), funtix: updated.funtix, clubForever: isAdmin(updated) || !!updated.clubForever, aiAccess: isOwner(updated) || isAdmin(updated) || !!updated.aiAccess, banned: isBanned, banReason: updated.banReason || '', bannedUntil: updated.bannedUntil || 0, admin: isAdmin(updated), owner: isOwner(updated) } });
-});
-
-// One-time cleanup (owner only): strip the grant-only Dr. Pepper theme from
-// everyone except the owner, so it is grant-only again. Idempotent.
-app.post('/api/admin/strip-pepper', auth, async (req, res) => {
-  if (!isOwner(req.user)) return res.status(403).json({ error: 'Owner only' });
-  const { data: users, error } = await supabase.from('users').select('name, inventory');
-  if (error) return res.status(500).json({ error: error.message });
-  let stripped = 0;
-  for (const u of users || []) {
-    if (String(u.name || '').toLowerCase() === 'fun') continue;
-    const inv = Array.isArray(u.inventory) ? u.inventory : [];
-    if (inv.includes('theme_drpepper')) {
-      await supabase.from('users').update({ inventory: inv.filter(id => id !== 'theme_drpepper') }).eq('name', u.name);
-      stripped++;
-    }
-  }
-  res.json({ ok: true, stripped });
 });
 
 // View a player's inventory (owner only).
