@@ -10,7 +10,7 @@ import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
 import { createFamily, linkParentChild } from './family.js';
-import { createParent } from './parent.js';
+import { createParent, actingParentCol, actingSessions, clearActingSession, forbidActing, dmsActingCol } from './parent.js';
 import { createGameVerify } from './gameverify.js';
 import { createForums } from './forums.js';
 import { BAD, ageYears, ageGroupOf, isAdultUser, isChildUser, canSwear, safetyFilter, chatFilter, validEmail, validBirthday, adultChildBlocked } from './safety.js';
@@ -325,7 +325,10 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 async function auth(req, res, next) {
   const tok = (req.headers.authorization || '').replace('Bearer ', '');
-  const { data: session, error: sErr } = await supabase.from('sessions').select('username').eq('token', tok).single();
+  // Parent-acting sessions: read the acting_parent flag with the session
+  // row when the column exists (graceful probe — see parent.js).
+  const cols = (await actingParentCol()) ? 'username,acting_parent' : 'username';
+  const { data: session, error: sErr } = await supabase.from('sessions').select(cols).eq('token', tok).single();
   if (sErr || !session) return res.status(401).json({ error: 'Not logged in' });
   const { data: user, error: uErr } = await supabase.from('users').select('*').eq('name', session.username).single();
   if (uErr || !user) return res.status(401).json({ error: 'User not found' });
@@ -334,6 +337,10 @@ async function auth(req, res, next) {
     return res.status(403).json({ error: 'Your account is banned' });
   }
   req.user = user;
+  // Who is really behind this session: a parent using their child's
+  // account (column when it exists, in-memory map otherwise). Null for a
+  // normal sign-in. Guards below (password, birthday, ...) read this.
+  req.actingParent = session.acting_parent || actingSessions.get(tok) || null;
   touch(req.user.name);
   next();
 }
@@ -423,6 +430,7 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/logout', auth, async (req, res) => {
   const tok = (req.headers.authorization || '').replace('Bearer ', '');
   await supabase.from('sessions').delete().eq('token', tok);
+  clearActingSession(tok);
   res.json({ ok: true });
 });
 
@@ -525,12 +533,13 @@ app.get('/api/me', auth, async (req, res) => {
     if (u.avatar?.head === 'head_slimebody') { u.avatar = { ...u.avatar, head: 'head_classic' }; upd.avatar = u.avatar; }
     await supabase.from('users').update(upd).eq('name', u.name);
   }
-  res.json({ ...await publicUser(u), daily, streak: streak || 0, newBadges, funtix: u.funtix, inventory: u.inventory, requests: u.requests, friendList: u.friends, favorites: u.favorites, recent: u.recent, clubUntil: u.clubUntil || 0, clubForever: isAdmin(u) || !!u.clubForever, aiAccess: isOwner(u) || isAdmin(u) || !!u.aiAccess, birthday: u.birthday || null, ageGroup: ageGroupOf(u), adultVerified: !!u.adult_verified, contractAgreed: !!u.contract_agreed });
+  res.json({ ...await publicUser(u), daily, streak: streak || 0, newBadges, funtix: u.funtix, inventory: u.inventory, requests: u.requests, friendList: u.friends, favorites: u.favorites, recent: u.recent, clubUntil: u.clubUntil || 0, clubForever: isAdmin(u) || !!u.clubForever, aiAccess: isOwner(u) || isAdmin(u) || !!u.aiAccess, birthday: u.birthday || null, ageGroup: ageGroupOf(u), adultVerified: !!u.adult_verified, contractAgreed: !!u.contract_agreed, actingParent: req.actingParent || null });
 });
 
 // Safety (Phase 1): existing players set a birthday once — age-gating needs
 // it, and accounts made before signup asked for it don't have one yet.
 app.post('/api/me/birthday', auth, async (req, res) => {
+  if (forbidActing(req, res, 'birthday')) return;
   if (!(await safetyCols())) return res.status(500).json({ error: 'Safety features are not set up yet — the owner needs to run the safety SQL in Supabase' });
   if (req.user.birthday) return res.status(400).json({ error: 'Your birthday is already set' });
   const bd = String(req.body?.birthday || '').trim();
@@ -561,8 +570,9 @@ app.post('/api/me/adult-verify', auth, async (req, res) => {
   res.json({ adultVerified: true });
 });
 
-// Change own password
+// Change own password (never while a parent is using the child's account)
 app.post('/api/me/password', auth, async (req, res) => {
+  if (forbidActing(req, res, 'password')) return;
   const cur = String(req.body?.current || ''), nw = String(req.body?.password || '');
   if (nw.length < 4 || nw.length > 64) return res.status(400).json({ error: 'New password must be 4-64 characters' });
   const u = req.user;
@@ -1907,7 +1917,11 @@ app.post('/api/dm/:name', auth, async (req, res) => {
   // Safety (Phase 1): adults cannot message children unless they are in the
   // same family (trusted friend). Unknown birthday = treated as a child.
   if (adultChildBlocked(req.user, u, await sameFamily(me, u.name))) return res.status(403).json({ error: 'Adults cannot message children unless you are in the same family' });
-  const { data, error } = await supabase.from('dms').insert({ sender: me, recipient: u.name, text, created: Date.now() }).select().single();
+  // Parent acting as their child: tag the message so moderation/audit can
+  // tell it apart from the child's own (when the dms column exists).
+  const dmRow = { sender: me, recipient: u.name, text, created: Date.now() };
+  if (req.actingParent && (await dmsActingCol())) dmRow.acting_parent = req.actingParent;
+  const { data, error } = await supabase.from('dms').insert(dmRow).select().single();
   if (error) return res.status(500).json({ error: 'Could not send' });
   notify(u.name, 'dm', `${me} sent you a message`, `#/messages/${encodeURIComponent(me)}`);
   res.json(data);

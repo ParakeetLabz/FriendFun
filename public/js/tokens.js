@@ -3,8 +3,8 @@
 // rarity. Ability items equip in Gear and grant a real in-game ability.
 // The Pumpkin Shop Token is a 1-in-100,000,000 wheel jackpot — it unlocks
 // the pumpkin shop for exactly one purchase.
-import { CATALOG, ITEM } from './catalog.js?v=90a4da23';
-import { avatarImage } from './avatar3d.js?v=a3b315a0';
+import { CATALOG, ITEM } from './catalog.js?v=6e002cc3';
+import { avatarImage } from './avatar3d.js?v=2bf09633';
 import { PEPPER_CAN } from './pepper.js?v=57beac3a';
 
 const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', superrare: 'Super Rare', king: 'King', galactic: 'Galactic', universal: 'Universal', scout: 'Scout', drpepper: 'Dr. Pepper', skull: 'Skull', glitch: 'Glitch', pumpkin: 'Pumpkin' };

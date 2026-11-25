@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=d52f8dae';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=6e002cc3';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -569,12 +569,12 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const hatIt = ITEM[avatar.hat];
   if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
   else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
-  // Limbs. R6: two chunky segments per limb (same width/color both parts),
-  // pivots at shoulder/hip and elbow/knee — bendy like R15, blocky like
-  // classic R6.
+  // Limbs. R6: classic one-piece limbs — a single rigid block per limb,
+  // no elbow/knee pivots. R15: two segments per limb with elbow/knee
+  // pivots (bendy). Both rigs: no hands, no feet.
   const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.userData.w = w; const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
-  // A two-segment limb — upper + lower with an elbow/knee pivot. R15 and
-  // the new bendy R6 both use it.
+  // A two-segment limb — upper + lower with an elbow/knee pivot. R15
+  // (and the Bugs/Daffy variants) use it; classic R6 is one-piece again.
   // No hands or feet: the lower segment extends to the ground instead.
   // Returns { upper, lower, end } pivots (end is an empty pivot, kept
   // for compatibility). Same blocky
@@ -622,18 +622,22 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
         f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
       }
     } else {
-      // Tapered lower segments (forearms/shins narrower than uppers) so the
-      // elbow and knee joints actually read; longer lowers, arms flush
-      // against the torso sides (upper-arm inner edge meets the torso edge,
-      // like R6) so the arms hang straight down instead of floating out.
-      // Same total height, feet still at y=0.
+      // Roblox R15 limbs: two-segment arms and legs (elbow/knee pivots),
+      // straight at rest like R6 — upper and lower segments the SAME width
+      // and the SAME color, so each limb reads as one straight R15 limb.
+      // The joints are pivots, not a taper: they stay straight at rest and
+      // bend when walking or emoting. Arms flush against the torso sides
+      // (upper-arm inner edge meets the torso edge, like R6) so the arms
+      // hang straight down instead of floating out. Same total height,
+      // feet still at y=0. NOT one-piece R6 limbs — R15 keeps its own
+      // two-segment limbs.
       const armC = suit ? '#263238' : null;
-      const aL = limb2(-1.45, 4, armC || C.larm, 0.9, 0.9, 0.72, 0.95, 0.75, 0.25, 0.8, 0, C.larm);
-      const aR = limb2(1.45, 4, armC || C.rarm, 0.9, 0.9, 0.72, 0.95, 0.75, 0.25, 0.8, 0, C.rarm);
+      const aL = limb2(-1.45, 4, armC || C.larm, 0.9, 0.9, 0.9, 0.95, 0.75, 0.25, 0.8, 0, C.larm, 1);
+      const aR = limb2(1.45, 4, armC || C.rarm, 0.9, 0.9, 0.9, 0.95, 0.75, 0.25, 0.8, 0, C.rarm, 1);
       larm = aL.upper; larmLow = aL.lower;
       rarm = aR.upper; rarmLow = aR.lower;
-      const gL = limb2(-0.5, 2, C.lleg, 0.95, 0.9, 0.78, 0.95, 0.85, 0.15, 1.25, 0.2);
-      const gR = limb2(0.5, 2, C.rleg, 0.95, 0.9, 0.78, 0.95, 0.85, 0.15, 1.25, 0.2);
+      const gL = limb2(-0.5, 2, C.lleg, 0.95, 0.9, 0.95, 0.95, 0.85, 0.15, 1.25, 0.2, null, 1);
+      const gR = limb2(0.5, 2, C.rleg, 0.95, 0.9, 0.95, 0.95, 0.85, 0.15, 1.25, 0.2, null, 1);
       lleg = gL.upper; llegLow = gL.lower;
       rleg = gR.upper; rlegLow = gR.lower;
     }
@@ -652,28 +656,21 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
       f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
     }
   } else {
-    // Classic R6, now with bendy limbs: two segments per limb, same chunky
-    // width and same color top and bottom (shadeAmt 1 — no narrowing, no
-    // darkening), overlap one bevel so the joint reads as one column at
-    // rest. Same total length, feet still at y=0, no hands or feet — the
-    // end pivot stays empty.
-    const armC = suit ? '#263238' : null;
-    const aL = limb2(-1.5, 4, armC || C.larm, 1, 1, 1, 1, 1, 0, 1, 0, null, 1, ROUND_BEV);
-    const aR = limb2(1.5, 4, armC || C.rarm, 1, 1, 1, 1, 1, 0, 1, 0, null, 1, ROUND_BEV);
-    larm = aL.upper; larmLow = aL.lower;
-    rarm = aR.upper; rarmLow = aR.lower;
-    const gL = limb2(-0.5, 2, C.lleg, 1, 1, 1, 1, 1, 0, 1, 0, null, 1, ROUND_BEV);
-    const gR = limb2(0.5, 2, C.rleg, 1, 1, 1, 1, 1, 0, 1, 0, null, 1, ROUND_BEV);
-    lleg = gL.upper; llegLow = gL.lower;
-    rleg = gR.upper; rlegLow = gR.lower;
+    // Classic R6: one-piece limbs, the old look — a single rigid block
+    // per limb, no elbow/knee pivots. Same total length, feet at y=0,
+    // no hands or feet. The Low pivots stay unset, so this rig never
+    // bends when walking or emoting.
+    larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
+    lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
   }
   // ---- Additive character detail (same silhouette, same height) ----
   // Collar on a bare torso, wrist cuffs when no shirt covers the arms.
   // No hands or feet anywhere: no finger grooves, no toe grooves, no
   // shoe soles on either rig.
   // Every piece is a child of a limb pivot, so animations move it for
-  // free. R6's limbs are two segments now, so cuffs/sleeves ride the
-  // forearm pivot like R15. Still no grooves, no soles, no hands or feet.
+  // free. On two-segment rigs (R15) the cuffs/sleeves ride the forearm
+  // pivot like the limb itself; on one-piece R6 they ride the rigid limb.
+  // Still no grooves, no soles, no hands or feet.
   // Sizes come from bounding boxes, not geometry internals, so this
   // works for rounded and sharp parts alike.
   const endMesh = (g) => g && g.children.find(c => c.isMesh);
@@ -686,26 +683,19 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
     torso.add(collar);
   }
   if (larmLow && rarmLow) {
-    // Wrist cuffs on bare arms (shirt sleeves already add cuffs). Rides the
-    // forearm pivot, so it follows the wrist when the elbow bends. The cuff
-    // sits at the visible end of the lower segment (mesh height minus the
-    // hidden joint overlap).
+    // Two-segment limbs (R15 + Bugs/Daffy variants): wrist cuffs ride the
+    // forearm pivot, so they follow the wrist when the elbow bends.
     if (!shirtOn) {
       for (const low of [larmLow, rarmLow]) {
         const m = endMesh(low); if (!m) continue;
         const s = meshSize(m);
-        const ov = low.userData.overlap || 0;
-        const visH = s.y - ov;
-        // R6 (overlap > 0) keeps the old chunky 0.25 cuff at the old height;
-        // R15 keeps its own 0.2 cuff.
-        const cuffH = ov > 0 ? 0.25 : 0.2;
-        const cuff = part(s.x + 0.06, cuffH, s.x + 0.06, shade(meshHex(m), 0.82));
-        cuff.position.y = ov > 0 ? -visH + 0.15 : -s.y + 0.1;
+        const cuff = part(s.x + 0.06, 0.2, s.x + 0.06, shade(meshHex(m), 0.82));
+        cuff.position.y = -s.y + 0.1;
         low.add(cuff);
       }
     }
   } else {
-    // One-piece limbs (Bugs/Daffy R6 variants) — no grooves, no soles, no hands or feet.
+    // One-piece limbs (classic R6) — no grooves, no soles, no hands or feet.
     if (!shirtOn) {
       for (const arm of [larm, rarm]) {
         const m = endMesh(arm); if (!m) continue;
@@ -760,13 +750,13 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
 // Returns a THREE.Group; feet at y=0, facing +z. userData.limbs carries the
 // upper pivots (larm, rarm, lleg, rleg, head, torso) plus the lower pivots
 // (larmLow, rarmLow, llegLow, rlegLow) on any rig with bendy limbs — R15
-// and the new R6. No hands or feet on either rig — the lower segments run
-// straight to the ground.
+// only. No hands or feet on either rig — the R15 lower segments run
+// straight to the ground, and R6 is one-piece again.
 // Modern Roblox-style rig: articulated limbs (elbows, knees) in the same
 // blocky language. The R6 builder is kept as the fallback
 // (buildCharacterR6 below).
-// R6 always gets the smooth finish now — same six chunky parts, now with
-// elbow/knee pivots, softer edges and a glossier plastic. R15 keeps its
+// R6 always gets the smooth finish now — the same six chunky one-piece
+// parts, softer edges and a glossier plastic. R15 keeps its
 // look (the advanced-graphics toggle still smooths it via
 // buildCharacterSmooth). R6 is the default rig: an avatar with no rig set
 // builds as classic blocky R6.
@@ -775,14 +765,14 @@ export function buildCharacter(avatar, opts = {}) { const r15 = avatar?.rig === 
 // Advanced graphics: same R15 shapes, smoother finish (soft rounding + gloss).
 export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r15' ? 'r15' : 'r6'); }
 
-// Classic R6, now with bendy limbs, kept as a fallback.
+// Classic R6, one-piece limbs, kept as a fallback.
 export function buildCharacterR6(avatar, opts = {}) { return buildRig(avatar, opts, true, 'r6'); }
 
 export function animateCharacter(ch, state, t, dt) {
   const L = ch.userData.limbs; if (!L) return;
   // Animation: upper limbs swing; the elbows/knees bend too (laf/raf/llf/rlf)
-  // on any rig with lower pivots — R15 and the new bendy R6. One-piece
-  // variants (Bugs/Daffy R6) ignore the joints.
+  // on any rig with lower pivots — R15 only. One-piece variants
+  // (classic R6, Bugs/Daffy R6) ignore the joints.
   // Classic Roblox style: idle is statue-still, walk swings big, jump = arms straight up, fall = arms out
   // rotation.x > 0 swings a limb backwards (character faces +z); arms up ~ -PI
   if (L.torso.userData.baseY === undefined) L.torso.userData.baseY = L.torso.position.y;

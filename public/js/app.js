@@ -25,7 +25,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=da9aed2d').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=2bf09633').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -111,6 +111,17 @@ function applyTheme() {
   window.__setLobbyStage?.(); // recolor the live 3D stage if the lobby is up
 }
 
+// Relative time for DM timestamps ("just now", "5m ago", "2h ago", "3d ago").
+// dmPage/dmListPage call this on every message row; it was referenced but
+// never defined, so any non-empty DM thread threw and rendered blank.
+function timeAgo(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - Number(ts || 0)) / 1000));
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  if (s < 86400 * 7) return Math.floor(s / 86400) + 'd ago';
+  return new Date(Number(ts)).toLocaleDateString();
+}
 export function toast(msg, err = false) {
   const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = msg;
   document.getElementById('toasts').appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3000);
@@ -122,6 +133,44 @@ function saveAccounts(accs) { localStorage.setItem('ff_accounts', JSON.stringify
 function addAccount(name, tok) { const accs = getAccounts().filter(a => a.name.toLowerCase() !== name.toLowerCase()); accs.push({ name, token: tok }); saveAccounts(accs); }
 function removeAccount(name) { if (!name) return; saveAccounts(getAccounts().filter(a => a.name.toLowerCase() !== String(name).toLowerCase())); }
 function switchAccount(name) { const acc = getAccounts().find(a => a.name.toLowerCase() === String(name).toLowerCase()); if (!acc) return; token = acc.token; localStorage.setItem('ff_token', token); me = null; location.hash = '#/home'; route(); }
+// Switch the active session to a token WITHOUT saving it as an account
+// (used for parent-acting sessions: the acting token must never replace
+// the child's own saved sign-in in ff_accounts).
+function switchToToken(tok) { token = tok; localStorage.setItem('ff_token', tok); me = null; location.hash = '#/home'; route(); }
+
+// Parent acting as a linked child: a persistent banner on EVERY page while
+// the session is a parent-acting session (me.actingParent comes from
+// /api/me). It lives in document.body, outside #app, so page mounts and
+// the lobby overlay never remove it. It always offers the way back.
+function renderActingBanner() {
+  const existing = document.getElementById('acting-banner');
+  const parent = me?.actingParent;
+  if (!parent || !me) { existing?.remove(); return; }
+  const label = `You are using ${me.name}'s account as their parent`;
+  const backLabel = `Switch back to ${parent}`;
+  if (existing) {
+    existing.querySelector('.acting-banner-text').textContent = label;
+    existing.querySelector('.acting-banner-back').textContent = backLabel;
+    return;
+  }
+  const el = document.createElement('div');
+  el.id = 'acting-banner';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10001;display:flex;align-items:center;justify-content:center;gap:12px;padding:7px 12px;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.35);';
+  el.innerHTML = `<span class="acting-banner-text"></span><button class="acting-banner-back btn-secondary btn-small" style="background:#fff;color:#5b21b6;border:none;"></button>`;
+  el.querySelector('.acting-banner-text').textContent = label;
+  const back = el.querySelector('.acting-banner-back');
+  back.textContent = backLabel;
+  back.onclick = () => switchBackFromActing();
+  document.body.appendChild(el);
+}
+function switchBackFromActing() {
+  const parent = me?.actingParent;
+  if (!parent) return;
+  const acc = getAccounts().find(a => a.name.toLowerCase() === parent.toLowerCase());
+  if (acc) { switchAccount(parent); return; }
+  toast('Your own sign-in was not saved on this device — please log in again.');
+  logout();
+}
 const fmt = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1).replace('.0', '') + 'K' : String(n);
 const rating = g => (g.likes + g.dislikes) ? Math.round(g.likes / (g.likes + g.dislikes) * 100) + '%' : '--';
 
@@ -571,7 +620,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=da7d551b');
+  const m = await import('./lobby.js?v=ae3d13ae');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -931,7 +980,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=9fc16c94');
+  const { Game } = await import('./game.js?v=d05b043e');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -987,7 +1036,7 @@ async function avatarPage(tab = 'body') {
         body.querySelector('input[type=color]').onchange = e => apply(e.target.value);
       } else if (tab === 'rig') {
         // R6 = classic look with bendy limbs, R15 = modern Roblox-style articulated limbs
-        const rigs = [['r6', 'R6 Classic', 'The classic look — arms and legs bend at the elbow and knee.'], ['r15', 'R15 Modern', 'Modern Roblox style — elbows and knees, no hands or feet.']];
+        const rigs = [['r6', 'R6 Classic', 'The classic look — one-piece arms and legs.'], ['r15', 'R15 Modern', 'Modern Roblox style — arms and legs bend at the elbow and knee, no hands or feet.']];
         body.innerHTML = `<div class="item-grid">${rigs.map(([k, n, d]) => `<button class="item ${av.rig === k ? 'worn' : ''}" data-rig="${k}"><img src="${avatarImage({ ...av, rig: k }, 'full')}"><span>${n}</span><span class="muted small">${d}</span></button>`).join('')}</div>`;
         body.querySelectorAll('[data-rig]').forEach(b => b.onclick = () => { av.rig = b.dataset.rig; rebuild(); render(); save(); });
       } else {
@@ -1550,7 +1599,7 @@ async function studioPage(id, tpl) {
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=9fc16c94');
+      const { Game: GameClass } = await import('./game.js?v=d05b043e');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -1752,7 +1801,7 @@ const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
 const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
 const forumsDeps = { api, mount, esc, toast, get me() { return me; } };
 const familyDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
-const parentDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
+const parentDeps = { api, mount, esc, toast, avatarImgTag, switchAccount, addAccount, switchToToken, get token() { return token; }, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
 const twoUiDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const tradeDeps = { api, mount, esc, toast, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
@@ -1888,9 +1937,10 @@ async function route() {
   if (cleanup) { const c = cleanup; cleanup = null; c(); }
   const [path, query] = location.hash.slice(1).split('?');
   const seg = (path || '/home').split('/').filter(Boolean);
-  if (!token && seg[0] !== 'horror' && seg[0] !== 'safety-qa') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); showIntro(); return loginPage(); }
+  if (!token && seg[0] !== 'horror' && seg[0] !== 'safety-qa') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); renderActingBanner(); showIntro(); return loginPage(); }
   try {
     if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
+    renderActingBanner();
     // Safety (Phase 1): existing players must agree to the Safety Contract
     // before the lobby (or any page) mounts. Agreeing re-runs route().
     if (!me.contractAgreed) { showContractGate(); return; }
@@ -1950,7 +2000,7 @@ async function route() {
       case 'trades': { const m = await import('./trade.js?v=ab62c059'); return m.tradePage(tradeDeps); }
       case 'trade': { const m = await import('./trade.js?v=ab62c059'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
       case 'pets': { const m = await import('./pets.js?v=973b9a99'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=7a28080d'); return m.tokensPage(tokensDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=f413b3ee'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
