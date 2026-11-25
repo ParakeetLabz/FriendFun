@@ -10,6 +10,58 @@ const MAX_CHAT_LEN = 500;
 const FAMILY_COLORS = ['#7c3aed', '#e2231a', '#0284c7', '#16a34a', '#ec4899', '#f59e0b', '#06b6d4', '#ef4444'];
 const FAMILY_ICONS = ['🏠', '👨‍👩‍👧‍👦', '⭐', '❤️', '🔥', '🌈', '👑', '🎮'];
 
+// ---------- parent-email auto-link ----------
+// linkParentChild(supabase, key, adultName, kidName): connect a kid to a
+// parent through the SAME families table the Family feature uses — no
+// second linking system. One parent can link to MANY kids: a new kid is
+// ADDED to the parent's existing family, never replacing or unlinking the
+// kids already there.
+// Rules: already sharing a family -> no-op; adult has a family and the kid
+// has none -> kid joins it; kid has a family and the adult has none ->
+// adult joins it; neither has one -> a new family is created (owner =
+// adult, members = [adult, kid]); both in DIFFERENT families -> no-op
+// (families are never merged automatically). Returns the family row, or
+// null when nothing was linked (table missing, family full, ...). Never
+// throws — signup must never fail because linking hiccuped.
+export async function linkParentChild(supabase, key, adultName, kidName) {
+  const adult = key(adultName), kid = key(kidName);
+  if (!adult || !kid || adult === kid) return null;
+  const genCode = () => crypto.randomBytes(3).toString('hex').toUpperCase();
+  const genId = () => 'f_' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  try {
+    // Proven pattern from the rest of the codebase (contains on text[]).
+    const { data: adultRows, error: aErr } = await supabase.from('families').select('*').contains('members', [adult]);
+    if (aErr) return null;
+    const { data: kidRows, error: kErr } = await supabase.from('families').select('*').contains('members', [kid]);
+    if (kErr) return null;
+    const adultFam = (adultRows || [])[0] || null;
+    const kidFam = (kidRows || [])[0] || null;
+    if (adultFam && kidFam) {
+      if (adultFam.id === kidFam.id) return adultFam;
+      return null; // both in different families — never merge automatically
+    }
+    if (adultFam) {
+      if ((adultFam.members || []).length >= MAX_MEMBERS) return null;
+      const members = [...adultFam.members, kid];
+      const { error: uErr } = await supabase.from('families').update({ members }).eq('id', adultFam.id);
+      if (uErr) return null;
+      return { ...adultFam, members };
+    }
+    if (kidFam) {
+      if ((kidFam.members || []).length >= MAX_MEMBERS) return null;
+      const members = [...kidFam.members, adult];
+      const { error: uErr } = await supabase.from('families').update({ members }).eq('id', kidFam.id);
+      if (uErr) return null;
+      return { ...kidFam, members };
+    }
+    const display = adult.charAt(0).toUpperCase() + adult.slice(1);
+    const f = { id: genId(), name: `${display}'s Family`, owner: adult, members: [adult, kid], color: FAMILY_COLORS[0], icon: FAMILY_ICONS[0], motto: '', code: genCode(), created: new Date().toISOString() };
+    const { error: iErr } = await supabase.from('families').insert(f);
+    if (iErr) return null;
+    return f;
+  } catch { return null; }
+}
+
 export function createFamily(D) {
   const { app, auth, supabase, filter, notify, key, chatFilter, safetyFilter } = D;
   const norm = n => String(n || '').trim().toLowerCase();

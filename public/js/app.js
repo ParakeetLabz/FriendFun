@@ -732,8 +732,9 @@ function loginPage() {
         <label>Username<input name="username" autocomplete="username" placeholder="Don't use your real name" required></label>
         <label>Password<input name="password" type="password" autocomplete="current-password" placeholder="At least 4 characters" required></label>
         <div class="auth-signup-fields">
-          <label>Email<input name="email" type="email" autocomplete="email" placeholder="Email"></label>
           <label>Birthday<input name="birthday" type="date"></label>
+          <label><span class="auth-email-label">Your email</span><input name="email" type="email" autocomplete="email" placeholder="Email"></label>
+          <p class="muted small auth-email-hint" style="display:none">Some kids don't have an email — use a parent's email instead.</p>
           <details class="contract-details"><summary>Read the FunTopia Safety Contract</summary><div class="contract-body">${SAFETY_CONTRACT_HTML}</div></details>
           <p class="muted small">New here? Read the <a href="#/safety-qa">Safety Q&amp;A</a> to see how FunTopia keeps you safe.</p>
           <label class="auth-contract"><input type="checkbox" name="contract"> I have read the Safety Contract and I agree to follow it.</label>
@@ -749,25 +750,55 @@ function loginPage() {
   app.querySelectorAll('.auth-tabs button').forEach(b => b.onclick = () => {
     mode = b.dataset.m; app.querySelectorAll('.auth-tabs button').forEach(x => x.classList.toggle('active', x === b));
     form.querySelector('button[type=submit]').textContent = mode === 'signup' ? 'Sign Up' : 'Log In';
-    // Safety (Phase 1): email, birthday + contract agreement are signup-only.
+    // Safety: birthday + contract agreement are signup-only. The email
+    // field is your own email for adults, a parent's email for kids.
     form.querySelector('.auth-signup-fields').style.display = mode === 'signup' ? '' : 'none';
   });
+  // Kid sign-up: the birthday decides kid vs adult, and the email field
+  // adapts — kids give a parent's email (their own is not required),
+  // adults give their own. Same 18+ rule as the server (ageGroupOf).
+  const emailLabel = form.querySelector('.auth-email-label');
+  const emailHint = form.querySelector('.auth-email-hint');
+  const ageFromBirthday = bd => {
+    if (!bd) return null;
+    const d = new Date(bd + 'T00:00:00Z');
+    if (isNaN(d.getTime()) || d > new Date()) return null;
+    const now = new Date();
+    let age = now.getUTCFullYear() - d.getUTCFullYear();
+    const m = now.getUTCMonth() - d.getUTCMonth();
+    if (m < 0 || (m === 0 && now.getUTCDate() < d.getUTCDate())) age--;
+    return age;
+  };
+  const syncEmailField = () => {
+    const age = ageFromBirthday(form.birthday.value);
+    const isKid = age !== null && age < 18;
+    if (emailLabel) emailLabel.textContent = isKid ? "A parent's email" : 'Your email';
+    form.email.placeholder = isKid ? "A parent's email address" : 'Email';
+    if (emailHint) emailHint.style.display = isKid ? '' : 'none';
+  };
+  form.birthday.addEventListener('change', syncEmailField);
+  form.birthday.addEventListener('input', syncEmailField);
+  syncEmailField();
   form.onsubmit = async e => {
     e.preventDefault();
     try {
       const body = { username: form.username.value.trim(), password: form.password.value };
       if (mode === 'signup') {
-        // Safety (Phase 1): validate email + birthday + contract before the
-        // server ever sees the request (the server validates again too).
+        // Safety: validate birthday + the right email for the age group +
+        // contract before the server ever sees the request (the server
+        // validates again too — it decides kid vs adult from the birthday).
         const errEl = form.querySelector('.auth-err');
         const email = form.email.value.trim();
         const birthday = form.birthday.value;
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = 'Enter a real email address'; return; }
         if (!birthday) { errEl.textContent = 'Enter your birthday'; return; }
         const bd = new Date(birthday + 'T00:00:00Z');
         if (isNaN(bd.getTime()) || bd > new Date()) { errEl.textContent = 'Enter a real birthday'; return; }
+        const age = ageFromBirthday(birthday);
+        const isKid = age !== null && age < 18;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = isKid ? "Enter a parent's real email address" : 'Enter a real email address'; return; }
         if (!form.contract.checked) { errEl.textContent = 'You have to read and agree to the Safety Contract to play'; return; }
-        Object.assign(body, { email, birthday, contractAgreed: true });
+        Object.assign(body, { birthday, contractAgreed: true });
+        if (isKid) body.parentEmail = email; else body.email = email;
       }
       const r = await api('POST', mode === 'signup' ? '/api/signup' : '/api/login', body);
       token = r.token; localStorage.setItem('ff_token', token);

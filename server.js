@@ -9,7 +9,7 @@ import { createFunAI } from './funai.js';
 import { createSuggestions } from './suggestions.js';
 import { createCalling } from './calling.js';
 import { createVerify } from './verify.js';
-import { createFamily } from './family.js';
+import { createFamily, linkParentChild } from './family.js';
 import { createParent } from './parent.js';
 import { createGameVerify } from './gameverify.js';
 import { createForums } from './forums.js';
@@ -282,6 +282,18 @@ async function safetyCols() {
   if (!safetyColsOk) console.warn('[safety] users table is missing safety columns (email, birthday, adult_verified, contract_agreed) — run supabase_funtopia_safety_p1.sql in Supabase');
   return safetyColsOk;
 }
+// parent_email column (kid sign-up): probed SEPARATELY from safetyCols so
+// the new column being missing never stops the existing safety columns
+// from being stored. Same graceful pattern: write it only once it exists
+// (run supabase_funtopia_parent_email.sql in Supabase).
+let parentEmailColOk = null, parentEmailColAt = 0;
+async function parentEmailCol() {
+  if (parentEmailColOk !== null && Date.now() - parentEmailColAt < 60000) return parentEmailColOk;
+  const { error } = await supabase.from('users').select('parent_email').limit(1);
+  parentEmailColOk = !error; parentEmailColAt = Date.now();
+  if (!parentEmailColOk) console.warn('[safety] users table is missing parent_email — run supabase_funtopia_parent_email.txt in Supabase');
+  return parentEmailColOk;
+}
 // Family lookup, cached 60s: the "trusted friend" link for adult/child chat.
 // A mom in the same family as her kid can talk to them; strangers cannot.
 // (FunTopia never asks anyone — especially kids — for a home address.)
@@ -327,14 +339,25 @@ async function auth(req, res, next) {
 }
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password, email, birthday, contractAgreed } = req.body || {};
+  const { username, password, email, parentEmail, birthday, contractAgreed } = req.body || {};
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username || '')) return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or _' });
   if (!password || password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
-  // Safety (Phase 1): an email so safety reports have somewhere to go, a
-  // birthday so we know who is a child and who is an adult, and the Safety
-  // Contract must be agreed to. No parent verification at signup.
-  if (!validEmail(email)) return res.status(400).json({ error: 'Enter a real email address' });
+  // Safety: a birthday so the SERVER decides who is a child and who is an
+  // adult (ageGroupOf, never a client-sent age group), and the Safety
+  // Contract must be agreed to. Email rule depends on the age group:
+  // adults need their own email; kids do NOT need one (some kids don't
+  // have an email) but MUST give a parent's email instead — that is the
+  // contact address for safety reports. A parent email is contact info,
+  // not verification: kids play immediately, no parent approval gate.
   if (!validBirthday(birthday)) return res.status(400).json({ error: 'Enter your real birthday' });
+  const group = ageGroupOf({ birthday: String(birthday).trim() });
+  const parentEmailNorm = String(parentEmail || '').trim().toLowerCase();
+  const emailNorm = String(email || '').trim().toLowerCase();
+  if (group === 'adult') {
+    if (!validEmail(emailNorm)) return res.status(400).json({ error: 'Enter a real email address' });
+  } else {
+    if (!validEmail(parentEmailNorm)) return res.status(400).json({ error: 'Enter a parent\'s real email address' });
+  }
   if (contractAgreed !== true) return res.status(400).json({ error: 'You have to read and agree to the Safety Contract to play' });
   const { data: existing } = await supabase.from('users').select('name').eq('name', key(username)).maybeSingle();
   if (existing) return res.status(400).json({ error: 'That username is taken' });
@@ -347,9 +370,35 @@ app.post('/api/signup', async (req, res) => {
     clubForever: false, clubUntil: 0,
   };
   // Stored only once the safety columns exist (see safetyCols above).
-  if (await safetyCols()) Object.assign(userData, { email: String(email).trim().toLowerCase(), birthday: String(birthday).trim(), adult_verified: false, contract_agreed: true });
+  if (await safetyCols()) {
+    Object.assign(userData, { birthday: String(birthday).trim(), adult_verified: false, contract_agreed: true });
+    if (group === 'adult') userData.email = emailNorm;
+    else if (validEmail(emailNorm)) userData.email = emailNorm; // a kid's own email, only if they gave a real one
+    if (group !== 'adult' && await parentEmailCol()) userData.parent_email = parentEmailNorm;
+  }
   const { data: user, error: uErr } = await supabase.from('users').insert(userData).select().single();
   if (uErr) return res.status(500).json({ error: uErr.message });
+
+  // Parent-email auto-link (best effort — signup already succeeded).
+  // Kid signup: link to every adult whose email matches the parent email.
+  // Adult signup: link any kids who signed up earlier with this email as
+  // their parent email (the pending link). One parent links to MANY kids —
+  // linking only ever ADDS a member, never replaces or unlinks anyone.
+  try {
+    if (group !== 'adult') {
+      const { data: adults } = await supabase.from('users').select('name,birthday').eq('email', parentEmailNorm);
+      for (const a of (adults || [])) {
+        if (ageGroupOf(a) !== 'adult') continue;
+        if (await linkParentChild(supabase, key, a.name, user.name)) { familyCache.delete(key(a.name)); familyCache.delete(key(user.name)); }
+      }
+    } else {
+      const { data: kids } = await supabase.from('users').select('name,birthday,parent_email').eq('parent_email', emailNorm);
+      for (const k of (kids || [])) {
+        if (ageGroupOf(k) !== 'child') continue;
+        if (await linkParentChild(supabase, key, user.name, k.name)) { familyCache.delete(key(user.name)); familyCache.delete(key(k.name)); }
+      }
+    }
+  } catch (e) { console.warn('[signup] parent-email auto-link skipped:', e.message); }
 
   const tok = crypto.randomBytes(24).toString('hex');
   await supabase.from('sessions').insert({ token: tok, username: user.name });
