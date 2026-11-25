@@ -16,16 +16,21 @@ export async function lobbyPage(D) {
   const app = document.getElementById('app');
   app.className = 'fullscreen';
   let games = [], friends = [], party = { active: false }, siteVersion = '1.0';
+  // Unread DM total for the MESSAGES rail badge; 0 (no badge) if the fetch
+  // fails — the lobby must mount either way.
+  let unreadDms = 0;
   // One parallel round of fetches (was three sequential awaits) so the
   // lobby paints promptly instead of leaving the previous page up for seconds.
   try {
-    const [gRes, fRes, pRes, vRes] = await Promise.all([
+    const [gRes, fRes, pRes, vRes, dRes] = await Promise.all([
       api('GET', '/api/games').catch(() => []),
       api('GET', '/api/friends').then(r => r.friends || []).catch(() => []),
       api('GET', '/api/event/party').catch(() => ({ active: false })),
       api('GET', '/api/version').catch(() => ({})),
+      api('GET', '/api/dms').catch(() => []),
     ]);
     games = gRes; friends = fRes; party = pRes; siteVersion = vRes.version || '1.0';
+    unreadDms = (dRes || []).reduce((s, c) => s + (c.unread || 0), 0);
   } catch {}
   const online = (friends || []).filter(f => f.online || f.gameId);
   const byPlaying = [...games].sort((a, b) => (b.playing || 0) - (a.playing || 0));
@@ -89,6 +94,7 @@ export async function lobbyPage(D) {
         <button class="lb-item lb-rail-group-btn" type="button" aria-expanded="false"><span class="ic">${icons.people}</span>Friends<span class="ic lb-chev">${icons.chevron}</span></button>
         <div class="lb-rail-sub">
           <a class="lb-item" href="#/friends"><span class="ic">${icons.people}</span>FRIENDS${me.requests?.length ? ` <i class="lb-dot">${me.requests.length}</i>` : ''}</a>
+          <a class="lb-item" href="#/messages"><span class="ic">${icons.chat}</span>MESSAGES${unreadDms ? ` <i class="lb-dot">${unreadDms}</i>` : ''}</a>
           <a class="lb-item" href="#/family"><span class="ic">${FAMILY_LOGO}</span>FAMILY</a>
           <a class="lb-item" href="#/trades"><span class="ic">${icons.refresh}</span>TRADES</a>
         </div>
