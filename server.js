@@ -294,6 +294,39 @@ async function parentEmailCol() {
   if (!parentEmailColOk) console.warn('[safety] users table is missing parent_email — run supabase_funtopia_parent_email.txt in Supabase');
   return parentEmailColOk;
 }
+
+// Face-check result columns (u150, on-device age check): probed separately
+// like parent_email — the check result is stored only once they exist
+// (run supabase_funtopia_facecheck.txt in Supabase). The result is ONLY
+// the word kid/adult + the timestamp. The estimated age number is never
+// stored (it only ever lived on the player's device). A photo is NEVER accepted here.
+let faceCheckColOk = null, faceCheckColAt = 0;
+async function faceCheckCols() {
+  if (faceCheckColOk !== null && Date.now() - faceCheckColAt < 60000) return faceCheckColOk;
+  const { error } = await supabase.from('users').select('face_verified,face_age_group,face_verified_at').limit(1);
+  faceCheckColOk = !error; faceCheckColAt = Date.now();
+  if (!faceCheckColOk) console.warn('[safety] users table is missing face-check columns — run supabase_funtopia_facecheck.txt in Supabase');
+  return faceCheckColOk;
+}
+
+// Validate an on-device face-check result. ONLY the word kid/adult +
+// the timestamp are allowed — the estimated age NUMBER is never sent,
+// never accepted, never stored (it only ever lived on the player's device,
+// driving the uncertain/retake decision). Any photo data, any age number,
+// or any other field is rejected outright. The client never sends a photo,
+// and the server never accepts one.
+function validFaceCheck(fc) {
+  if (!fc || typeof fc !== 'object' || Array.isArray(fc)) return null;
+  const allowed = ['ageGroup', 'verifiedAt'];
+  for (const k of Object.keys(fc)) if (!allowed.includes(k)) return null;
+  for (const v of Object.values(fc)) {
+    if (typeof v === 'string' && (v.length > 500 || /data:image|base64/i.test(v))) return null;
+    if (typeof v === 'object' && v !== null) return null;
+  }
+  if (fc.ageGroup !== 'kid' && fc.ageGroup !== 'adult') return null;
+  if (typeof fc.verifiedAt !== 'number' || fc.verifiedAt > Date.now() + 60000 || fc.verifiedAt < Date.now() - 15 * 60 * 1000) return null;
+  return { ageGroup: fc.ageGroup, verifiedAt: Math.floor(fc.verifiedAt) };
+}
 // Family lookup, cached 60s: the "trusted friend" link for adult/child chat.
 // A mom in the same family as her kid can talk to them; strangers cannot.
 // (FunTopia never asks anyone — especially kids — for a home address.)
@@ -346,7 +379,7 @@ async function auth(req, res, next) {
 }
 
 app.post('/api/signup', async (req, res) => {
-  const { username, password, email, parentEmail, birthday, contractAgreed } = req.body || {};
+  const { username, password, email, parentEmail, birthday, contractAgreed, faceCheck } = req.body || {};
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username || '')) return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or _' });
   if (!password || password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
   // Safety: a birthday so the SERVER decides who is a child and who is an
@@ -366,6 +399,15 @@ app.post('/api/signup', async (req, res) => {
     if (!validEmail(parentEmailNorm)) return res.status(400).json({ error: 'Enter a parent\'s real email address' });
   }
   if (contractAgreed !== true) return res.status(400).json({ error: 'You have to read and agree to the Safety Contract to play' });
+  // Face check (u150): the on-device result travels with the signup — the
+  // client enforces the check, the server validates the shape and stores
+  // ONLY the result (never a photo). Absent is tolerated so older cached
+  // clients can still sign up; a present-but-invalid result is rejected.
+  // A direct API caller can skip any client-side check, so this is a
+  // recorded attestation, not proof — the birthday still decides the group.
+  const fc = faceCheck !== undefined ? validFaceCheck(faceCheck) : null;
+  if (faceCheck !== undefined && !fc) return res.status(400).json({ error: 'That face-check result is not valid — no photo data is ever accepted' });
+  if (fc && fc.ageGroup !== group) console.warn('[facecheck] signup result disagrees with birthday for', key(username), '- face says', fc.ageGroup, ', birthday says', group);
   const { data: existing } = await supabase.from('users').select('name').eq('name', key(username)).maybeSingle();
   if (existing) return res.status(400).json({ error: 'That username is taken' });
 
@@ -382,6 +424,7 @@ app.post('/api/signup', async (req, res) => {
     if (group === 'adult') userData.email = emailNorm;
     else if (validEmail(emailNorm)) userData.email = emailNorm; // a kid's own email, only if they gave a real one
     if (group !== 'adult' && await parentEmailCol()) userData.parent_email = parentEmailNorm;
+    if (fc && await faceCheckCols()) Object.assign(userData, { face_verified: true, face_age_group: fc.ageGroup, face_verified_at: fc.verifiedAt });
   }
   const { data: user, error: uErr } = await supabase.from('users').insert(userData).select().single();
   if (uErr) return res.status(500).json({ error: uErr.message });
@@ -557,6 +600,26 @@ app.post('/api/me/contract', auth, async (req, res) => {
   const { error } = await supabase.from('users').update({ contract_agreed: true }).eq('name', req.user.name);
   if (error) return res.status(500).json({ error: 'Could not save your agreement' });
   res.json({ ok: true, contractAgreed: true });
+});
+
+// Face check (u150): records ONLY the on-device verification result —
+// the word kid/adult + the timestamp. The photo never leaves the
+// player's device, so there is nothing to store and nothing is accepted:
+// any photo data in the body is rejected outright. The birthday still
+// decides kid vs adult (ageGroupOf); a face result that disagrees is
+// recorded and logged, never trusted over the birthday.
+app.post('/api/facecheck', auth, async (req, res) => {
+  if (forbidActing(req, res, 'facecheck')) return;
+  const fc = validFaceCheck(req.body || {});
+  if (!fc) return res.status(400).json({ error: 'That face-check result is not valid — no photo data is ever accepted' });
+  if (req.user.birthday) {
+    const bg = ageGroupOf(req.user);
+    if (bg !== fc.ageGroup) console.warn('[facecheck] result disagrees with birthday for', req.user.name, '- face says', fc.ageGroup, ', birthday says', bg);
+  }
+  if (!(await faceCheckCols())) return res.json({ ok: true, stored: false, note: 'Face-check columns are not set up yet — the owner needs to run the face-check SQL in Supabase' });
+  const { error } = await supabase.from('users').update({ face_verified: true, face_age_group: fc.ageGroup, face_verified_at: fc.verifiedAt }).eq('name', req.user.name);
+  if (error) return res.status(500).json({ error: 'Could not save the face-check result' });
+  res.json({ ok: true, stored: true, ageGroup: fc.ageGroup });
 });
 
 // Safety (Phase 1): adults (18+ by birthday) confirm "I am 18 or older" to

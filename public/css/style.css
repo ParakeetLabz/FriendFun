@@ -727,6 +727,14 @@ body.hk-corrupt #app { animation: hkJitter .18s infinite; }
 
 /* ============ 3D Lobby (Fortnite-style home) ============ */
 .lobby { position: fixed; inset: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: inherit; z-index: 1; }
+/* Parent acting as a child (u150): the fixed acting banner at the top of
+   the page must never cover the header. While acting, the whole app shifts
+   down by the banner's height (--acting-h is set from the banner's real
+   height by renderActingBanner in app.js): the fixed lobby, the fixed
+   overlay, and in-flow pages all start below the banner. */
+body.acting #app { padding-top: var(--acting-h, 40px); }
+body.acting .lobby { top: var(--acting-h, 40px); }
+body.acting .lb-overlay { top: var(--acting-h, 40px); }
 .lb-bg { position: absolute; inset: 0; z-index: 0; background: radial-gradient(ellipse at 50% 120%, var(--bg2) 0%, var(--bg) 70%); }
 .lb-3d { position: absolute; inset: 0; z-index: 0; }
 /* The 3D canvas is a composited WebGL layer: pin it inside the z-0 stacking

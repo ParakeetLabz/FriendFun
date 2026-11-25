@@ -142,27 +142,66 @@ function switchToToken(tok) { token = tok; localStorage.setItem('ff_token', tok)
 // the session is a parent-acting session (me.actingParent comes from
 // /api/me). It lives in document.body, outside #app, so page mounts and
 // the lobby overlay never remove it. It always offers the way back.
+// The banner is fixed at the very top — but it must NEVER cover the site
+// header. The lobby is itself viewport-fixed (`.lobby { position: fixed;
+// inset: 0 }`), so an in-flow banner cannot push it down. Instead, while
+// acting, the whole app shifts down by the banner's height (body.acting
+// + --acting-h, see style.css): the lobby, the overlay, and in-flow pages
+// all start below the banner, so the logo, FunTix, Themes, Settings and
+// account menu stay clickable. The X on the side (same look as the overlay
+// ✕) switches back, and so do the Switch back button and the ESC / E keys
+// (never while typing).
 function renderActingBanner() {
   const existing = document.getElementById('acting-banner');
   const parent = me?.actingParent;
-  if (!parent || !me) { existing?.remove(); return; }
+  if (!parent || !me) {
+    existing?.remove();
+    document.body.classList.remove('acting');
+    document.documentElement.style.removeProperty('--acting-h');
+    return;
+  }
   const label = `You are using ${me.name}'s account as their parent`;
   const backLabel = `Switch back to ${parent}`;
   if (existing) {
     existing.querySelector('.acting-banner-text').textContent = label;
     existing.querySelector('.acting-banner-back').textContent = backLabel;
+    syncActingOffset();
     return;
   }
   const el = document.createElement('div');
   el.id = 'acting-banner';
-  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10001;display:flex;align-items:center;justify-content:center;gap:12px;padding:7px 12px;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.35);';
-  el.innerHTML = `<span class="acting-banner-text"></span><button class="acting-banner-back btn-secondary btn-small" style="background:#fff;color:#5b21b6;border:none;"></button>`;
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10001;display:flex;align-items:center;justify-content:center;gap:12px;padding:5px 12px;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.35);';
+  el.innerHTML = `<span class="acting-banner-text"></span><button class="acting-banner-back btn-secondary btn-small" style="background:#fff;color:#5b21b6;border:none;"></button><button class="acting-banner-x lb-ov-close" title="Switch back to parent account" aria-label="Switch back to parent account" style="position:static;width:28px;height:28px;font-size:14px;flex-shrink:0;">✕</button>`;
   el.querySelector('.acting-banner-text').textContent = label;
   const back = el.querySelector('.acting-banner-back');
   back.textContent = backLabel;
   back.onclick = () => switchBackFromActing();
+  el.querySelector('.acting-banner-x').onclick = () => switchBackFromActing();
   document.body.appendChild(el);
+  document.body.classList.add('acting');
+  syncActingOffset();
+  // The banner can wrap to two lines on narrow screens: keep the offset
+  // in sync with its real height.
+  try { new ResizeObserver(syncActingOffset).observe(el); } catch {}
 }
+// While acting, the app shifts down by the banner's height so the banner
+// never covers the header (body.acting rules in style.css).
+function syncActingOffset() {
+  const el = document.getElementById('acting-banner');
+  if (!el) return;
+  document.documentElement.style.setProperty('--acting-h', el.offsetHeight + 'px');
+}
+// Keyboard way out of the acting view: ESC or E switches back to the
+// parent, same as the banner X. Never while typing in a field, and never
+// inside a game (E is a game key there, ESC opens the game menu) — the X
+// and Switch back buttons still work in a game.
+addEventListener('keydown', e => {
+  if (!me?.actingParent) return;
+  if (e.target.closest && e.target.closest('input,textarea,select,[contenteditable]')) return;
+  const h = location.hash || '';
+  if (h.startsWith('#/games/') || h.startsWith('#/play/')) return;
+  if (e.key === 'Escape' || e.key === 'e' || e.key === 'E') { e.preventDefault(); switchBackFromActing(); }
+});
 function switchBackFromActing() {
   const parent = me?.actingParent;
   if (!parent) return;
@@ -701,7 +740,9 @@ const SAFETY_CONTRACT_HTML = `
 <li><b>Act on reports.</b> When a report comes in, the safety team will look at it and take action when the rules were broken.</li>
 </ul>
 <h3>5. Accounts: verification and email</h3>
-<p>Making a FunTopia account is not quick on purpose. A harder sign-up helps keep bad actors out. Every account needs <b>verification</b> — you have to prove you are a real person before you can play. Every account needs a <b>real email address</b> — we need it so we can contact the account holder. Keep your password secret. Never share it, not even with a friend.</p>
+<p>Making a FunTopia account is not quick on purpose. A harder sign-up helps keep bad actors out. Every account needs <b>verification</b> — you have to prove you are a real person before you can play. Part of verification is a face check at sign-up (see 5a below). Every account needs a <b>real email address</b> — we need it so we can contact the account holder. Keep your password secret. Never share it, not even with a friend.</p>
+<h3>5a. Face check at sign-up</h3>
+<p>When you sign up, FunTopia asks you to do a quick face check. Your camera turns on for a split second. The check happens <b>on your own device</b> — your photo is never sent to FunTopia or anyone else, it is never saved, and it is deleted right away. <b>Nobody sees your photo, not even you.</b> Only the result is kept: whether you are a kid or an adult, and when the check happened. This stops people from pretending to be a kid when they are an adult, or pretending to be an adult when they are a kid.</p>
 <h3>6. Parent accounts</h3>
 <p>A parent can have a <b>parent account</b> linked to their child's account. A parent account can <b>view what the child's account is doing</b> on FunTopia — the games they play, who they talk to, and the reports linked to their account. Parents can use what they see to talk with their child and to report anything that worries them.</p>
 <h3>7. How to report someone</h3>
@@ -778,6 +819,11 @@ function loginPage() {
           <details class="contract-details"><summary>Read the FunTopia Safety Contract</summary><div class="contract-body">${SAFETY_CONTRACT_HTML}</div></details>
           <p class="muted small">New here? Read the <a href="#/safety-qa">Safety Q&amp;A</a> to see how FunTopia keeps you safe.</p>
           <label class="auth-contract"><input type="checkbox" name="contract"> I have read the Safety Contract and I agree to follow it.</label>
+          <div class="facecheck-box" style="margin:10px 0;padding:10px;border:1px solid #c9c9e8;border-radius:8px">
+            <p class="muted small" style="margin:0 0 8px">Face check: your camera turns on for a split second to check if you are a kid or an adult. The photo never leaves your device and nobody sees it — not even you. Only the result (kid or adult) is kept.</p>
+            <button type="button" class="btn-secondary facecheck-start">Start face check</button>
+            <span class="facecheck-status muted small"></span>
+          </div>
         </div>
         <div class="auth-err"></div>
         <button class="btn-primary big" type="submit">Sign Up</button>
@@ -819,6 +865,45 @@ function loginPage() {
   form.birthday.addEventListener('change', syncEmailField);
   form.birthday.addEventListener('input', syncEmailField);
   syncEmailField();
+  // Face check (u150): on-device age check at sign-up. The camera turns
+  // on only when the player starts the check, no preview is ever shown,
+  // the photo never leaves the device, and only the result is sent with
+  // the signup. Uncertain results are retaken inside the check itself;
+  // if still uncertain after the retakes it comes back as a kid.
+  let faceResult = null;
+  let faceCheckMod = null;
+  async function loadFaceCheck() {
+    if (!faceCheckMod) faceCheckMod = import('./facecheck.js?v=db372cb2');
+    return faceCheckMod;
+  }
+  async function doFaceCheck() {
+    const btn = form.querySelector('.facecheck-start');
+    const st = form.querySelector('.facecheck-status');
+    if (btn) btn.disabled = true;
+    try {
+      const { runFaceCheck } = await loadFaceCheck();
+      faceResult = await runFaceCheck({ onStatus: t => { if (st) st.textContent = t; } });
+      if (st) {
+        st.textContent = faceResult.retakesExhausted
+          ? 'We could not get a clear read, so this account will be treated as a kid.'
+          : faceResult.ageGroup === 'adult' ? 'Face check done — verified as an adult.'
+          : 'Face check done — verified as a kid.';
+      }
+      return faceResult;
+    } catch (e) {
+      faceResult = null;
+      if (st) st.textContent = '';
+      throw e;
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+  const faceStartBtn = form.querySelector('.facecheck-start');
+  if (faceStartBtn) faceStartBtn.onclick = async () => {
+    const errEl = form.querySelector('.auth-err');
+    errEl.textContent = '';
+    try { await doFaceCheck(); } catch (e) { errEl.textContent = e.message || 'Face check needs the camera to verify you. Try again.'; }
+  };
   form.onsubmit = async e => {
     e.preventDefault();
     try {
@@ -837,7 +922,16 @@ function loginPage() {
         const isKid = age !== null && age < 18;
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { errEl.textContent = isKid ? "Enter a parent's real email address" : 'Enter a real email address'; return; }
         if (!form.contract.checked) { errEl.textContent = 'You have to read and agree to the Safety Contract to play'; return; }
-        Object.assign(body, { birthday, contractAgreed: true });
+        // Face check runs after birthday + contract, before the account is
+        // created. No camera, or a refused camera, means no signup — the
+        // check is never silently skipped.
+        if (!faceResult) {
+          try { await doFaceCheck(); } catch (err) { errEl.textContent = err.message || 'Face check needs the camera to verify you. Try again.'; return; }
+        }
+        // Only the word kid/adult + timestamp leaves the device. The
+        // estimated age number stays on-device (it only drove the retake
+        // decision) and is never sent, stored, or shown.
+        Object.assign(body, { birthday, contractAgreed: true, faceCheck: { ageGroup: faceResult.ageGroup, verifiedAt: faceResult.verifiedAt } });
         if (isKid) body.parentEmail = email; else body.email = email;
       }
       const r = await api('POST', mode === 'signup' ? '/api/signup' : '/api/login', body);
