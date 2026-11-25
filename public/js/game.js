@@ -444,10 +444,16 @@ export class Game {
     if (this.dead) { this.dead = false; this.health = 100; this.char.visible = true; }
   }
   // Bots fill the enemy team while the room is near-empty, so Strike Arena
-  // is fun solo. They leave as soon as 2+ humans are in the room.
+  // is fun solo. They leave as soon as 2+ DISTINCT humans are in the room.
+  // Two sessions of the same account count as ONE human (same username),
+  // so a duplicate login can't scare the bots away from a solo player.
   maybeSpawnBots() {
     if (!this.fps) return;
-    const humans = 1 + this.players.size;
+    const names = new Set();
+    const myName = (this.me?.name || '').toLowerCase();
+    if (myName) names.add(myName);
+    for (const p of this.players.values()) { const n = (p.name || '').toLowerCase(); if (n) names.add(n); }
+    const humans = Math.max(1, names.size);
     if (humans >= 2) { if (this._fpsBots.length) this.removeFpsBots(); return; }
     if (this._fpsBots.length) return;
     const enemy = (this.fps.team || 'red') === 'red' ? 'blue' : 'red';
