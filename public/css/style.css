@@ -754,7 +754,6 @@ body.theme-forest .lb-logo-word { background: linear-gradient(135deg, #4ade80, #
 body.theme-sunset .lb-logo-word { background: linear-gradient(135deg, #fb923c, #ec4899, #f472b6); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; }
 body.theme-midnight .lb-logo-word { background: linear-gradient(135deg, #60a5fa, #3b82f6, #a78bfa); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; }
 .lb-logo-mark svg { width: 100%; height: 100%; }
-.lb-beta { font-size: 13px; font-weight: 900; letter-spacing: 1px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
 .lb-logo-word { background: linear-gradient(135deg, #fff, var(--blue2), var(--blue), #fff); background-size: 200% 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: grad-slide 5s ease infinite; }
 .lb-top-right { display: flex; align-items: center; gap: 10px; }
 .lb-tix { background: var(--card); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; font-weight: 700; color: var(--text); text-decoration: none; }
@@ -1163,7 +1162,6 @@ button.two-ui-el { cursor: pointer; }
 .ff-intro-logo { width: 110px; height: 110px; animation: ffIntroPop .7s cubic-bezier(.2, 1.6, .4, 1) both .1s; filter: drop-shadow(0 8px 24px rgba(124, 77, 255, .45)); }
 .ff-intro-logo svg { width: 100%; height: 100%; }
 .ff-intro-word { font-size: 44px; font-weight: 900; letter-spacing: 4px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; animation: ffIntroUp .6s ease both .45s; }
-.ff-intro-beta { font-size: 15px; font-weight: 900; letter-spacing: 1px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; animation: ffIntroUp .6s ease both .65s; }
 .ff-intro-credit { color: var(--muted); font-size: 15px; animation: ffIntroUp .6s ease both .8s; }
 .ff-intro-credit b { color: var(--text); }
 .ff-intro-skip { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; color: var(--muted); font-size: 13px; animation: ffIntroUp .6s ease both 1s; }
@@ -1491,3 +1489,52 @@ body.glitching .glitch-overlay { animation: glitchFlicker .1s steps(2) infinite;
 @media (max-width: 700px) {
   .lb-rail-group.open .lb-rail-sub { display: contents; }
 }
+
+/* ---------- u155 launch cinematic: ribbon cutting, Beta comes off ---------- */
+#ff-launch { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: var(--bg); cursor: pointer; animation: ffIntroIn .4s ease both; }
+#ff-launch.ff-launch-out { opacity: 0; transition: opacity .5s ease; pointer-events: none; }
+.ff-launch-inner { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 20px; width: min(94vw, 620px); }
+.ff-launch-word { font-size: 44px; font-weight: 900; letter-spacing: 4px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.1; }
+.ff-launch-word.ff-launch-pop, #ff-launch.ff-launch-final .ff-launch-word { animation: ffLaunchPop .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+.ff-launch-beta { font-size: 15px; font-weight: 900; letter-spacing: 1px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; transition: transform .7s ease-in, opacity .7s ease-in; }
+#ff-launch.ff-launch-peeled .ff-launch-beta { transform: translateY(70px) rotate(32deg) scale(.85); opacity: 0; }
+.ff-launch-sub { color: var(--muted); font-size: 15px; min-height: 20px; opacity: 0; transition: opacity .5s ease; }
+#ff-launch.ff-launch-final .ff-launch-sub { opacity: 1; }
+.ff-launch-sub b { color: var(--text); }
+.ff-launch-stage { position: relative; width: 100%; height: 250px; margin-top: 8px; overflow: hidden; }
+.ff-launch-ribbon { position: absolute; left: 0; right: 0; top: 46%; height: 24px; z-index: 1; }
+.ff-ribbon-half { position: absolute; top: 0; height: 100%; background: linear-gradient(180deg, #fb7185, #e11d48 55%, #9f1239); box-shadow: 0 3px 8px rgba(0,0,0,.35); transition: transform .8s ease-in, opacity .8s ease-in; }
+.ff-ribbon-left { left: 0; width: 50%; }
+.ff-ribbon-right { right: 0; width: 50%; }
+.ff-ribbon-knot { position: absolute; left: 50%; top: 50%; width: 60px; height: 44px; transform: translate(-50%, -50%); z-index: 2; transition: transform .8s ease-in, opacity .8s ease-in; }
+.ff-ribbon-knot svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 6px rgba(0,0,0,.35)); }
+#ff-launch.ff-launch-cut .ff-ribbon-left { transform: translate(-34px, 150px) rotate(-28deg); opacity: 0; }
+#ff-launch.ff-launch-cut .ff-ribbon-right { transform: translate(34px, 150px) rotate(28deg); opacity: 0; }
+#ff-launch.ff-launch-cut .ff-ribbon-knot { transform: translate(-50%, 160px) rotate(40deg); opacity: 0; }
+.ff-launch-char { position: absolute; left: 3%; bottom: 0; height: 225px; z-index: 2; animation: ffLaunchWalkIn .8s cubic-bezier(.2, 1.4, .4, 1) both; }
+.ff-launch-char-img, .ff-launch-char-img img { display: block; height: 100%; }
+.ff-launch-char-img svg { height: 100%; width: auto; }
+.ff-launch-char-img img { width: auto; }
+.ff-launch-scissors { position: absolute; left: 40%; top: 26%; width: 112px; z-index: 3; transform: rotate(-14deg); transform-origin: 20% 60%; filter: drop-shadow(0 4px 8px rgba(0,0,0,.4)); }
+.ff-launch-scissors svg { width: 100%; height: auto; display: block; }
+#ff-launch.ff-launch-snip .ff-launch-scissors { animation: ffLaunchSnip .45s ease-in-out 2; }
+#ff-launch.ff-launch-cut .ff-launch-scissors { animation: ffLaunchCheer .6s ease both; }
+.ff-launch-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 5; }
+.ff-launch-confetti span { position: absolute; top: -14px; display: block; opacity: 0; }
+#ff-launch.ff-launch-final .ff-launch-confetti span { animation: ffLaunchConfettiFall 2.8s ease-in forwards; }
+.ff-launch-skip { position: absolute; bottom: 28px; left: 0; right: 0; text-align: center; color: var(--muted); font-size: 13px; }
+@keyframes ffLaunchWalkIn { from { transform: translateX(-70px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes ffLaunchSnip { 0%, 100% { transform: rotate(-14deg); } 30% { transform: rotate(-30deg) translateX(6px); } 60% { transform: rotate(-8deg) translateX(2px); } }
+@keyframes ffLaunchCheer { from { transform: rotate(-14deg) translateY(0); } 50% { transform: rotate(6deg) translateY(-14px); } to { transform: rotate(-14deg) translateY(0); } }
+@keyframes ffLaunchPop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes ffLaunchConfettiFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(320px) rotate(720deg); opacity: .9; } }
+@media (max-width: 700px) {
+  .ff-launch-stage { height: 210px; }
+  .ff-launch-char { height: 180px; }
+  .ff-launch-scissors { width: 88px; left: 42%; }
+  .ff-launch-word { font-size: 36px; }
+}
+
+/* ---------- u155 donate page ---------- */
+.donate-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 10px; }
+.donate-list li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }

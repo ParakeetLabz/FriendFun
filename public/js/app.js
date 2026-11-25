@@ -1,6 +1,7 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { THEME_IDS, themesPage } from './themes.js?v=3780b96a';
+import { showLaunch } from './launch.js?v=1ba02477';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -659,7 +660,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=94cd58a9');
+  const m = await import('./lobby.js?v=13d74f1f');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -1878,6 +1879,7 @@ const ugcDeps = { api, mount, esc, tix, fmt, toast, itemImage, loadUgc, ensureAv
 const funaiDeps = { api, mount, esc, toast, get me() { return me; } };
 const suggestDeps = { api, mount, esc, toast, get me() { return me; } };
 const forumsDeps = { api, mount, esc, toast, get me() { return me; } };
+const donateDeps = { api, mount, esc, toast, get me() { return me; } };
 const familyDeps = { api, mount, esc, toast, avatarImgTag, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const parentDeps = { api, mount, esc, toast, avatarImgTag, switchAccount, addAccount, switchToToken, get token() { return token; }, setCleanup: fn => { cleanup = fn; }, get me() { return me; } };
 const themesDeps = { api, mount, esc, toast, applyTheme, get me() { return me; } };
@@ -1980,20 +1982,25 @@ async function addonsPage() {
 let routing = 0;
 // ---------- splash intro ----------
 // Full-screen FunTopia intro on first load each session: the logo pops in,
-// the wordmark + Beta tag + "Made by BoldPStudios" slide up, then it fades
-// out to reveal the site. Tap anywhere to skip. Plays once per tab
-// session (sessionStorage).
+// the wordmark + "Made by BoldPStudios" slide up, then it fades out to reveal
+// the site. Tap anywhere to skip. Plays once per tab session (sessionStorage).
+// One-time launch cinematic (u155): the first time a logged-in player opens
+// the lobby, the launch animation plays INSTEAD of this intro — the character
+// cuts the ribbon and the Beta tag comes off. Never on the login page
+// (token && me are only both set after the contract gate).
 let introShown = false;
 function showIntro() {
   if (introShown) return;
   introShown = true;
   try { if (sessionStorage.getItem('ff_intro_seen')) return; sessionStorage.setItem('ff_intro_seen', '1'); } catch {}
+  if (token && me) {
+    try { if (showLaunch(me)) return; } catch {}
+  }
   const el = document.createElement('div');
   el.id = 'ff-intro';
   el.innerHTML = `<div class="ff-intro-inner">
     <div class="ff-intro-logo">${LOGO}</div>
     <div class="ff-intro-word">FUNTOPIA</div>
-    <div class="ff-intro-beta">Beta <span class="ff-intro-ver">…</span></div>
     <div class="ff-intro-credit">Made by <b>BoldPStudios</b></div>
     <div class="ff-intro-skip">Tap to skip</div>
   </div>`;
@@ -2007,7 +2014,6 @@ function showIntro() {
   };
   el.addEventListener('click', close);
   setTimeout(close, 2600);
-  api('GET', '/api/version').then(v => { const s = el.querySelector('.ff-intro-ver'); if (s && v?.version) s.textContent = v.version; }).catch(() => {});
 }
 
 async function route() {
@@ -2028,7 +2034,7 @@ async function route() {
     const qp = new URLSearchParams(query || '');
     // No shell anymore: page routes render the lobby first, then open the page
     // in the lobby overlay (direct loads included).
-    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', 'parent', '2ui', 'trades', 'trade', 'pets', 'tokens', 'safety-contract', 'forums', 'safety-qa']);
+    const LOBBY_PAGE_ROUTES = new Set(['discover', 'games', 'play', 'create', 'users', 'friends', 'messages', 'groups', 'updates', 'avatar', 'catalog', 'ugc', 'suggest', 'studio', 'scripts', 'leaderboard', 'club', 'admin', 'settings', 'owner', 'moderation', 'funtix', 'addons', 'funai', 'skinmaker', 'themes', 'family', 'parent', '2ui', 'trades', 'trade', 'pets', 'tokens', 'safety-contract', 'forums', 'safety-qa', 'donate']);
     if (LOBBY_PAGE_ROUTES.has(seg[0]) && !overlayMode) {
       await renderLobby();
       window.__openLobbyOverlay?.(location.hash);
@@ -2066,6 +2072,7 @@ async function route() {
       case 'catalog': return await catalogPage(seg[1]);
       case 'ugc': { const m = await import('./ugc-studio.js?v=27b0715e'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
+      case 'donate': { const m = await import('./donate.js?v=abb42ec4'); return m.donatePage(donateDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case 'parent': { const m = await import('./parent.js?v=parentp2'); if (seg[1]) return m.parentChildPage(parentDeps, decodeURIComponent(seg[1])); return m.parentPage(parentDeps); }
       case 'forums': {

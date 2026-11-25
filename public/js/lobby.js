@@ -50,7 +50,7 @@ export async function lobbyPage(D) {
     <div class="lb-bg"></div>
     <div class="lb-3d"></div>
     <header class="lb-top">
-      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span><span class="lb-beta">Beta ${esc(siteVersion)}</span></a>
+      <a class="lb-logo" href="#/home"><span class="lb-logo-mark">${LOGO}</span><span class="lb-logo-word">FUNTOPIA</span></a>
       <div class="lb-top-right">
         <a class="lb-tix" href="#/funtix" title="FunTix"><span class="ic">${icons.coins}</span> ${fmt(me.funtix ?? 0)}</a>
         <span class="lb-online" title="Total players"><span class="ic">${icons.people}</span> <b class="player-count">–</b></span>
@@ -104,6 +104,7 @@ export async function lobbyPage(D) {
         <div class="lb-rail-sub">
           <a class="lb-item" href="#/suggest"><span class="ic">${icons.bulb}</span>SUGGESTIONS</a>
           <a class="lb-item" href="#/forums"><span class="ic">${icons.chat}</span>FORUMS</a>
+          <a class="lb-item" href="#/donate"><span class="ic">${icons.gift}</span>DONATE</a>
           <a class="lb-item" href="#/users/${encodeURIComponent(me.name)}"><span class="ic">${icons.award}</span>PROFILE</a>
           ${me.owner ? `<a class="lb-item lb-cav" href="#/owner" title="Owner Panel">${CAV_LOGO}</a>` : ''}
           ${me.admin && !me.owner ? `<a class="lb-item" href="#/admin"><span class="ic">${icons.shield}</span>ADMIN</a>` : ''}
