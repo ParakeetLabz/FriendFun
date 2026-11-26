@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=6e002cc3';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=03de3e72';
 import { renderToDataURL } from './three-util.js?v=88ba247e';
 import { isVerified } from './verified.js?v=4e9b72be';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -476,6 +476,13 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
   const shirtMat = shirtOn ? new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.8 }) : null;
   const trimMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.8 }) : null;
   const btnMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#37474f', roughness: 0.6 }) : null;
+  // pants mirror the shirt approach: a shell over each leg in the pants
+  // item's color, plus a darker waistband trim at the hips.
+  const pantsIt = ITEM[avatar.pants];
+  const pantsOn = avatar.pants && avatar.pants !== 'pants_none' && !(pantsIt && pantsIt.model_url);
+  const pantsColor = (pantsIt && pantsIt.color) || '#aaaaaa';
+  const pantsMat = pantsOn ? new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.8 }) : null;
+  const pantsTrimMat = pantsOn ? new THREE.MeshStandardMaterial({ color: shade(pantsColor, 0.7), roughness: 0.8 }) : null;
   // every shirt gets its own garment layout: archetype from the shirt style + hashed variations
   const garmentLayout = (id) => {
     const it = ITEM[id];
@@ -732,6 +739,21 @@ function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
         }
       }
     }
+  }
+  if (pantsOn) {
+    // Pants shells ride the leg pivots, so they swing with every animation.
+    // R15 legs are two segments, so each gets its own shell; R6 one-piece
+    // legs get a single shell. Sizes come from bounding boxes, so this
+    // works for both rigs and the Bugs/Daffy variants.
+    const legPairs = (llegLow && rlegLow) ? [[lleg, llegLow], [rleg, rlegLow]] : [[lleg], [rleg]];
+    for (const [upper, lower] of legPairs) {
+      const um = endMesh(upper);
+      if (um) { const s = meshSize(um); const shell = clothPart(s.x + 0.08, s.y + 0.04, s.z + 0.08, pantsMat); shell.position.copy(um.position); upper.add(shell); }
+      if (lower) { const lm = endMesh(lower); if (lm) { const s = meshSize(lm); const shell = clothPart(s.x + 0.08, s.y + 0.04, s.z + 0.08, pantsMat); shell.position.copy(lm.position); lower.add(shell); } }
+    }
+    // waistband trim around the hips
+    const waist = clothPart(torsoW + 0.14, 0.22, 1.14, pantsTrimMat);
+    waist.position.y = 2; root.add(waist);
   }
   root.userData.rig = rig;
   root.userData.limbs = (larmLow && rarmLow && llegLow && rlegLow)

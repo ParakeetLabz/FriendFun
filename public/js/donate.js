@@ -2,9 +2,9 @@ import { icons } from './icons.js?v=1aa0a4d3';
 // 💝 Donate page (#/donate): FunTopia is free and stays free. Donations are
 // a voluntary way for families who love FunTopia to help keep it running —
 // they pay for the website name and keeping the site online and safe.
-// No payment provider is set up yet, so the button is honest:
-// "Donations open soon". No money is taken here, and donating never buys
-// anything in the game.
+// The Donate button opens the donation page in a new tab. Donating never
+// buys anything in the game.
+const DONATE_URL = 'https://venmo.com/u/FunTopia?txn=pay&note=Donation';
 export function donatePage(D) {
   D.mount('donate', `
     <h1><span class="ic">${icons.gift}</span> Donate to FunTopia</h1>
@@ -20,8 +20,8 @@ export function donatePage(D) {
       <p>Donating does not buy FunTix, items, or any advantage in the game. Everyone plays fair, whether they donate or not. FunTopia is never pay-to-win.</p>
     </section>
     <section><div class="sec-h"><h2>Donate</h2></div>
-      <p><button class="btn-primary" disabled>Donations open soon</button></p>
-      <p class="muted">Donations aren't open yet. The best way to help for now is to play, invite your friends, and tell us what would make FunTopia even better.</p>
+      <p><a class="btn-primary" href="${DONATE_URL}" target="_blank" rel="noopener">Donate</a></p>
+      <p class="muted">If you'd like to help keep FunTopia running, you can donate. Every bit helps, and it's totally your choice.</p>
     </section>
   `);
 }

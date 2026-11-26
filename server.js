@@ -662,7 +662,7 @@ app.put('/api/me/avatar', auth, async (req, res) => {
   const colors = {};
   for (const k of Object.keys(DEFAULT_AVATAR.colors)) colors[k] = hex.test(a.colors?.[k]) ? a.colors[k] : req.user.avatar.colors[k];
   const pick = (slot) => (a[slot] && (a[slot] === slot + '_none' || req.user.inventory.includes(a[slot])) && itemDef(a[slot])?.type === slot) ? a[slot] : req.user.avatar[slot];
-  const avatar = { colors, hat: pick('hat'), face: pick('face'), shirt: pick('shirt'), head: pick('head') || DEFAULT_AVATAR.head, pet: pick('pet') || DEFAULT_AVATAR.pet, gear: pick('gear') || DEFAULT_AVATAR.gear, vehicle: pick('vehicle') || 'vehicle_none', rig: (a.rig === 'r6' || a.rig === 'r15') ? a.rig : (req.user.avatar.rig === 'r15' ? 'r15' : 'r6') };
+  const avatar = { colors, hat: pick('hat'), face: pick('face'), shirt: pick('shirt'), pants: pick('pants') || DEFAULT_AVATAR.pants, head: pick('head') || DEFAULT_AVATAR.head, pet: pick('pet') || DEFAULT_AVATAR.pet, gear: pick('gear') || DEFAULT_AVATAR.gear, vehicle: pick('vehicle') || 'vehicle_none', rig: (a.rig === 'r6' || a.rig === 'r15') ? a.rig : (req.user.avatar.rig === 'r15' ? 'r15' : 'r6') };
   // Only ONE ability-granting item can be equipped at a time. Keep the one in
   // the slot that just changed (vs the stored avatar); if none changed, keep
   // the highest-priority slot (gear > shirt > hat > head > face).

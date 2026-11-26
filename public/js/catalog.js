@@ -32,6 +32,13 @@ export const CATALOG = [
   { id: 'shirt_galaxy', type: 'shirt', name: 'Galaxy Tee', price: 130, color: '#1a1033' },
   { id: 'shirt_ff', type: 'shirt', name: 'FriendFun Logo Tee', price: 0, free: true, color: '#ffffff' },
   { id: 'shirt_stripes', type: 'shirt', name: 'Striped Sweater', price: 120, color: '#ffffff' },
+  { id: 'pants_none', type: 'pants', name: 'Plain', price: 0, free: true },
+  { id: 'pants_jeans', type: 'pants', name: 'Jeans', price: 30, color: '#1e5aa8' },
+  { id: 'pants_blackjeans', type: 'pants', name: 'Black Jeans', price: 60, color: '#212121' },
+  { id: 'pants_shorts', type: 'pants', name: 'Shorts', price: 30, color: '#e53935' },
+  { id: 'pants_cargo', type: 'pants', name: 'Cargo Pants', price: 90, color: '#6d7c3f' },
+  { id: 'pants_track', type: 'pants', name: 'Track Pants', price: 60, color: '#1a237e' },
+  { id: 'pants_galaxy', type: 'pants', name: 'Galaxy Pants', price: 130, color: '#1a1033' },
   { id: 'head_classic', type: 'head', name: 'Classic Head', price: 0, free: true },
   { id: 'head_block', type: 'head', name: 'Block Head', price: 0, free: true },
   { id: 'head_round', type: 'head', name: 'Round Head', price: 40 },
@@ -799,7 +806,7 @@ export const UGC_MAX_PRICE = 10000;
 export const UGC_CREATOR_CUT = 0.7;
 export const DEFAULT_AVATAR = {
   colors: { head: '#f5cd30', torso: '#0d69ac', larm: '#f5cd30', rarm: '#f5cd30', lleg: '#a4bd47', rleg: '#a4bd47' },
-  hat: 'hat_none', face: 'face_smile', shirt: 'shirt_none', head: 'head_classic', pet: 'pet_none', gear: 'gear_none', rig: 'r6',
+  hat: 'hat_none', face: 'face_smile', shirt: 'shirt_none', pants: 'pants_none', head: 'head_classic', pet: 'pet_none', gear: 'gear_none', rig: 'r6',
 };
 
 export const BADGES = {

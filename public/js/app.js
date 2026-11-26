@@ -1,7 +1,7 @@
 import { nameColor, tix, LOGO, CLUB, badgeIcon, displayNameOf } from './ui.js?v=a89886d1';
 import { icons } from './icons.js?v=1aa0a4d3';
 import { THEME_IDS, themesPage } from './themes.js?v=3780b96a';
-import { showLaunch } from './launch.js?v=1ba02477';
+import { showLaunch } from './launch.js?v=3b7c806b';
 
 // Badge definitions
 let BADGE_DEFS = {};
@@ -26,7 +26,7 @@ let _avatar3dLoading = null;
 async function ensureAvatar3d() {
   if (_avatar3d) return _avatar3d;
   if (!_avatar3dLoading) {
-    _avatar3dLoading = import('./avatar3d.js?v=2bf09633').then(m => {
+    _avatar3dLoading = import('./avatar3d.js?v=f67e1a92').then(m => {
       _avatar3d = m;
       refreshAvatars(); // swap placeholders for real avatars
       return m;
@@ -67,7 +67,7 @@ function buildCharacter(avatar) {
   if (!_avatar3d) throw new Error('avatar3d not loaded yet');
   return _avatar3d.buildCharacter(avatar);
 }
-import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=6e002cc3';
+import { CATALOG, ITEM, ECON, BADGES, PET_MODELS, GEAR_MODELS, UGC_TEMPLATES, UGC_CREATOR_CUT } from './catalog.js?v=03de3e72';
 import { templates, GEN_GAMES } from './worlds.js?v=3266e928';
 import { isVerified } from './verified.js?v=4e9b72be';
 const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
@@ -660,7 +660,7 @@ function startLobbyServices() {
 }
 
 async function renderLobby() {
-  const m = await import('./lobby.js?v=13d74f1f');
+  const m = await import('./lobby.js?v=f40d5af9');
   await m.lobbyPage(lobbyDeps);
   wireLobbyAccountMenu();
   startLobbyServices();
@@ -1059,7 +1059,7 @@ async function playPage(id, server, autoVoice) {
     return;
   }
   app.innerHTML = '<div class="play-container"></div>';
-  const { Game } = await import('./game.js?v=2e7ddc70');
+  const { Game } = await import('./game.js?v=8a7d3c0d');
   const game = new Game(app.querySelector('.play-container'), {
     world: g.world, gameId: g.id, gameName: g.name, server, autoVoice, shooter: g.event === 'shooter' || g.world?.shooter === true, gameGears: g.world?.gears || [], me, token, funtix: me.funtix,
     onMoney: r => setMoney(r), onExit: () => { cleanup = null; if (wasOverlay && window.__closeLobbyOverlay) window.__closeLobbyOverlay(); else history.length > 1 ? history.back() : (location.hash = '#/games/' + g.id); },
@@ -1071,21 +1071,21 @@ async function playPage(id, server, autoVoice) {
 const SKIN = ['#f5cd30', '#ffcc99', '#e8b98a', '#c68e5b', '#8d5524', '#5c3a1e', '#ffffff', '#a3a2a5', '#1b2a35', '#0d69ac', '#6e99ca', '#2f8cff', '#a4bd47', '#4b974b', '#287f47', '#c4281c', '#ff66cc', '#8a4bd8', '#da8541', '#ffd400', '#000000', '#7c5c46'];
 async function avatarPage(tab = 'body') {
   try { await ensureAvatar3d(); } catch {}
-  const av = structuredClone(me.avatar); av.head ??= 'head_classic'; av.rig ??= 'r6';
+  const av = structuredClone(me.avatar); av.head ??= 'head_classic'; av.rig ??= 'r6'; av.pants ??= 'pants_none';
   let part = 'all';
   mount('avatar', `
     <h1>Avatar Editor</h1><button class="btn-secondary av-random"><span class="ic">${icons.dice}</span> Randomize outfit</button> <a class="btn-secondary" href="#/skinmaker"><span class="ic">${icons.palette}</span> AI Skin Maker</a>
     <div class="av-wrap">
       <div class="av-preview"><canvas class="av-canvas"></canvas><div class="muted small">Drag to rotate</div></div>
       <div class="av-panel">
-        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'gear', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', gear: 'Gears', rig: 'Rig' }[t]}</button>`).join('')}</div>
+        <div class="av-tabs">${['body', 'head', 'hat', 'face', 'shirt', 'pants', 'gear', 'rig'].map(t => `<button data-tab="${t}" class="${t === tab ? 'active' : ''}">${{ body: 'Body Colors', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pants: 'Pants', gear: 'Gears', rig: 'Rig' }[t]}</button>`).join('')}</div>
         <div class="av-body"></div>
       </div>
     </div>`, () => {
     const canvas = app.querySelector('.av-canvas');
     app.querySelector('.av-random').onclick = () => {
       const pick = t => { const pool = CATALOG.filter(i => i.type === t && (me.inventory.includes(i.id) || i.free)); return pool.length ? pool[Math.floor(Math.random() * pool.length)].id : av[t]; };
-      av.hat = pick('hat'); av.face = pick('face'); av.shirt = pick('shirt'); av.pet = pick('pet');
+      av.hat = pick('hat'); av.face = pick('face'); av.shirt = pick('shirt'); av.pants = pick('pants'); av.pet = pick('pet');
       rebuild(); render(); save(); toast('Randomized!');
     };
     const r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); r.outputColorSpace = THREE.SRGBColorSpace;
@@ -1145,7 +1145,7 @@ function itemImage(item) {
   }
   const a = structuredClone(me?.avatar || PREVIEW_BASE);
   a[item.type] = item.id;
-  return avatarImage(a, item.type === 'shirt' ? 'full' : 'headshot');
+  return avatarImage(a, (item.type === 'shirt' || item.type === 'pants') ? 'full' : 'headshot');
 }
 
 // ---------- UGC (player-created avatar items) ----------
@@ -1163,8 +1163,8 @@ async function loadUgc() {
 }
 
 async function catalogPage(filter = 'all') {
-  const filters = ['all', 'head', 'hat', 'face', 'shirt', 'pet', 'gear', 'ugc'];
-  const labels = { all: 'All', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pet: 'Pets', gear: 'Gears', ugc: `${icons.palette} UGC` };
+  const filters = ['all', 'head', 'hat', 'face', 'shirt', 'pants', 'pet', 'gear', 'ugc'];
+  const labels = { all: 'All', head: 'Heads', hat: 'Hats', face: 'Faces', shirt: 'Shirts', pants: 'Pants', pet: 'Pets', gear: 'Gears', ugc: `${icons.palette} UGC` };
   const list = filter === 'ugc' ? UGC_LIST : CATALOG.filter(i => !i.limited && (filter === 'all' || i.type === filter));
   const soc = await api('GET', '/api/social/me').catch(() => ({ wishlist: [] }));
   const wish = new Set(soc.wishlist || []);
@@ -1672,13 +1672,13 @@ async function studioPage(id, tpl) {
   if (overlayMode) app.classList.add('fullscreen'); else app.className = 'fullscreen';
   app.innerHTML = '<div class="studio-container"></div>';
   let game = null;
-  const { Studio } = await import('./studio.js?v=031de5c9');
+  const { Studio } = await import('./studio.js?v=5cc84738');
   const studio = new Studio(app.querySelector('.studio-container'), {
     gameId: g.id, name: g.name, description: g.description, icon: g.icon, world: g.world, api, toast, aiAccess: me.aiAccess,
     onCreated: newId => history.replaceState(null, '', '#/studio/' + newId),
     onExit: gid => { cleanup = null; location.hash = gid ? '#/create' : '#/create'; },
     playTest: async (box, world, name, done) => {
-      const { Game: GameClass } = await import('./game.js?v=2e7ddc70');
+      const { Game: GameClass } = await import('./game.js?v=8a7d3c0d');
       game = new GameClass(box, { world, gameName: name + ' (Test)', me, token, test: true, onExit: () => { game = null; done(); } });
     },
   });
@@ -2070,9 +2070,9 @@ async function route() {
       case 'updates': return updatesPage();
       case 'avatar': return avatarPage();
       case 'catalog': return await catalogPage(seg[1]);
-      case 'ugc': { const m = await import('./ugc-studio.js?v=27b0715e'); return m.ugcPage(ugcDeps); }
+      case 'ugc': { const m = await import('./ugc-studio.js?v=655e7564'); return m.ugcPage(ugcDeps); }
       case 'suggest': { const m = await import('./suggest.js?v=8c9eb7b4'); return m.suggestPage(suggestDeps); }
-      case 'donate': { const m = await import('./donate.js?v=2ebc1217'); return m.donatePage(donateDeps); }
+      case 'donate': { const m = await import('./donate.js?v=4aa6fdd7'); return m.donatePage(donateDeps); }
       case 'family': { const m = await import('./family.js?v=ac1cc607'); return m.familyPage(familyDeps); }
       case 'parent': { const m = await import('./parent.js?v=parentp2'); if (seg[1]) return m.parentChildPage(parentDeps, decodeURIComponent(seg[1])); return m.parentPage(parentDeps); }
       case 'forums': {
@@ -2082,10 +2082,10 @@ async function route() {
       }
       case 'safety-qa': { const m = await import('./forums.js?v=p3forums1'); return m.safetyQaPage(forumsDeps); }
       case '2ui': { const m = await import('./two-ui.js?v=c35306d5'); if (seg[1] === 'new') return m.twoUiStudioPage(twoUiDeps, null); if (seg[1]) return m.twoUiStudioPage(twoUiDeps, seg[1]); return m.twoUiBrowsePage(twoUiDeps); }
-      case 'trades': { const m = await import('./trade.js?v=ab62c059'); return m.tradePage(tradeDeps); }
-      case 'trade': { const m = await import('./trade.js?v=ab62c059'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
-      case 'pets': { const m = await import('./pets.js?v=973b9a99'); return m.petsPage(petsDeps); }
-      case 'tokens': { const m = await import('./tokens.js?v=dddf5cf1'); return m.tokensPage(tokensDeps); }
+      case 'trades': { const m = await import('./trade.js?v=e8b79a46'); return m.tradePage(tradeDeps); }
+      case 'trade': { const m = await import('./trade.js?v=e8b79a46'); return m.tradeWithPage(tradeDeps, decodeURIComponent(seg[1] || '')); }
+      case 'pets': { const m = await import('./pets.js?v=64f4d79c'); return m.petsPage(petsDeps); }
+      case 'tokens': { const m = await import('./tokens.js?v=a42cbc9b'); return m.tokensPage(tokensDeps); }
       case 'studio': return await studioPage(seg[1], seg[2]);
       case 'scripts': { const m = await import('./scripts-page.js?v=e6be93e9'); return m.scriptsPage(D); }
       case 'leaderboard': return await leaderboardPage();
@@ -2101,7 +2101,7 @@ async function route() {
       case 'horror': { const m = await import('./horror.js?v=HORROR_SHA'); return m.horrorPage(horrorDeps); }
       case 'addons': return await addonsPage();
       case 'funai': { const m = await import('./funai.js?v=2518b14a'); return m.funaiPage(funaiDeps); }
-      case 'skinmaker': { const m = await import('./skinmaker.js?v=b7af6d55'); return m.skinmakerPage(skinmakerDeps); }
+      case 'skinmaker': { const m = await import('./skinmaker.js?v=9c614b88'); return m.skinmakerPage(skinmakerDeps); }
       case 'themes': return themesPage(themesDeps);
       default: location.hash = '#/home'; return;
     }
