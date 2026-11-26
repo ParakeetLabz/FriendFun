@@ -241,7 +241,7 @@ export async function tokensPage(D) {
       const tokenEl = app.querySelector('#cineTokenCanvas');
       // Live 3D coin: a real spinning token in the token's colors.
       try {
-        const { startToken3D } = await import('./token3d.js?v=9a0c49bc');
+        const { startToken3D } = await import('./token3d.js?v=4ac7ae2d');
         if (stopCoin) stopCoin();
         stopCoin = startToken3D(tokenEl, { emoji: tok?.emoji || '🪙', color: tok?.color || cfg.accent });
       } catch (e) { tokenEl.style.display = 'none'; }
