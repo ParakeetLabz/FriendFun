@@ -11,31 +11,35 @@
     background: linear-gradient(160deg, #2a1650 0%, #1a1a2e 55%, #12081f 100%);
     color: #fff;
     font-family: 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', 'Bradley Hand', cursive;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 24px 16px 40px;
-    overflow-x: hidden;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    position: relative;
   }
   /* hand-drawn wobbly border, like a marker line that overshoots */
   .sketch-border {
     border: 3px solid #fff;
     border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
   }
-  /* the sketch image; the smiling face in its top-left corner is the Go Back button */
+  /* the sketch fills the whole screen */
   .sketch-wrap {
-    position: relative;
-    width: min(720px, 92vw);
-    margin: 10px auto 0;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
   }
   .sketch-img {
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
     display: block;
   }
+  /* the smiling face in the sketch's top-left corner is the Go Back button;
+     its position is set by placeFaceBtn() so it tracks the face even when
+     the cover-cropped image shifts (see script below) */
   .face-btn {
     position: absolute;
     left: 0;
@@ -47,18 +51,31 @@
     border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
     cursor: pointer;
     padding: 0;
+    z-index: 2;
   }
   .face-btn:hover, .face-btn:focus-visible {
     border-color: rgba(255, 255, 255, 0.8);
     background: rgba(255, 255, 255, 0.06);
     outline: none;
   }
+  /* message + buttons sit on top of the sketch, at the bottom */
+  .overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    text-align: center;
+    padding: 90px 16px 26px;
+    background: linear-gradient(to top, rgba(18, 8, 31, 0.88) 0%, rgba(18, 8, 31, 0.45) 55%, transparent 100%);
+    pointer-events: none;
+  }
+  .overlay .btn-back, .overlay .lobby-link { pointer-events: auto; }
   .oops {
     font-size: clamp(19px, 4.5vw, 26px);
     color: #e9d5ff;
-    margin: 14px 0 26px;
+    margin: 0 0 16px;
     transform: rotate(-1deg);
-    max-width: 560px;
   }
   .btn-back {
     display: inline-block;
@@ -93,7 +110,7 @@
   .doodle.star2 { bottom: 14%; left: 7%; width: 36px; transform: rotate(-18deg); }
   .doodle.squig { bottom: 9%; right: 12%; width: 90px; transform: rotate(-6deg); }
   @media (max-width: 560px) {
-    .face-btn { width: 22%; height: 34%; }
+    .overlay { padding: 70px 12px 20px; }
   }
 </style>
 </head>
@@ -113,25 +130,51 @@
   <svg class="doodle star2" viewBox="0 0 48 48" aria-hidden="true"><g filter="url(#wobble)" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 4 L28 18 L42 20 L30 29 L34 43 L24 34 L14 43 L18 29 L6 20 L20 18 Z"/></g></svg>
   <svg class="doodle squig" viewBox="0 0 90 30" aria-hidden="true"><g filter="url(#wobble)" fill="none" stroke="#e9d5ff" stroke-width="3" stroke-linecap="round"><path d="M4 16 Q 16 4, 28 16 T 52 16 T 76 16 T 88 14"/></g></svg>
 
-  <main>
+  <main class="sketch-wrap">
     <!-- the user's own hand-drawn sketch: Error, 404, and the blocky character.
          The smiling face in the sketch's top-left corner is the Go Back button. -->
-    <div class="sketch-wrap">
-      <img class="sketch-img" src="/img/sketch-404.png" alt="Hand-drawn sketch: Error 404 with a blocky FunTopia character">
-      <button class="face-btn" type="button" onclick="goBack()" aria-label="Go back" title="Go back"></button>
-    </div>
+    <img class="sketch-img" src="/img/sketch-404.png" alt="Hand-drawn sketch: Error 404 with a blocky FunTopia character">
+    <button class="face-btn" type="button" onclick="goBack()" aria-label="Go back" title="Go back"></button>
+  </main>
 
+  <div class="overlay">
     <p class="oops">Oops! This page got lost in the blocks.</p>
     <button class="btn-back sketch-border" type="button" onclick="goBack()">&#8592; Go Back</button>
     <br>
     <a class="lobby-link" href="/#/home">or head back to the lobby &rarr;</a>
-  </main>
+  </div>
 
   <script>
     function goBack() {
       if (window.history.length > 1) { window.history.back(); }
       else { window.location.href = '/#/home'; }
     }
+    // The sketch covers the screen (object-fit: cover), so on tall/narrow
+    // screens the image is cropped left/right and the face shifts. Keep the
+    // face button on top of the face: face box measured in the 1381x917
+    // image is x 0.5%-16.5%, y 0%-29%.
+    function placeFaceBtn() {
+      var img = document.querySelector('.sketch-img');
+      var btn = document.querySelector('.face-btn');
+      if (!img || !btn || !img.naturalWidth) return;
+      var vw = window.innerWidth, vh = window.innerHeight;
+      var s = Math.max(vw / img.naturalWidth, vh / img.naturalHeight);
+      var dw = img.naturalWidth * s, dh = img.naturalHeight * s;
+      var ox = (dw - vw) / 2, oy = (dh - vh) / 2;
+      var left = 0.005 * dw - ox, top = 0 * dh - oy;
+      var w = (0.165 - 0.005) * dw, h = 0.29 * dh;
+      btn.style.left = left + 'px';
+      btn.style.top = top + 'px';
+      btn.style.width = w + 'px';
+      btn.style.height = h + 'px';
+      // if the face is cropped out of view entirely, hide its button
+      btn.style.display = (left + w < 0 || top + h < 0 || left > vw || top > vh) ? 'none' : '';
+    }
+    window.addEventListener('resize', placeFaceBtn);
+    window.addEventListener('orientationchange', placeFaceBtn);
+    var _img = document.querySelector('.sketch-img');
+    if (_img.complete) { placeFaceBtn(); }
+    else { _img.addEventListener('load', placeFaceBtn); }
   </script>
 </body>
 </html>
