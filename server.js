@@ -2926,6 +2926,19 @@ supabase.from('games').delete().eq('event', 'looney').then(() => console.log('lo
 supabase.from('games').delete().in('event', ['halloween', 'blockverse']).then(() => console.log('event games removed'));
 supabase.from('games').delete().eq('id', 'g_spookyrivals').then(() => console.log('tourney arena removed'));
 seedShooterGames().then(r => console.log('shooter:', r.created));
+// 404 page: unknown paths get the hand-drawn 404 page (public/404.html).
+// Placed last so it never swallows a real route. API misses stay JSON 404s,
+// /ws stays untouched, and missing static assets stay plain 404s (a missing
+// .js/.css file must never load as HTML).
+app.use((req, res) => {
+  if (req.path === '/api' || req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+  if (req.path === '/ws' || req.path.startsWith('/ws/')) return res.status(404).end();
+  if (/^\/(js|css|models|three)\//.test(req.path) || /\.(js|css|png|jpg|jpeg|gif|webp|svg|ico|glb|json|map|woff2?|ttf|mp3|wav|ogg)$/i.test(req.path)) {
+    return res.status(404).send('Not found');
+  }
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+});
+
 server.listen(PORT, () => console.log(`Funtopia running on http://localhost:${PORT}`));
 
 export default app;

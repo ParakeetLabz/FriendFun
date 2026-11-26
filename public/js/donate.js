@@ -3,8 +3,7 @@ import { icons } from './icons.js?v=1aa0a4d3';
 // a voluntary way for families who love FunTopia to help keep it running —
 // they pay for the website name and keeping the site online and safe.
 // No payment provider is set up yet, so the button is honest:
-// "Donations open soon" — a parent still needs to set up the payment part
-// before anyone can donate. No money is taken here, and donating never buys
+// "Donations open soon". No money is taken here, and donating never buys
 // anything in the game.
 export function donatePage(D) {
   D.mount('donate', `
@@ -22,7 +21,7 @@ export function donatePage(D) {
     </section>
     <section><div class="sec-h"><h2>Donate</h2></div>
       <p><button class="btn-primary" disabled>Donations open soon</button></p>
-      <p class="muted">The Donate button will work once a parent sets up the payment part. Until then, the best way to help is to play, invite your friends, and tell us what would make FunTopia even better.</p>
+      <p class="muted">Donations aren't open yet. The best way to help for now is to play, invite your friends, and tell us what would make FunTopia even better.</p>
     </section>
   `);
 }

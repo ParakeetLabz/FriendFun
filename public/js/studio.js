@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=88ba247e';
-import { CATALOG } from './catalog.js?v=d52f8dae';
+import { CATALOG } from './catalog.js?v=6e002cc3';
 import { icons } from './icons.js?v=1aa0a4d3';
+import { OBJECTIVE_KINDS, DIFFICULTIES, defaultObjective, normalizeObjective, readObjectiveEntry, syncObjectiveEntry, buildHardSection, shortObjectiveLabel } from './objectives.js?v=f3c44694';
 
 const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -74,6 +75,11 @@ export class Studio {
     this.world = structuredClone(o.world);
     if (!Array.isArray(this.world.folders)) this.world.folders = [];
     if (!Array.isArray(this.world.scripts)) this.world.scripts = [];
+    // An objective the creator picked earlier (or one that came back from
+    // the server inside the hidden scripts entry) — show it picked. No
+    // guessing here: worlds without an explicit objective stay classic.
+    this.world.objective = normalizeObjective(this.world.objective, this.world) || normalizeObjective(readObjectiveEntry(this.world), this.world) || null;
+    if (this.world.objective && !this.world.difficulty) this.world.difficulty = 'normal';
     this.gameId = o.gameId || null; this.name = o.name || 'Untitled Game'; this.description = o.description || ''; this.icon = o.icon || '';
     this.meshes = new Map(); this.sel = null; this.multi = []; this.exFilter = ''; this.closedFolders = new Set(); this.undoStack = []; this.redoStack = []; this.dirty = false;
     this.snap = true; this.keys = {};
@@ -90,7 +96,7 @@ export class Studio {
     <div class="studio">
       <div class="st-top">
         <div class="st-title"><span class="ff-mini">FF</span> Funtopia Studio <span class="st-gname">${esc(this.name)}</span><span class="st-dirty"></span></div>
-        <div class="st-top-actions"><button class="st-act" data-a="save">Save</button><button class="st-act" data-a="fun" title="Download this game as a .fun file"><span class="ic">${icons.download}</span> .fun</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
+        <div class="st-top-actions"><button class="st-act test" data-a="play" title="Playtest — play this game right now (F5)"><span class="ic">▶</span> Playtest</button><button class="st-act" data-a="save">Save</button><button class="st-act" data-a="fun" title="Download this game as a .fun file"><span class="ic">${icons.download}</span> .fun</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
       </div>
       <div class="st-ribbon">
         <div class="rb-group"><div class="rb-row">
@@ -116,6 +122,12 @@ export class Studio {
           <button class="rb-btn play" data-a="play" title="Play test (F5)"><span class="rb-ico">&#x25B6;</span>Play</button>
           <button class="rb-btn" data-a="testobby" title="Test if obby is completable"><span class="rb-ico"><span class="ic">${icons.target}</span></span>Obby</button>
         </div><div class="rb-label">Test</div></div>
+        <div class="rb-group"><div class="rb-row">
+          ${Object.entries(OBJECTIVE_KINDS).map(([k, o]) => `<button class="rb-btn obj-btn${this.world.objective?.kind === k ? ' active' : ''}" data-obj="${k}" title="${o.desc}"><span class="rb-ico">${o.icon}</span>${o.label}</button>`).join('')}
+        </div><div class="rb-row">
+          <label class="rb-btn" title="Difficulty — enemy strength, timer tightness, hard-section size"><select class="rb-diff">${Object.entries(DIFFICULTIES).map(([k, d]) => `<option value="${k}"${(this.world.difficulty || 'normal') === k ? ' selected' : ''}>${d.label}</option>`).join('')}</select>Difficulty</label>
+          <button class="rb-btn" data-a="hardsec" title="Add a hard stretch: kill bricks, sweepers and blink platforms"><span class="rb-ico">💪</span>Hard section</button>
+        </div><div class="rb-label">Objective <span class="obj-sum">${this.world.objective ? shortObjectiveLabel(this.world.objective, this.world.difficulty) : 'Pick one to give this game a goal'}</span></div></div>
         <div class="rb-group"><div class="rb-row rb-light">
           <label class="rb-btn" title="Sky color"><input type="color" class="rb-sky" value="${toHex(this.world.sky || '#8fc8ff')}">Sky</label>
           <label class="rb-slider" title="Time of day"><span class="ic">${icons.clock}</span><input type="range" class="rb-tod" min="0" max="24" step="0.5" value="${this.world.light?.tod ?? 12}"><b class="rb-tod-v">${this.world.light?.tod ?? 12}h</b></label>
@@ -142,9 +154,10 @@ export class Studio {
     this.c.querySelector('.studio').addEventListener('click', e => {
       const t = e.target.closest('[data-tool]'); if (t) this.setTool(t.dataset.tool);
       const i = e.target.closest('[data-insert]'); if (i) this.insert(i.dataset.insert);
+      const ob = e.target.closest('[data-obj]'); if (ob) this.setObjective(ob.dataset.obj);
       const a = e.target.closest('[data-a]')?.dataset.a;
       if (a === 'dup') this.duplicate(); if (a === 'del') this.remove(); if (a === 'undo') this.undo(); if (a === 'redo') this.redo(); if (a === 'stairs') this.stairs(); if (a === 'mirror') this.mirror();
-      if (a === 'play') this.play(); if (a === 'testobby') this.testObby(); if (a === 'save') this.save(); if (a === 'fun') this.downloadFun(); if (a === 'publish') this.publishDialog(); if (a === 'exit') this.exit();
+      if (a === 'play') this.play(); if (a === 'testobby') this.testObby(); if (a === 'hardsec') this.addHardSection(); if (a === 'save') this.save(); if (a === 'fun') this.downloadFun(); if (a === 'publish') this.publishDialog(); if (a === 'exit') this.exit();
     });
     q('.rb-color').oninput = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.c = e.target.value; this.refresh(p); } } };
     q('.rb-mat').onchange = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.m = e.target.value; this.refresh(p); } } };
@@ -160,6 +173,7 @@ export class Studio {
       this.applyLight(); this.markDirty();
     };
     q('.rb-tod').oninput = lightUpd; q('.rb-amb').oninput = lightUpd; q('.rb-fog').oninput = lightUpd;
+    q('.rb-diff').onchange = e => this.setDifficulty(e.target.value);
     const aiBtn = q('.ai-gen');
     if (aiBtn) aiBtn.onclick = async () => {
       const promptEl = q('.ai-prompt');
@@ -300,7 +314,7 @@ export class Studio {
   }
   renderExplorer() {
     const folders = this.world.folders || [];
-    const scripts = this.world.scripts || [];
+    const scripts = (this.world.scripts || []).filter(s => s.id !== '__objective__'); // hidden objective data, not a script
     const parts = this.world.parts || [];
     const folderMap = {};
     folders.forEach(f => folderMap[f.id] = f);
@@ -815,7 +829,37 @@ export class Studio {
     this.keys = {};
     this.o.playTest(box, structuredClone(this.world), this.name, () => { box.classList.add('hidden'); this.resize(); });
   }
+  // ---------- objectives ----------
+  // Picking an objective gives the game a goal, a timer and a score — the
+  // runtime (game.js) enforces it. Tap the picked one again to go back
+  // to classic mode (win pad wins, no timer). Difficulty scales enemy
+  // strength, timer tightness and hard-section size (see objectives.js).
+  setObjective(kind) {
+    if (this.world.objective?.kind === kind) this.world.objective = null;
+    else this.world.objective = defaultObjective(kind);
+    if (this.world.objective && !this.world.difficulty) this.world.difficulty = 'normal';
+    syncObjectiveEntry(this.world);
+    this.markDirty(); this.refreshObjectiveUI();
+    this.o.toast(this.world.objective ? `Objective set: ${this.world.objective.winCondition}` : 'Objective removed — classic win-pad mode');
+  }
+  setDifficulty(level) {
+    this.world.difficulty = DIFFICULTIES[level] ? level : 'normal';
+    syncObjectiveEntry(this.world);
+    this.markDirty(); this.refreshObjectiveUI();
+  }
+  addHardSection() {
+    const n = buildHardSection(this.world, this.world.difficulty || 'normal');
+    if (!n) { this.o.toast('Could not place a hard section here', true); return; }
+    this.rebuildAll(); this.markDirty();
+    this.o.toast(`Added a hard section (${n} parts) — try it with Playtest!`);
+  }
+  refreshObjectiveUI() {
+    this.c.querySelectorAll('[data-obj]').forEach(b => b.classList.toggle('active', this.world.objective?.kind === b.dataset.obj));
+    const sel = this.c.querySelector('.rb-diff'); if (sel) sel.value = this.world.difficulty || 'normal';
+    const sum = this.c.querySelector('.obj-sum'); if (sum) sum.textContent = this.world.objective ? shortObjectiveLabel(this.world.objective, this.world.difficulty) : 'Pick one to give this game a goal';
+  }
   async save(extra = {}) {
+    syncObjectiveEntry(this.world); // objective (+difficulty) rides in the hidden scripts entry so it survives the server round-trip
     const body = { name: this.name, description: this.description, world: this.world, icon: this.icon || '', ...extra };
     try {
       let createdStatus = null;
@@ -829,6 +873,7 @@ export class Studio {
   // Download this game as a .fun file: JSON with the game's Name,
   // description and world (parts + scripts). Load it back from Create.
   downloadFun() {
+    syncObjectiveEntry(this.world);
     const data = { format: 'fun', version: 1, name: this.name, description: this.description || '', world: this.world };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');

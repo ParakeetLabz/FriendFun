@@ -1,4 +1,5 @@
 import { genTemplates, GEN_GAMES } from './gen-games.js?v=932604b0';
+import { defaultObjective } from './objectives.js?v=f3c44694';
 // World generators shared by server (seeding) and client (studio templates).
 function rng(seed) {
   let s = seed >>> 0;
@@ -52,6 +53,7 @@ export function obby() {
   z -= 14;
   w.parts.push(part([x, y, z], [20, 1, 20], '#ffd700', { name: 'WinPlatform', m: 'neon' }));
   w.parts.push(part([x, y + 0.75, z], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  w.objective = defaultObjective('race', { timerSec: 240 });
   return w;
 }
 
@@ -119,6 +121,7 @@ export function tower() {
   }
   w.parts.push(part([0, 121, 0], [16, 1, 16], '#ffd700', { name: 'Top', m: 'neon' }));
   w.parts.push(part([0, 121.75, 0], [6, 0.5, 6], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  w.objective = defaultObjective('race', { timerSec: 300 });
   return w;
 }
 
@@ -138,6 +141,7 @@ export function coinRush() {
       if (i % 5 === 4) w.parts.push(part([px + sz / 2 - 1.3, y + 0.75, pz], [2.2, 0.5, 2.2], '#ff9800', { name: 'SpeedPad', k: 'speed', m: 'neon' }));
     }
   }
+  w.objective = defaultObjective('collect', { timerSec: 300, score: 30 });
   return w;
 }
 
@@ -451,6 +455,7 @@ export function raceTrack() {
   for (let i = 0; i < 10; i++) w.parts.push(part([-50 + i * 11, 1.5, -40], [1.2, 1.2, 1.2], '#ffd400', { name: 'Coin', k: 'coin' }));
   w.parts.push(part([0, 0.75, -40], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
   w.parts.push(part([0, 2, -30], [2, 5, 2], '#ffd400', { name: 'Race Marshal', k: 'npc', dialog: 'Hit the boosts, slide the ice corner, and don\'t cut the grass!' }));
+  w.objective = defaultObjective('race', { timerSec: 150 });
   return w;
 }
 
@@ -667,6 +672,7 @@ export function forestCamp() {
   // Supplies
   for (let i = 0; i < 10; i++) w.parts.push(part([(r() - 0.5) * 140, 1, (r() - 0.5) * 140], [1.2, 1.2, 1.2], '#ffd400', { name: 'Supply', k: 'coin', m: 'neon' }));
   w.parts.push(part([0, 0.25, 6], [6, 0.5, 6], '#3a7bd5', { name: 'SpawnLocation', k: 'spawn', m: 'spawn' }));
+  w.objective = defaultObjective('survive', { timerSec: 120 });
   return w;
 }
 
@@ -813,6 +819,7 @@ export function dungeonQuest() {
   w.parts.push(part([3, 3, -68], [1, 6, 1], '#00e5ff', { name: 'PortalFrame', m: 'neon' }));
   w.parts.push(part([0, 6, -68], [7, 1, 1], '#00e5ff', { name: 'PortalTop', m: 'neon' }));
   w.parts.push(part([0, 0.75, -62], [8, 0.5, 8], '#ffffff', { name: 'WinPad', k: 'win', m: 'neon' }));
+  w.objective = defaultObjective('race', { timerSec: 180 });
   return w;
 }
 
@@ -992,6 +999,7 @@ export function crystalDash() {
   P(-5, 3, -76, 2, 3, 2, '#ff2d95', { name: 'Crystal', m: 'neon', sh: 'cone' });
   P(5, 3, -76, 2, 3, 2, '#7c4dff', { name: 'Crystal', m: 'neon', sh: 'cone' });
   for (let k = 0; k < 4; k++) coin(Math.cos(k * Math.PI / 2 + Math.PI / 4) * 5, 2.5, -72 + Math.sin(k * Math.PI / 2 + Math.PI / 4) * 3);
+  w.objective = defaultObjective('race', { timerSec: 180 });
   return w;
 }
 

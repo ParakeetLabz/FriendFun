@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error 404 — FunTopia</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    background: linear-gradient(160deg, #2a1650 0%, #1a1a2e 55%, #12081f 100%);
+    color: #fff;
+    font-family: 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', 'Bradley Hand', cursive;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px 16px 40px;
+    overflow-x: hidden;
+  }
+  /* hand-drawn wobbly border, like a marker line that overshoots */
+  .sketch-border {
+    border: 3px solid #fff;
+    border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  }
+  /* top-left: the smiling Fun Cube block logo, links home */
+  .corner-logo {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    transform: rotate(-3deg);
+    z-index: 5;
+  }
+  .corner-logo .cube {
+    width: 72px;
+    height: 72px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+  .corner-logo .cube svg { width: 100%; height: 100%; display: block; }
+  .corner-logo .cap {
+    color: #e9d5ff;
+    font-size: 17px;
+    transform: rotate(-2deg);
+  }
+  .corner-logo:hover .cube { background: rgba(255, 255, 255, 0.18); }
+  .sketch-word {
+    margin: 0;
+    font-weight: 700;
+    color: #fff;
+    line-height: 0.95;
+    text-shadow: 3px 3px 0 rgba(124, 58, 237, 0.9), -2px -1px 0 rgba(34, 211, 238, 0.45);
+  }
+  .sketch-error {
+    font-size: clamp(52px, 11vw, 96px);
+    transform: rotate(-2.5deg);
+    letter-spacing: 2px;
+  }
+  .sketch-404 {
+    font-size: clamp(120px, 30vw, 220px);
+    transform: rotate(1.5deg);
+    letter-spacing: 6px;
+  }
+  .doodle-figure { width: min(240px, 55vw); height: auto; margin: 8px auto 0; }
+  .oops {
+    font-size: clamp(19px, 4.5vw, 26px);
+    color: #e9d5ff;
+    margin: 14px 0 26px;
+    transform: rotate(-1deg);
+    max-width: 560px;
+  }
+  .btn-back {
+    display: inline-block;
+    font-family: inherit;
+    font-size: clamp(21px, 5vw, 27px);
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    padding: 14px 34px;
+    cursor: pointer;
+    transform: rotate(-1.5deg);
+    box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.35);
+    transition: transform 0.12s ease;
+  }
+  .btn-back:hover { transform: rotate(-1.5deg) scale(1.06); }
+  .btn-back:active { transform: rotate(-1.5deg) scale(0.97); box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35); }
+  .lobby-link {
+    display: inline-block;
+    margin-top: 18px;
+    color: #a5f3fc;
+    font-size: 19px;
+    text-decoration: underline wavy #22d3ee;
+    text-underline-offset: 5px;
+    transform: rotate(0.8deg);
+  }
+  .doodle {
+    position: fixed;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .doodle.star1 { top: 12%; right: 9%; width: 46px; transform: rotate(14deg); }
+  .doodle.star2 { bottom: 14%; left: 7%; width: 36px; transform: rotate(-18deg); }
+  .doodle.squig { bottom: 9%; right: 12%; width: 90px; transform: rotate(-6deg); }
+  @media (max-width: 560px) {
+    .corner-logo .cube { width: 56px; height: 56px; }
+    .corner-logo .cap { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+  <!-- wobble filter: makes every stroke look hand-drawn, like the sketch -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <filter id="wobble" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.02 0.035" numOctaves="2" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="4"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- the smiling block character in the top-left corner = the Fun Cube logo, links home -->
+  <a class="corner-logo" href="/#/home" title="Back to FunTopia">
+    <span class="cube sketch-border"><svg class="ff-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fflg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="ff-lg-a" stop-color="#7c3aed"/><stop offset="1" class="ff-lg-b" stop-color="#06b6d4"/></linearGradient></defs><rect x="3" y="3" width="42" height="42" rx="12" fill="url(#fflg)"/><rect x="14" y="17" width="7" height="9" rx="2" fill="#fff"/><rect x="27" y="17" width="7" height="9" rx="2" fill="#fff"/><path d="M16 31q8 6 16 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path class="ff-spark" d="M41 2l1.7 4.6L47 8.3l-4.3 1.7L41 14.6 39.3 10 35 8.3l4.3-1.7z" fill="#22d3ee"/></svg></span>
+    <span class="cap">FunTopia</span>
+  </a>
+
+  <!-- little sketchy doodles -->
+  <svg class="doodle star1" viewBox="0 0 48 48" aria-hidden="true"><g filter="url(#wobble)" fill="none" stroke="#facc15" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 4 L28 18 L42 20 L30 29 L34 43 L24 34 L14 43 L18 29 L6 20 L20 18 Z"/></g></svg>
+  <svg class="doodle star2" viewBox="0 0 48 48" aria-hidden="true"><g filter="url(#wobble)" fill="none" stroke="#22d3ee" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 4 L28 18 L42 20 L30 29 L34 43 L24 34 L14 43 L18 29 L6 20 L20 18 Z"/></g></svg>
+  <svg class="doodle squig" viewBox="0 0 90 30" aria-hidden="true"><g filter="url(#wobble)" fill="none" stroke="#e9d5ff" stroke-width="3" stroke-linecap="round"><path d="M4 16 Q 16 4, 28 16 T 52 16 T 76 16 T 88 14"/></g></svg>
+
+  <main>
+    <!-- big rough-sketched letters, like the drawing -->
+    <h1 class="sketch-word sketch-error" style="filter:url(#wobble)">Error</h1>
+    <div class="sketch-word sketch-404" style="filter:url(#wobble)" aria-label="404">404</div>
+
+    <!-- the blocky figure from the sketch: square head, block body, one arm up -->
+    <svg class="doodle-figure" viewBox="0 0 240 280" role="img" aria-label="A blocky FunTopia character looking lost">
+      <g filter="url(#wobble)" stroke="#1e1033" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+        <!-- waving arm -->
+        <rect x="18" y="88" width="52" height="20" rx="5" fill="#7c3aed" transform="rotate(-28 70 98)"/>
+        <!-- legs -->
+        <rect x="84" y="186" width="30" height="58" rx="4" fill="#312e81"/>
+        <rect x="126" y="186" width="30" height="58" rx="4" fill="#312e81"/>
+        <!-- torso -->
+        <rect x="78" y="96" width="84" height="92" rx="6" fill="#a855f7"/>
+        <!-- other arm -->
+        <rect x="164" y="100" width="20" height="58" rx="5" fill="#7c3aed"/>
+        <!-- head -->
+        <rect x="72" y="12" width="96" height="80" rx="8" fill="#7c3aed"/>
+        <!-- eyes -->
+        <rect x="94" y="38" width="15" height="19" rx="3" fill="#fff" stroke="none"/>
+        <rect x="131" y="38" width="15" height="19" rx="3" fill="#fff" stroke="none"/>
+        <!-- smile -->
+        <path d="M102 66 Q 120 80, 138 66" fill="none" stroke="#fff" stroke-width="5"/>
+        <!-- spark -->
+        <path d="M172 2l2.2 6 6 2.2-6 2.2-2.2 6-2.2-6-6-2.2 6-2.2z" fill="#22d3ee" stroke="none"/>
+        <!-- little question mark, hand-drawn -->
+        <path d="M196 52 q 12 -2, 10 10 q -2 8, -8 9" fill="none" stroke="#facc15" stroke-width="4"/>
+        <circle cx="197" cy="80" r="3" fill="#facc15" stroke="none"/>
+      </g>
+    </svg>
+
+    <p class="oops">Oops! This page got lost in the blocks.</p>
+    <button class="btn-back sketch-border" type="button" onclick="goBack()">&#8592; Go Back</button>
+    <br>
+    <a class="lobby-link" href="/#/home">or head back to the lobby &rarr;</a>
+  </main>
+
+  <script>
+    function goBack() {
+      if (window.history.length > 1) { window.history.back(); }
+      else { window.location.href = '/#/home'; }
+    }
+  </script>
+</body>
+</html>

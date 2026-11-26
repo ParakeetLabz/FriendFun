@@ -1,4 +1,5 @@
 import { icons } from './icons.js?v=1aa0a4d3';
+import { finishFunaiWorld, objectiveLabel } from './objectives.js?v=f3c44694';
 // ✨ FunAI — game maker AI page for Funtopia (client).
 // Describe a game -> FunAI designs a Funtopia Studio world -> save it
 // as a real experience and open it straight in Funtopia Studio, or
@@ -86,7 +87,7 @@ export async function funaiPage(D) {
       stage.classList.remove('hidden');
       q('.funai-title').textContent = g.title;
       q('.funai-desc').textContent = g.description || '';
-      q('.funai-meta').textContent = g.world.parts.length + ' parts · ' + kindCounts(g.world);
+      q('.funai-meta').textContent = g.world.parts.length + ' parts · ' + kindCounts(g.world) + (g.world.objective ? ' · ' + objectiveLabel(g.world.objective, g.world.difficulty) : '');
       q('.funai-code').textContent = JSON.stringify(g.world, null, 1).slice(0, 20000);
       drawMap(g.world);
       stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -104,7 +105,7 @@ export async function funaiPage(D) {
       const games = shelf();
       q('.funai-shelf').innerHTML = games.length ? games.map((g, i) => `
         <div class="funai-card">
-          <b>${esc(g.title)}</b><span class="muted small">${esc(g.description || '')}</span><span class="muted small">${g.world?.parts?.length || 0} parts</span>
+          <b>${esc(g.title)}</b><span class="muted small">${esc(g.description || '')}</span><span class="muted small">${g.world?.parts?.length || 0} parts${g.world?.objective ? ' · ' + objectiveLabel(g.world.objective, g.world.difficulty) : ''}</span>
           <div class="funai-actions"><button class="btn-secondary" data-view="${i}"><span class="ic">${icons.eye}</span> View</button><button class="btn-secondary" data-studio="${i}"><span class="ic">${icons.edit}</span> Studio</button><button class="btn-danger" data-del="${i}">Delete</button></div>
         </div>`).join('') : '<p class="muted">Nothing saved yet. Build a world and hit Save to shelf.</p>';
       q('.funai-shelf').querySelectorAll('[data-view]').forEach(b => b.onclick = () => { const g = shelf()[+b.dataset.view]; if (g) show(g); });
@@ -127,8 +128,14 @@ export async function funaiPage(D) {
       think(true);
       try {
         const r = await api('POST', '/api/funai/generate', { prompt, style: q('.funai-style').value, ...(world ? { world } : {}) });
+        // Finish the world before showing it: every FunAI game gets a real
+        // objective, a hard section and a finished look (lighting + props)
+        // — the server prompt asks for them, but this guarantees them even
+        // when the AI skips one. Idempotent: a world that already has
+        // those keeps them.
+        const done = finishFunaiWorld(r.world);
         show({ title: r.title, description: r.description, world: r.world });
-        toast('FunAI built your world!');
+        toast('FunAI built your world!' + (done.objective ? ` ${done.objective.winCondition}` : ''));
       } catch (e) { toast(e.message, true); status.textContent = e.message; }
       think(false);
     };

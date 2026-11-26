@@ -205,6 +205,7 @@ section { margin-bottom: 34px; }
 .health { width: 180px; height: 8px; background: rgba(0,0,0,.5); border-radius: 4px; overflow: hidden; } .health-fill { height: 100%; background: #2ecc71; width: 100%; transition: width .2s; }
 .hud-bottom { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; z-index: 5; }
 .tag-hud { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 6; background: rgba(0,0,0,.55); color: #fff; border: 2px solid #ff2233; border-radius: 999px; padding: 8px 16px; font-size: 15px; font-weight: 700; white-space: nowrap; pointer-events: none; }
+.obj-hud { top: 58px; border-color: #ffd400; }
 .tag-hud .tag-timer { color: #ffd400; }
 .funbux-hud { background: rgba(0,0,0,.5); padding: 7px 14px; border-radius: 20px; display: flex; align-items: center; gap: 6px; font-weight: 800; }
 .stop-btn { background: #e2231a; color: #fff; border: 0; border-radius: 8px; padding: 9px 22px; font-weight: 800; font-size: 15px; }
@@ -229,7 +230,7 @@ section { margin-bottom: 34px; }
 .st-top { height: 34px; background: #1e1e1e; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid #111; }
 .st-title { display: flex; align-items: center; gap: 8px; font-weight: 700; } .st-gname { color: #9a9a9a; font-weight: 400; margin-left: 10px; }
 .st-top-actions { margin-left: auto; display: flex; gap: 6px; }
-.st-act { background: #3a3a3a; border: 1px solid #4a4a4a; color: #eee; border-radius: 4px; padding: 4px 14px; font-weight: 600; } .st-act:hover { background: #474747; } .st-act.pub { background: #0b72e7; border-color: #0b72e7; }
+.st-act { background: #3a3a3a; border: 1px solid #4a4a4a; color: #eee; border-radius: 4px; padding: 4px 14px; font-weight: 600; } .st-act:hover { background: #474747; } .st-act.pub { background: #0b72e7; border-color: #0b72e7; } .st-act.test { background: #1b8a3c; border-color: #22a347; color: #fff; } .st-act.test:hover { background: #22a347; }
 .st-ribbon { display: flex; background: #353535; border-bottom: 1px solid #1a1a1a; padding: 4px 4px 0; overflow-x: auto; }
 .rb-group { display: flex; flex-direction: column; border-right: 1px solid #262626; padding: 0 6px; } .rb-row { display: flex; gap: 2px; } .rb-label { text-align: center; color: #888; font-size: 11px; padding: 2px 0 3px; }
 .rb-btn { background: none; border: 1px solid transparent; color: #ddd; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 7px; border-radius: 3px; font-size: 12px; min-width: 50px; cursor: pointer; }

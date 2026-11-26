@@ -14,6 +14,7 @@ import { VoiceChat } from './voice.js?v=9d41bd66';
 import { sfx } from './sound.js?v=music27';
 import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
 import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=6e002cc3';
+import { getObjective, getDifficulty, effectiveTimer, difficultyConfig, objectiveLabel } from './objectives.js?v=f3c44694';
 
 const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
 const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
@@ -122,12 +123,21 @@ export class Game {
     this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
     this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
     this.collected = new Set(); this.won = false;
+    // Objectives (world.objective / hidden scripts entry / inferred from
+    // parts — see objectives.js). Classic worlds have none: the win pad
+    // still wins exactly like before.
+    this.objective = getObjective(this.world);
+    this.difficulty = getDifficulty(this.world);
+    this._enemyMul = difficultyConfig(this.difficulty).enemy;
+    this.objTimeLeft = this.objective ? effectiveTimer(this.objective, this.difficulty) : 0;
+    this.objCoins = 0; this.objCapT = 0; this.objDone = false;
     this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false; this.tag = null; this._tagCd = 0; this._tagRing = null; this.fps = null; this._fpsBots = []; this._fpsPoint = null; this._fpsRing = null;
     if (this.world?.fps) this.fps = this.newFpsState();
     this.buildDom(); this.build3D(); this.bind();
     this.spawn(true);
     if (this.world?.fps) this.startFps();
     if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
+    if (this.objective) { this.sys(`🎯 ${objectiveLabel(this.objective, this.difficulty)} — good luck!`); this.updateObjHUD(); }
     // Steal a Blob detection: sanitizeWorld() strips the stealablob flag from
     // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
     // which survive sanitizing. Covers the seeded game + Studio-made blob games.
@@ -152,6 +162,7 @@ export class Game {
       </div>
       <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
       <div class="tag-hud" style="display:none"></div>
+      <div class="obj-hud tag-hud" style="display:none"></div>
       <div class="fps-hud tag-hud" style="display:none"></div>
       <div class="hud-topright">
         <div class="lb"><div class="lb-head"><span>${esc(this.o.gameName || 'Game')}</span></div><div class="lb-list"></div></div>
@@ -371,6 +382,84 @@ export class Game {
   // Health bar updater. This was called in several places (Rivals damage,
   // enemy hits, heals) but never defined — defining it fixes that latent crash.
   updateHud() { if (this.healthFill) this.healthFill.style.width = Math.max(0, this.health) + '%'; }
+  // ---------- Objectives ----------
+  // A world objective (Capture / Collect / Race / Survive) turns the win
+  // pad and coins into a real goal with a timer and a score. Worlds
+  // without one play exactly like before: touch the win pad, win.
+  fmtTime(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+  updateObjHUD() {
+    const el = this.c.querySelector('.obj-hud');
+    if (!el) return;
+    const o = this.objective;
+    if (!o || this.objDone) { el.style.display = 'none'; return; }
+    const icon = { capture: '🎯', collect: '🪙', race: '🏁', survive: '🛡️' }[o.kind] || '🎯';
+    let prog = '';
+    if (o.kind === 'capture') prog = ` · Holding ${Math.floor(this.objCapT)}s/${o.score}s`;
+    else if (o.kind === 'collect') prog = ` · ${this.objCoins}/${o.score} coins`;
+    else if (o.kind === 'race') prog = ` · Reach the finish!`;
+    else if (o.kind === 'survive') prog = ` · Stay alive!`;
+    el.innerHTML = `${icon} ${esc(o.winCondition)}${prog} <span class="tag-timer">${this.fmtTime(this.objTimeLeft)}</span>`;
+    el.style.display = 'block';
+  }
+  onWinPad() {
+    // Same overlap test as triggersCheck, against the win-pad triggers.
+    const P = this.pos;
+    for (const b of this.triggers) {
+      if (b.p.k !== 'win') continue;
+      if (P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2]) return true;
+    }
+    return false;
+  }
+  objTick(dt) {
+    const o = this.objective;
+    if (!o || this.objDone || this.dead) return;
+    if (o.timerSec > 0) {
+      this.objTimeLeft -= dt;
+      if (this.objTimeLeft <= 0) {
+        this.objTimeLeft = 0;
+        if (o.kind === 'survive') this.winObjective('🛡️ YOU SURVIVED!');
+        else this.loseObjective('⏰ Time\'s up!', o.kind === 'capture' ? 'The point was not captured in time — try again!' : o.kind === 'collect' ? `You collected ${this.objCoins}/${o.score} coins — try again!` : 'You did not reach the finish in time — try again!');
+        this.updateObjHUD();
+        return;
+      }
+    }
+    if (o.kind === 'capture' && this.onWinPad()) {
+      this.objCapT += dt;
+      if (this.objCapT >= o.score) this.winObjective('🎯 POINT CAPTURED!');
+    }
+    this.updateObjHUD();
+  }
+  winObjective(title) {
+    if (this.won) return;
+    this.won = true; this.objDone = true;
+    sfx.win();
+    this.showBig(title || (this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`), 4000);
+    this.send({ t: 'win' });
+    if (!reduceMotion()) confetti(this.c);
+    this.showEndPanel('🏆 YOU WIN!', this.o.test ? '' : `+${ECON.WIN_TIX} FunTix`);
+  }
+  loseObjective(title, sub) {
+    if (this.won) return;
+    this.won = true; this.objDone = true;
+    sfx.oof();
+    this.showBig(title, 4000);
+    this.showEndPanel(title, sub || '');
+  }
+  showEndPanel(title, sub) {
+    const panel = document.createElement('div'); panel.className = 'win-panel';
+    panel.innerHTML = `<h2>${title}</h2><p>${sub || ''}</p><button class="btn-primary win-again">Play again</button><button class="btn-secondary win-next">Next game</button>`;
+    this.c.appendChild(panel);
+    panel.querySelector('.win-again').onclick = () => { panel.remove(); this.resetObjectiveRun(); };
+    panel.querySelector('.win-next').onclick = () => this.exit();
+  }
+  resetObjectiveRun() {
+    this.won = false; this.objDone = false; this.checkpoint = null; this.collected.clear();
+    this.objCoins = 0; this.objCapT = 0;
+    this.objTimeLeft = this.objective ? effectiveTimer(this.objective, this.difficulty) : 0;
+    for (const [id, m] of this.meshes) { const pp = (this.world?.parts || []).find(x => x.id === id); if (pp?.k === 'coin') m.visible = true; }
+    this.spawn();
+    this.updateObjHUD();
+  }
   // ---------- Strike Arena FPS mode ----------
   // Round-based control-point battles. The server is NOT involved: each
   // client runs the same deterministic rules from the positions it sees
@@ -802,7 +891,7 @@ export class Game {
         const dx = this.pos.x - n.char.position.x, dz = this.pos.z - n.char.position.z;
         const dist = Math.hypot(dx, dz);
         if (dist > 0.6) {
-          const step = 17 * dt;
+          const step = 17 * (this._enemyMul || 1) * dt;
           const nx = n.char.position.x + dx / (dist || 1) * step, nz = n.char.position.z + dz / (dist || 1) * step;
           if (Math.hypot(nx - n.base.x, nz - n.base.z) < 50) { n.char.position.x = nx; n.char.position.z = nz; }
           n.char.rotation.y = Math.atan2(dx, dz);
@@ -814,7 +903,7 @@ export class Game {
           if (this.inSafe) { /* safe zones block enemy damage */ }
           else if (this.shield) { this.shield = false; this.showBig('🛡️ Shield saved you!', 1200); sfx.checkpoint(); }
           else {
-            this.health -= 20; this.updateHud(); sfx.oof();
+            this.health -= Math.round(20 * (this._enemyMul || 1)); this.updateHud(); sfx.oof();
             this.vel.x = -dx / (dist || 1) * 60; this.vel.z = -dz / (dist || 1) * 60; this.vel.y = 45;
             if (this.health <= 0) this.die(); else this.showBig('👹 Ouch! An enemy got you!', 1200);
           }
@@ -1721,6 +1810,7 @@ export class Game {
     };
     const names = Object.keys(api);
     for (const s of scripts) {
+      if (s.id === '__objective__') continue; // hidden objective data, not a script
       if (s.kind === 'visual') {
         try { this.runVisualScript(s, api); } catch (e) { console.warn('Visual script error in ' + s.name + ':', e); }
         continue;
@@ -2297,17 +2387,28 @@ export class Game {
       if (p.k === 'magnet' && !this.collected.has('magnet:' + p.id)) { this.collected.add('magnet:' + p.id); this.magnetT = 20; this.showBig('🧲 Coin magnet! 20s', 1500); sfx.coin(); const hm = this.meshes.get(p.id); if (hm) hm.visible = false; setTimeout(() => { this.collected.delete('magnet:' + p.id); const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 15000); }
       if (p.k === 'shield' && !this.shield) { this.shield = true; this.showBig('🛡️ Shield up!', 1500); sfx.checkpoint(); const hm = this.meshes.get(p.id); if (hm) hm.visible = false; setTimeout(() => { this.shield = false; const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 30000); }
       if (p.k === 'tp' && this.tpCd <= 0) { const other = (this.world?.parts || []).find(q => q.k === 'tp' && q.id !== p.id && q.name === p.name); if (other) { this.tpCd = 1; this.pos.set(other.p[0], other.p[1] + 3, other.p[2]); this.vel.set(0, 0, 0); this.showBig('🌀 Teleported!', 1200); sfx.checkpoint(); } }
-      if (p.k === 'win' && !this.won) { this.won = true; sfx.win(); this.showBig(this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`, 4000); this.send({ t: 'win' }); if (!reduceMotion()) confetti(this.c);
-        const panel = document.createElement('div'); panel.className = 'win-panel';
-        panel.innerHTML = `<h2>🏆 YOU WIN!</h2><p>${this.o.test ? '' : `+${ECON.WIN_TIX} FunTix`}</p><button class="btn-primary win-again">Play again</button><button class="btn-secondary win-next">Next game</button>`;
-        this.c.appendChild(panel);
-        panel.querySelector('.win-again').onclick = () => { panel.remove(); this.won = false; this.checkpoint = null; this.collected.clear(); for (const [id, m] of this.meshes) { const pp = (this.world?.parts || []).find(x => x.id === id); if (pp?.k === 'coin') m.visible = true; } this.spawn(); };
-        panel.querySelector('.win-next').onclick = () => this.exit();
+      if (p.k === 'win' && !this.won) {
+        if (this.objective) {
+          // Capture: the pad IS the point — holding it wins (objTick counts
+          // it), so touching it does not win instantly. Survive: the pad is
+          // scenery — the timer is the goal. Race / Collect: the pad is the
+          // finish line, exactly like the classic win.
+          if (this.objective.kind === 'capture' || this.objective.kind === 'survive') { /* handled by objTick / the timer */ }
+          else this.winObjective();
+        } else {
+          this.won = true; sfx.win(); this.showBig(this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`, 4000); this.send({ t: 'win' }); if (!reduceMotion()) confetti(this.c);
+          const panel = document.createElement('div'); panel.className = 'win-panel';
+          panel.innerHTML = `<h2>🏆 YOU WIN!</h2><p>${this.o.test ? '' : `+${ECON.WIN_TIX} FunTix`}</p><button class="btn-primary win-again">Play again</button><button class="btn-secondary win-next">Next game</button>`;
+          this.c.appendChild(panel);
+          panel.querySelector('.win-again').onclick = () => { panel.remove(); this.won = false; this.checkpoint = null; this.collected.clear(); for (const [id, m] of this.meshes) { const pp = (this.world?.parts || []).find(x => x.id === id); if (pp?.k === 'coin') m.visible = true; } this.spawn(); };
+          panel.querySelector('.win-next').onclick = () => this.exit();
+        }
       }
       if (p.k === 'coin' && !this.collected.has(p.id)) {
         this.collected.add(p.id); this.meshes.get(p.id).visible = false; sfx.coin();
         this.send({ t: 'coin', part: p.id });
         if (this.o.test) this.txCount.textContent = this.collected.size + ' coins';
+        this.countCoin();
       }
       this.fireScriptTouch(p.name);
       const sc = p.script?.onTouch;
@@ -2331,9 +2432,17 @@ export class Game {
         }
       }
     }
-    if (this.magnetT > 0) { const vacR = this.hasAbility('coinhack') ? 400 : 144; for (const b of this.triggers) { const q = b.p; if (q.k !== 'coin' || this.collected.has(q.id)) continue; const dx = q.p[0] - P.x, dz = q.p[2] - P.z; if (dx * dx + dz * dz < vacR) { this.collected.add(q.id); const mm = this.meshes.get(q.id); if (mm) mm.visible = false; sfx.coin(); this.send({ t: 'coin', part: q.id }); } } }
+    if (this.magnetT > 0) { const vacR = this.hasAbility('coinhack') ? 400 : 144; for (const b of this.triggers) { const q = b.p; if (q.k !== 'coin' || this.collected.has(q.id)) continue; const dx = q.p[0] - P.x, dz = q.p[2] - P.z; if (dx * dx + dz * dz < vacR) { this.collected.add(q.id); const mm = this.meshes.get(q.id); if (mm) mm.visible = false; sfx.coin(); this.send({ t: 'coin', part: q.id }); this.countCoin(); } } }
   }
 
+  // One coin toward a Collect objective (called from both the touch
+  // pickup and the coin-magnet vacuum). Wins the run at the target.
+  countCoin() {
+    if (this.objective?.kind !== 'collect' || this.objDone) return;
+    this.objCoins++;
+    this.updateObjHUD();
+    if (this.objCoins >= this.objective.score) this.winObjective('🪙 ALL COINS COLLECTED!');
+  }
   // ---------- loop ----------
   loop(now) {
     if (this.destroyed) return;
@@ -2398,6 +2507,8 @@ export class Game {
     if (this.world?.tag) { try { this.tagTick(dt); this.updateTagHUD(); } catch (e) { console.warn('tag tick error:', e); } }
     // Strike Arena FPS mode
     if (this.world?.fps) { try { this.fpsTick(dt); } catch (e) { console.warn('fps tick error:', e); } }
+    // Objectives (Capture / Collect / Race / Survive)
+    if (this.objective) { try { this.objTick(dt); } catch (e) { console.warn('objective tick error:', e); } }
     // gear swing animation
     if (this.gearSwingT > 0 && !this.dead) {      this.gearSwingT -= dt;
       const rarm = this.char.userData.limbs?.rarm;

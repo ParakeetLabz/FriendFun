@@ -1,5 +1,6 @@
 // ✨ FunAI — game maker AI for Funtopia (server).
 import { ITEM, CATALOG, DEFAULT_AVATAR } from './public/js/catalog.js';
+import { normalizeObjective } from './public/js/objectives.js';
 // Wired into server.js via createFunAI({ app, auth }).
 // POST /api/funai/generate turns a player's idea into a FUNTOPIA STUDIO
 // WORLD: { title, description, world: { sky, parts } } in exactly the
@@ -18,13 +19,15 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const SYSTEM = [
   'You are FunAI, a game maker AI inside Funtopia. You design a 3D block world for Funtopia Studio.',
   'Reply with ONLY a JSON object, no markdown, no commentary:',
-  '{"title":"short game title","description":"one fun sentence","sky":"#8fc8ff","parts":[ ... ]}',
+  '{"title":"short game title","description":"one fun sentence","sky":"#8fc8ff","light":{"tod":12,"ambient":1,"fog":0.35},"objective":{"kind":"race","timerSec":180,"score":0},"parts":[ ... ]}',
   'Each part is a compact ARRAY: [name, x,y,z, sx,sy,sz, "#hexcolor", kind, material]',
   'Example part: ["Platform",0,2,-10, 6,1,6, "#ff595e","part","plastic"]',
   '- (x,y,z) is the part CENTER, (sx,sy,sz) its size. y is UP. Ground level is y=0: include a ground like ["Ground",0,-0.5,0, 120,1,120, "#4caf50","part","grass"].',
   '- kind must be one of: part, spawn, kill, checkpoint, win, bounce, coin, speed, npc, heal. Exactly ONE spawn: ["SpawnLocation",0,0.25,-40, 6,0.5,6, "#3a7bd5","spawn","spawn"] placed ON the ground near the start.',
   '- material must be one of: plastic, neon, grass, wood, brick, glass, concrete, sand, baseplate, spawn, metal.',
   '- Gameplay: an obby/course needs platforms spaced for jumping (gaps of 4-8 blocks, height steps of 1-3), kill parts (lava) below or as hazards, checkpoint parts along the way, coin parts as rewards, and ONE win part at the end. A hangout needs buildings, trees, furniture-ish blocks and one npc.',
+  '- "objective" is the game\'s GOAL — every game needs one, so the player knows what to do. Pick the kind that fits best: "race" (reach the white win pad before the timer runs out, timerSec 120-300 — for obbies, courses and mazes), "collect" (gather coins: score = how many coins, 5-30, timerSec 180-300 — for maps with lots of coins), "capture" (stand on the glowing win pad to capture the point: score = seconds to hold it, 5-15, timerSec 120-240 — for arenas), "survive" (stay alive until the timer runs out, timerSec 90-180, score 0 — for maps with lots of enemies or hazards).',
+  '- Every game needs a real CHALLENGE, not a flat empty map: put a hard stretch in the middle or near the end with kill bricks, moving platforms (mv), blink platforms, narrow jumps, or enemy npcs. And make it look FINISHED: "light" is time of day in hours ("tod": 0 = night, 12 = midday, 17 = sunset), "ambient" is brightness (0.5-1.5), "fog" is haze (0-0.6) — pick lighting that fits the sky (a dark night sky needs tod 0 and ambient 0.7, a bright day sky needs tod 12 and ambient 1). Add props too: trees, torches, signs, clouds, or an npc who tells the player the goal.',
   '- An npc part may add a 10th element: an object like {"dialog":"Welcome!"} — npc size is [2,5,2]. Any part may add that object with "mv":{"a":"x","d":6,"s":1} (slides along an axis) or "blink":{"on":2.5,"off":1.3}.',
   '- Use 40 to 90 parts. Keep numbers tidy (whole or .5 steps). Everything must connect: a player must be able to REACH the win part from the spawn by walking/jumping.',
   '- Keep the JSON compact: short names, no spaces you do not need, no comments, no extra fields.',
@@ -192,12 +195,28 @@ function salvageParts(text) {
   return out;
 }
 
-function buildWorld(title, description, sky, rawParts) {
+function buildWorld(title, description, sky, rawParts, rawLight, rawObjective) {
   if (!Array.isArray(rawParts) || rawParts.length < 6) return null;
+  const world = { sky: /^#[0-9a-fA-F]{6}$/.test(sky || '') ? sky : '#8fc8ff', parts: cleanParts(rawParts) };
+  const light = validLight(rawLight);
+  if (light) world.light = light;
+  const objective = normalizeObjective(rawObjective, world);
+  if (objective) world.objective = objective;
   return {
     title: String(title || 'FunAI Game').slice(0, 50),
     description: String(description || 'Made with ✨ FunAI').slice(0, 300),
-    world: { sky: /^#[0-9a-fA-F]{6}$/.test(sky || '') ? sky : '#8fc8ff', parts: cleanParts(rawParts) },
+    world,
+  };
+}
+
+// Lighting the AI asked for, clamped to sane values. Missing light is
+// fine — the client finish step adds lighting that fits the sky.
+function validLight(l) {
+  if (!l || typeof l !== 'object') return null;
+  return {
+    tod: clamp(num(l.tod, 12), 0, 24),
+    ambient: clamp(num(l.ambient, 1), 0.3, 1.5),
+    fog: clamp(num(l.fog, 0.35), 0, 0.6),
   };
 }
 
@@ -207,7 +226,7 @@ function extractWorld(text) {
   const raw = String(text || '');
   try {
     const j = JSON.parse(stripToJson(raw));
-    const g = j && buildWorld(j.title, j.description, j.sky, j.parts);
+    const g = j && buildWorld(j.title, j.description, j.sky, j.parts, j.light, j.objective);
     if (g) return g;
   } catch {}
   // Truncated or slightly broken JSON: salvage complete parts.
