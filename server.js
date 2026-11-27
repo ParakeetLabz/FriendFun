@@ -355,12 +355,12 @@ app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 app.use('/three', express.static(path.join(__dirname, 'node_modules/three'), { maxAge: '1y', immutable: true }));
 app.get('/health', (req, res) => res.json({ ok: true }));
-// itch.io + Poki embed page: friendfun.onrender.com//itch.io//EmBed#FunTopia and //poki//EmBed#FunTopia
+// itch.io + Poki embed page: friendfun.onrender.com//itch.io//EmBed#FunTopia //poki//EmBed#FunTopia and //crazygames//EmBed#FunTopia
 // (matches any slash count / letter case, so the exact itch URL always works)
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const p = req.path.replace(/\/+/g, '/').replace(/\/$/, '').toLowerCase();
-  if (p !== '/itch.io/embed' && p !== '/poki/embed') return next();
+  if (!['/itch.io/embed', '/poki/embed', '/crazygames/embed', '/crazygames.com/embed'].includes(p)) return next();
   res.sendFile(path.join(__dirname, 'public', 'itch-embed.html'));
 });
 
