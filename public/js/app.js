@@ -152,6 +152,26 @@ function switchToToken(tok) { token = tok; localStorage.setItem('ff_token', tok)
 // account menu stay clickable. The X on the side (same look as the overlay
 // ✕) switches back, and so do the Switch back button and the ESC / E keys
 // (never while typing).
+// Guest play (u163): anyone can play without an account. Store/portal
+// embeds (server sets ff_embed) start as a guest automatically; the main
+// site shows a Play as Guest button. Guests can't buy, publish, friend or DM.
+function isEmbed() { try { return sessionStorage.getItem('ff_embed') === '1'; } catch { return false; } }
+async function startGuest() {
+  const r = await api('POST', '/api/guest');
+  token = r.token; try { localStorage.setItem('ff_token', token); } catch {}
+  me = null;
+}
+function renderGuestBadge(seg) {
+  let el = document.getElementById('guest-badge');
+  if (!me?.guest || seg === 'play') { el?.remove(); return; }
+  if (el) return;
+  el = document.createElement('div');
+  el.id = 'guest-badge';
+  el.style.cssText = 'position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:10000;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-radius:999px;background:rgba(20,16,40,.88);color:#fff;font-size:13px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:calc(100vw - 24px);';
+  el.innerHTML = `<span>Playing as ${esc(me.name)}</span><button class="btn-primary btn-small" style="padding:4px 12px;border-radius:999px">Sign up to save</button>`;
+  el.querySelector('button').onclick = () => { el.remove(); logout(); };
+  document.body.appendChild(el);
+}
 function renderActingBanner() {
   const existing = document.getElementById('acting-banner');
   const parent = me?.actingParent;
@@ -799,6 +819,7 @@ function showContractGate() {
 
 // ---------- pages ----------
 function loginPage() {
+  document.getElementById('guest-badge')?.remove();
   app.className = 'landing';
   app.innerHTML = `
   <div class="landing-bg"></div>
@@ -827,12 +848,19 @@ function loginPage() {
         </div>
         <div class="auth-err"></div>
         <button class="btn-primary big" type="submit">Sign Up</button>
+        <button class="btn-secondary big auth-guest" type="button" style="width:100%;margin-top:8px">Play as Guest</button>
         <p class="auth-fine">Start with ${ECON.START_TIX} FunTix free!</p>
       </form>
     </div>
   </div>`;
   let mode = 'signup';
   const form = app.querySelector('.auth-form');
+  const guestBtn = form.querySelector('.auth-guest');
+  if (guestBtn) guestBtn.onclick = async () => {
+    guestBtn.disabled = true;
+    try { await startGuest(); location.hash = '#/home'; route(); }
+    catch (err) { form.querySelector('.auth-err').textContent = err.message; guestBtn.disabled = false; }
+  };
   app.querySelectorAll('.auth-tabs button').forEach(b => b.onclick = () => {
     mode = b.dataset.m; app.querySelectorAll('.auth-tabs button').forEach(x => x.classList.toggle('active', x === b));
     form.querySelector('button[type=submit]').textContent = mode === 'signup' ? 'Sign Up' : 'Log In';
@@ -2021,10 +2049,12 @@ async function route() {
   if (cleanup) { const c = cleanup; cleanup = null; c(); }
   const [path, query] = location.hash.slice(1).split('?');
   const seg = (path || '/home').split('/').filter(Boolean);
+  if (!token && isEmbed() && seg[0] !== 'login') { try { await startGuest(); } catch {} if (my !== routing) return; }
   if (!token && seg[0] !== 'horror' && seg[0] !== 'safety-qa') { if (seg[0] !== 'login') history.replaceState(null, '', '#/login'); renderActingBanner(); showIntro(); return loginPage(); }
   try {
-    if (!me) { me = await api('GET', '/api/me'); dailyToast(me); await loadUgc(); }
+    if (!me) { me = await api('GET', '/api/me'); if (!me.guest) dailyToast(me); await loadUgc(); }
     renderActingBanner();
+    renderGuestBadge(seg[0]);
     // Safety (Phase 1): existing players must agree to the Safety Contract
     // before the lobby (or any page) mounts. Agreeing re-runs route().
     if (!me.contractAgreed) { showContractGate(); return; }

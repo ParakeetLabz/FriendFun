@@ -352,10 +352,39 @@ async function sameFamily(a, b) {
 
 // http
 const app = express();
+// Main address is now funtopia.zaydshub.com (u163). Same Render service;
+// page loads on friendfun.onrender.com get a 301 there (the browser keeps
+// the #/route). NOT redirected: /api/*, /ws, /health, the store embed pages,
+// static files (js/css/models — embeds load them from this host),
+// robots.txt, sitemap.xml and the Google verification file.
+const MAIN_HOST = 'funtopia.zaydshub.com';
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (String(req.hostname || '').toLowerCase() !== 'friendfun.onrender.com') return next();
+  const p = req.path.replace(/\/+/g, '/').replace(/\/$/, '').toLowerCase();
+  if (/^\/(api|ws|three|js|css|img|models)(\/|$)/.test(p) || p === '/health' || p === '/robots.txt' || p === '/sitemap.xml' || /^\/google[0-9a-f]+\.html$/.test(p)) return next();
+  if (['/games/embed', '/poki/embed', '/crazygames/embed', '/crazygames.com/embed'].includes(p)) return next();
+  if (/\.[a-z0-9]{1,5}$/.test(p) && !p.endsWith('.html')) return next();
+  if (!String(req.headers.accept || '').includes('text/html')) return next();
+  res.redirect(301, 'https://' + MAIN_HOST + req.originalUrl);
+});
+// CORS for store builds (u163): the self-contained CrazyGames / Poki /
+// itch.io zips load the client from the store's CDN and call this API.
+// Auth is a Bearer token (no cookies), so allowing any origin is safe.
+// Covers *.crazygames.com, *.poki.com, *.poki-gdn.com, *.itch.zone,
+// *.hwcdn.net, funtopia.zaydshub.com and friendfun.onrender.com.
+app.use('/api', (req, res, next) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.set('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 app.use('/three', express.static(path.join(__dirname, 'node_modules/three'), { maxAge: '1y', immutable: true }));
-app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/health', (req, res) => { res.set('Access-Control-Allow-Origin', '*'); res.json({ ok: true }); });
 // Embed pages for game portals: //games//EmBed (itch.io), //poki//EmBed, //crazygames//EmBed
 // (any slash count / letter case). Serves the real game page directly (no extra frame) with its
 // whole JS module graph preloaded in parallel, so it starts fast instead of loading file-by-file.
@@ -387,7 +416,7 @@ function embedHtml() {
   if (entry) walk(entry, 0);
   const links = [...urls].map(u => `<link rel="modulepreload" href="${u}">`).join('\n');
   // Portal links end in #FunTopia (not a route) -> open the lobby; a real #/route passes through.
-  const fix = `<script>if(!/^#\\//.test(location.hash))location.replace('#/home');</script>`;
+  const fix = `<script>try{sessionStorage.setItem('ff_embed','1')}catch(e){}if(!/^#\\//.test(location.hash))location.replace('#/home');</script>`;
   // Inject right after the viewport meta so <meta charset> stays first in <head>.
   const at = idx.match(/<meta name="viewport"[^>]*>/);
   const inj = '\n' + fix + '\n<meta name="robots" content="noindex">\n' + links;
@@ -417,6 +446,7 @@ async function auth(req, res, next) {
     await supabase.from('sessions').delete().eq('token', tok);
     return res.status(403).json({ error: 'Your account is banned' });
   }
+  if (isGuest(user) && !guestAllowed(req)) return res.status(403).json({ error: 'Sign up to do that — guests can only play', guest: true });
   req.user = user;
   // Who is really behind this session: a parent using their child's
   // account (column when it exists, in-memory map otherwise). Null for a
@@ -426,9 +456,67 @@ async function auth(req, res, next) {
   next();
 }
 
+// ---------- Guest play (u163) ----------
+// Guests are real user rows flagged by salt === 'GUEST' (server-set, so it
+// can't be spoofed, and no SQL migration is needed). No birthday/face check,
+// so safety treats a guest as a kid (child chat filter, adults can't reach
+// them). Guests can play, move, emote, chat and dress up with free items;
+// every other write is refused by the auth() guard (GUEST_OK allowlist).
+// Guest rows older than 3 days are cleaned up hourly.
+const GUEST_SALT = 'GUEST';
+function isGuest(u) { return u?.salt === GUEST_SALT; }
+const GUEST_OK = [
+  /^POST \/api\/(logout|ping|report|notifications\/read|me\/contract)$/,
+  /^POST \/api\/games\/[^/]+\/(visit|2ui-win)$/,
+  /^PUT \/api\/me\/avatar$/,
+];
+function guestAllowed(req) {
+  if (req.method === 'GET' || req.method === 'HEAD') return true;
+  const s = req.method + ' ' + req.path;
+  return GUEST_OK.some(r => r.test(s));
+}
+const guestHits = new Map(); let guestGlobal = [];
+app.post('/api/guest', async (req, res) => {
+  if (maintenance) return res.status(403).json({ error: 'Funtopia is in maintenance mode right now. Try again soon!' });
+  const ip = String(req.headers['cf-connecting-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0] || req.ip || '').trim();
+  const now = Date.now();
+  const hits = (guestHits.get(ip) || []).filter(t => now - t < 3600000);
+  guestGlobal = guestGlobal.filter(t => now - t < 3600000);
+  if (hits.length >= 30 || guestGlobal.length >= 1500) return res.status(429).json({ error: 'Too many guests right now — try again in a bit, or sign up' });
+  hits.push(now); guestHits.set(ip, hits); guestGlobal.push(now);
+  for (let i = 0; i < 6; i++) {
+    const name = 'guest' + crypto.randomInt(100000, 1000000);
+    const { data: ex } = await supabase.from('users').select('name').eq('name', name).maybeSingle();
+    if (ex) continue;
+    const row = {
+      name, salt: GUEST_SALT, pw: crypto.randomBytes(32).toString('hex'), created: now, funtix: 0,
+      avatar: structuredClone(DEFAULT_AVATAR), inventory: CATALOG.filter(it => it.free).map(it => it.id),
+      friends: [], requests: [], favorites: [], recent: [], earnedBadges: [], bio: '',
+      clubForever: false, clubUntil: 0,
+    };
+    const { data: user, error } = await supabase.from('users').insert(row).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    const tok = crypto.randomBytes(24).toString('hex');
+    await supabase.from('sessions').insert({ token: tok, username: user.name });
+    return res.json({ token: tok, name: user.name, guest: true });
+  }
+  res.status(500).json({ error: 'Could not make a guest player — try again' });
+});
+setInterval(async () => {
+  try {
+    const { data } = await supabase.from('users').select('name').eq('salt', GUEST_SALT).lt('created', Date.now() - 3 * 86400000).limit(200);
+    const names = (data || []).map(r => r.name);
+    if (!names.length) return;
+    await supabase.from('sessions').delete().in('username', names);
+    await supabase.from('users').delete().in('name', names);
+    console.log('guest cleanup: removed', names.length);
+  } catch (e) { console.warn('guest cleanup skipped:', e.message); }
+}, 3600000).unref?.();
+
 app.post('/api/signup', async (req, res) => {
   const { username, password, email, parentEmail, contractAgreed, faceCheck } = req.body || {};
   if (!/^[A-Za-z0-9_]{3,20}$/.test(username || '')) return res.status(400).json({ error: 'Username must be 3-20 letters, numbers or _' });
+  if (/^guest\d/i.test(username)) return res.status(400).json({ error: 'Names starting with "guest" are saved for guest players — pick another' });
   if (!password || password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
   // Safety (u151): the on-device face check (Funtopia Check) is the age
   // gate at sign-up — no birthday is collected any more. The server
@@ -547,7 +635,7 @@ async function dailyTix(u) {
 
 app.get('/api/player-count', auth, async (req, res) => {
   try {
-    const { count } = await supabase.from('users').select('name', { count: 'exact', head: true });
+    const { count } = await supabase.from('users').select('name', { count: 'exact', head: true }).neq('salt', GUEST_SALT);
     res.json({ count: count || 0 });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -624,7 +712,7 @@ app.get('/api/me', auth, async (req, res) => {
     if (u.avatar?.head === 'head_slimebody') { u.avatar = { ...u.avatar, head: 'head_classic' }; upd.avatar = u.avatar; }
     await supabase.from('users').update(upd).eq('name', u.name);
   }
-  res.json({ ...await publicUser(u), daily, streak: streak || 0, newBadges, funtix: u.funtix, inventory: u.inventory, requests: u.requests, friendList: u.friends, favorites: u.favorites, recent: u.recent, clubUntil: u.clubUntil || 0, clubForever: isAdmin(u) || !!u.clubForever, aiAccess: isOwner(u) || isAdmin(u) || !!u.aiAccess, birthday: u.birthday || null, ageGroup: ageGroupOf(u), adultVerified: !!u.adult_verified, contractAgreed: !!u.contract_agreed, actingParent: req.actingParent || null });
+  res.json({ ...await publicUser(u), daily, streak: streak || 0, newBadges, funtix: u.funtix, inventory: u.inventory, requests: u.requests, friendList: u.friends, favorites: u.favorites, recent: u.recent, clubUntil: u.clubUntil || 0, clubForever: isAdmin(u) || !!u.clubForever, aiAccess: isOwner(u) || isAdmin(u) || !!u.aiAccess, birthday: u.birthday || null, ageGroup: ageGroupOf(u), adultVerified: !!u.adult_verified, contractAgreed: isGuest(u) || !!u.contract_agreed, guest: isGuest(u), actingParent: req.actingParent || null });
 });
 
 // Safety (Phase 1): existing players set a birthday once — age-gating needs
@@ -886,8 +974,9 @@ app.post('/api/club/join', auth, async (req, res) => {
 });
 
 app.get('/api/leaderboard', auth, async (req, res) => {
-  const { data: all, error } = await supabase.from('users').select('*').order('funtix', { ascending: false }).order('created', { ascending: true });
+  const { data: allRows, error } = await supabase.from('users').select('*').order('funtix', { ascending: false }).order('created', { ascending: true });
   if (error) return res.status(500).json({ error: error.message });
+  const all = allRows.filter(u => !isGuest(u) || u.name === req.user.name);
   const userIndex = all.findIndex(u => u.name === req.user.name);
   res.json({
     top: await Promise.all(all.slice(0, 50).map(async u => ({
@@ -1722,6 +1811,7 @@ app.post('/api/friends/:name', auth, async (req, res) => {
   const { data: other, error: oErr } = await supabase.from('users').select('*').eq('name', key(req.params.name)).single();
   const me = req.user, mk = key(me.name);
   if (oErr || !other || other.name === me.name) return res.status(400).json({ error: 'Invalid user' });
+  if (isGuest(other)) return res.status(403).json({ error: 'Guest players can\'t be added as friends' });
   const ok = other.name;
   if ((me.friends || []).includes(ok)) return res.json({ status: 'friends' });
   if ((me.requests || []).includes(ok)) {
@@ -2027,8 +2117,9 @@ app.post('/api/dm/:name', auth, async (req, res) => {
   // stored; swearing is filtered per reader when the message is read.
   const text = safetyFilter(String(req.body?.text || '').trim().slice(0, 500));
   if (!text) return res.status(400).json({ error: 'Empty message' });
-  const { data: u } = await supabase.from('users').select('name,birthday,face_age_group').eq('name', key(req.params.name)).maybeSingle();
+  const { data: u } = await supabase.from('users').select('name,birthday,face_age_group,salt').eq('name', key(req.params.name)).maybeSingle();
   if (!u || u.name === me) return res.status(400).json({ error: 'Invalid user' });
+  if (isGuest(u)) return res.status(403).json({ error: 'Guest players can\'t get messages' });
   // Safety (Phase 1): adults cannot message children unless they are in the
   // same family (trusted friend). Unknown birthday = treated as a child.
   if (adultChildBlocked(req.user, u, await sameFamily(me, u.name))) return res.status(403).json({ error: 'Adults cannot message children unless you are in the same family' });
@@ -2266,6 +2357,7 @@ wss.on('connection', (ws) => {
       send(ws, { t: 'money', ...money(updated), earned });
     }
     else if (m.t === 'voice_join') {
+      if (isGuest(player.user)) return send(ws, { t: 'error', error: 'Sign up to use voice chat' });
       player.voice = true;
       // Tell existing voice users about the new peer
       for (const [, p] of room.players) {

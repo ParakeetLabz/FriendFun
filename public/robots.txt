@@ -7,4 +7,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://friendfun.onrender.com/sitemap.xml
+Sitemap: https://funtopia.zaydshub.com/sitemap.xml
