@@ -19,6 +19,7 @@ import { createTrade } from './trade.js';
 import { createTwoUi } from './twoui.js';
 import { createTokens, rollTokenDrop } from './tokens.js';
 import path from 'path';
+import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { templates, shooterArena, shooterFort, shooterRooftop, GEN_GAMES } from './public/js/worlds.js';
@@ -355,13 +356,52 @@ app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 app.use('/three', express.static(path.join(__dirname, 'node_modules/three'), { maxAge: '1y', immutable: true }));
 app.get('/health', (req, res) => res.json({ ok: true }));
-// itch.io + Poki embed page: friendfun.onrender.com//itch.io//EmBed#FunTopia //poki//EmBed#FunTopia and //crazygames//EmBed#FunTopia
-// (matches any slash count / letter case, so the exact itch URL always works)
+// Embed pages for game portals: //games//EmBed (itch.io), //poki//EmBed, //crazygames//EmBed
+// (any slash count / letter case). Serves the real game page directly (no extra frame) with its
+// whole JS module graph preloaded in parallel, so it starts fast instead of loading file-by-file.
+let embedCache = null;
+function embedHtml() {
+  if (embedCache && Date.now() - embedCache.at < 60000) return embedCache.html;
+  const pub = path.join(__dirname, 'public');
+  const urls = new Set();
+  const map = { three: '/three/build/three.module.min.js' };
+  const toDisk = u => u.startsWith('/three/') ? path.join(__dirname, 'node_modules/three', u.slice(7).split('?')[0]) : path.join(pub, u.split('?')[0]);
+  const walk = (u, depth) => {
+    if (urls.has(u) || depth > 6 || urls.size > 60) return;
+    let src; try { src = fs.readFileSync(toDisk(u), 'utf8'); } catch { return; }
+    urls.add(u);
+    const base = u.slice(0, u.lastIndexOf('/') + 1);
+    const re = /(?:^|[;\s])(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\s*\(\s*['"](\.\/(?:lobby|avatar3d)\.js[^'"]*)['"]\s*\)/g;
+    let m;
+    while ((m = re.exec(src))) {
+      let s = m[1] || m[2];
+      if (s === 'three') s = map.three;
+      else if (s.startsWith('three/addons/')) s = '/three/examples/jsm/' + s.slice(13);
+      else if (s.startsWith('./') || s.startsWith('../')) s = new URL(s, 'http://x' + base).pathname + (s.includes('?') ? '?' + s.split('?')[1] : '');
+      else continue;
+      walk(s, depth + 1);
+    }
+  };
+  const idx = fs.readFileSync(path.join(pub, 'index.html'), 'utf8');
+  const entry = (idx.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/) || [])[1];
+  if (entry) walk(entry, 0);
+  const links = [...urls].map(u => `<link rel="modulepreload" href="${u}">`).join('\n');
+  // Portal links end in #FunTopia (not a route) -> open the lobby; a real #/route passes through.
+  const fix = `<script>if(!/^#\\//.test(location.hash))location.replace('#/home');</script>`;
+  // Inject right after the viewport meta so <meta charset> stays first in <head>.
+  const at = idx.match(/<meta name="viewport"[^>]*>/);
+  const inj = '\n' + fix + '\n<meta name="robots" content="noindex">\n' + links;
+  const html = at ? idx.replace(at[0], at[0] + inj) : idx.replace('</head>', inj + '\n</head>');
+  embedCache = { at: Date.now(), html };
+  return html;
+}
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const p = req.path.replace(/\/+/g, '/').replace(/\/$/, '').toLowerCase();
   if (!['/games/embed', '/poki/embed', '/crazygames/embed', '/crazygames.com/embed'].includes(p)) return next();
-  res.sendFile(path.join(__dirname, 'public', 'itch-embed.html'));
+  res.set('Cache-Control', 'no-cache');
+  try { res.type('html').send(embedHtml()); }
+  catch { res.sendFile(path.join(__dirname, 'public', 'index.html')); }
 });
 
 async function auth(req, res, next) {
