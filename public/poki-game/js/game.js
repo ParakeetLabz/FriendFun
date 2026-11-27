@@ -1,0 +1,2659 @@
+import * as THREE from 'three';
+import { setupLighting, buildWorld, findSpawn } from './three-util.js?v=88ba247e';
+const gfxAdvanced = () => { try { return localStorage.getItem('ff_gfx') === 'advanced'; } catch { return false; } };
+const buildChar = (av, opts) => gfxAdvanced() ? buildCharacterSmooth(av, opts) : buildCharacter(av, opts);
+import { buildCharacter, buildCharacterSmooth, animateCharacter, makeNameTag, avatarImage, CLUB_PATH, buildVehicle, loadUgcGlb } from './avatar3d.js?v=2bf09633';
+import { isVerified } from './verified.js?v=4e9b72be';
+import { icons } from './icons.js?v=1aa0a4d3';
+import { displayNameOf } from './ui.js?v=a89886d1';
+const vtag = (name) => isVerified(name) ? ` <span class="ic" style="color:#1d9bf0" title="Verified account">${icons.check}</span>` : '';
+const chatTag = m => { const tags = []; if (m.role === 'owner') tags.push(['OWNER', 'owner']); else if (m.role === 'admin') tags.push(['ADMIN', 'admin']); else if (m.role === 'moderator') tags.push(['MOD', 'mod']); if (m.club) tags.push(['CLUB', 'club']); return tags.map(([t, c]) => `<span class="chat-tag tag-${c}">${t}</span>`).join(''); };
+const reduceMotion = () => { try { return localStorage.getItem('ff_reduce_motion') === '1'; } catch { return false; } };
+import { NEWSBOY_AVATAR, buildNewsStudio } from './news-studio.js?v=a0412434';
+import { VoiceChat } from './voice.js?v=9d41bd66';
+import { sfx } from './sound.js?v=music27';
+import { JAM_TRACKS, startJam, stopJam } from './jam.js?v=da88bb4b';
+import { ECON, BADGES, PET_MODELS, GEAR_MODELS, CATALOG, ITEM } from './catalog.js?v=6e002cc3';
+import { getObjective, getDifficulty, effectiveTimer, difficultyConfig, objectiveLabel } from './objectives.js?v=f3c44694';
+
+const GRAVITY = 196.2, WALK = 16, JUMP = 50, HW = 0.9, H = 5.2;
+const VEHICLES = ['vehicle_car', 'vehicle_truck', 'vehicle_kart', 'vehicle_taxi', 'vehicle_race', 'vehicle_icecream']; // net code = index + 1
+const ANIMS = ['idle', 'walk', 'jump', 'fall', 'wave', 'dance', 'dead', 'sit'];
+const EMOTES = [
+  { id: 'wave', icon: '👋', name: 'Wave' },
+  { id: 'dance', icon: '💃', name: 'Dance' },
+  { id: 'floss', icon: '🕺', name: 'Floss' },
+  { id: 'spin', icon: '🌀', name: 'Spin' },
+  { id: 'bow', icon: '🙇', name: 'Bow' },
+  { id: 'cheer', icon: '🎉', name: 'Cheer' },
+  { id: 'laugh', icon: '😂', name: 'Laugh' },
+  { id: 'dab', icon: '😎', name: 'Dab' },
+  { id: 'sit', icon: '🪑', name: 'Sit' },
+  { id: 'salute', icon: '🫡', name: 'Salute' },
+  { id: 'rock', icon: '🎸', name: 'Rock Out' },
+  { id: 'shrug', icon: '🤷', name: 'Shrug' },
+];
+const EMOTE_TIMES = { wave: 2.5, spin: 2.2, bow: 2.5, cheer: 3, laugh: 3, dab: 2.5, dance: 9999, floss: 9999, rock: 9999, sit: 9999, salute: 2.5, shrug: 2 };
+const GAME_TIPS = [
+  'Press / to chat with other players!',
+  'Type /e dance to show off your moves!',
+  'Collect coins in obbies to earn FunTix!',
+  'Log in daily to build your streak for bonus FunTix!',
+  'Press V near a vehicle to hop in and drive!',
+  'Check the Marketplace for new avatar items!',
+  'Add friends to see what games they\'re playing!',
+  'Press Shift to toggle shift-lock camera!',
+  'Double-tap W to sprint, Q to dash, C to crouch!',
+  'Jump twice for a double jump!',
+  'Complete achievements to earn exclusive badges!',
+  'Right-drag to rotate the camera around you!',
+];
+
+// ---------- pets ----------
+// boxes: [x, y, z, w, h, d, color, rotZ?]. Origin at ground, faces +z.
+
+function buildPet(petId) {
+  const spec = PET_MODELS[petId];
+  if (!spec) return null;
+  const g = new THREE.Group();
+  const body = new THREE.Group();
+  for (const b of spec.boxes) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), new THREE.MeshStandardMaterial({ color: b[6], roughness: 0.75 }));
+    m.position.set(b[0], b[1], b[2]);
+    if (b[7]) m.rotation.z = b[7];
+    m.castShadow = true;
+    body.add(m);
+  }
+  g.add(body);
+  g.userData.body = body;
+  return g;
+}
+function buildGear(gearId) {
+  const spec = GEAR_MODELS[gearId];
+  if (!spec) return null;
+  const g = new THREE.Group();
+  for (const b of spec.boxes) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(b[3], b[4], b[5]), new THREE.MeshStandardMaterial({ color: b[6], roughness: 0.6 }));
+    m.position.set(b[0], b[1], b[2]);
+    if (b[7]) m.rotation.z = b[7];
+    m.castShadow = true;
+    g.add(m);
+  }
+  g.scale.setScalar(0.5);
+  return g;
+}
+const GEAR_COOLDOWN = { gear_sword: 0.8, gear_slingshot: 0.6, gear_grapple: 1.5, gear_rocket: 2.2,
+  gear_blaster: 0.5, gear_raygun: 0.7, gear_crossbow: 0.9, gear_freezeray: 1.0,
+  gear_hammer: 1.0, gear_axe: 0.9, gear_katana: 0.6, gear_spear: 0.9, gear_mace: 1.1,
+  gear_lasersword: 0.7, gear_cannon: 2.5, gear_bazooka: 2.8,
+  gear_boombox: 3, gear_microphone: 2, gear_pumpkinsword: 1.2, gear_freezeray: 1.2 };
+const GEAR_BEHAVIOR = { gear_sword: 'melee', gear_slingshot: 'pellet', gear_rocket: 'rocket', gear_grapple: 'grapple',
+  gear_blaster: 'pellet', gear_raygun: 'pellet', gear_crossbow: 'pellet', gear_freezeray: 'freeze',
+  gear_hammer: 'melee', gear_axe: 'melee', gear_katana: 'melee', gear_spear: 'melee', gear_mace: 'melee',
+  gear_lasersword: 'melee', gear_cannon: 'rocket', gear_bazooka: 'rocket',
+  gear_boombox: 'boombox', gear_microphone: 'mic', gear_pumpkinsword: 'pumpkin' };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const RIVALS_WEAPONS = {
+  rifle:   { name: 'Rifle',   dmg: 22, hs: 34,  interval: 0.13, range: 70,  mag: 30, reload: 1.8, auto: true,  spread: 0.012, tracer: '#ffeb3b' },
+  smg:     { name: 'SMG',     dmg: 14, hs: 22,  interval: 0.075, range: 38, mag: 32, reload: 1.6, auto: true,  spread: 0.028, tracer: '#e040fb' },
+  shotgun: { name: 'Shotgun', dmg: 9,  hs: 14,  interval: 0.9,  range: 20, mag: 6,  reload: 2.3, auto: false, spread: 0.085, pellets: 8, tracer: '#ff9800' },
+  sniper:  { name: 'Sniper',  dmg: 90, hs: 140, interval: 1.5,  range: 130, mag: 5,  reload: 2.9, auto: false, spread: 0.001, tracer: '#69f0ae' },
+  pistol:  { name: 'Pistol',  dmg: 18, hs: 28,  interval: 0.24, range: 48, mag: 12, reload: 1.5,  auto: false, spread: 0.018, tracer: '#cfd8dc' },
+};
+
+// Strike Arena FPS mode: round-based control-point battles. First team to
+// 5 round wins takes the match. Rounds are 120s; holding the mid point
+// ticks round score (1/s), first to 30 round points wins the round early.
+const FPS_ROUND_MS = 120 * 1000;
+const FPS_ROUNDS_TO_WIN = 5;
+const FPS_SCORE_TARGET = 30;
+const FPS_CAP_RATE = 12.5; // capture % per second while one team holds the point alone (8s to capture)
+const FPS_DECAY_RATE = 6;   // capture % per second drifting back toward 0 when the point is empty
+const FPS_WEAPONS = ['rifle', 'shotgun', 'sniper'];
+const FPS_BOT_NAMES = ['BOT Rex', 'BOT Nova', 'BOT Pixel'];
+const FPS_BOT_DMG = 12, FPS_BOT_RANGE = 32, FPS_BOT_SPEED = 9;
+
+export class Game {
+  constructor(container, opts) {
+    this.c = container; this.o = opts;
+    this.world = opts.world; this.me = opts.me;
+    this.keys = {}; this.joy = { x: 0, y: 0 }; this.touchJump = false; this.t = 0; this.players = new Map();
+    this.projectiles = []; this.effects = []; this.gearSwingT = 0; this.lastGearUse = -9;
+    this.camYaw = Math.PI; this.camPitch = 0.35; this.camDist = 18;
+    this.health = 100; this.dead = false; this.emote = null; this.speedTimer = 0; this.kills = 0;
+    this.collected = new Set(); this.won = false;
+    // Objectives (world.objective / hidden scripts entry / inferred from
+    // parts — see objectives.js). Classic worlds have none: the win pad
+    // still wins exactly like before.
+    this.objective = getObjective(this.world);
+    this.difficulty = getDifficulty(this.world);
+    this._enemyMul = difficultyConfig(this.difficulty).enemy;
+    this.objTimeLeft = this.objective ? effectiveTimer(this.objective, this.difficulty) : 0;
+    this.objCoins = 0; this.objCapT = 0; this.objDone = false;
+    this.usedAirJump = false; this.usedAirJump2 = false; this.dashT = 0; this.dashCd = 0; this.hackTpCd = 0; this.fpGod = false; this.fpSuperJump = false; this.fpBig = false; this.fpSmall = false; this.fpRainbow = false; this.fpNightVision = false; this.fpSlowMo = false; this.fpFastFwd = false; this.fpFlySpeed = false; this.fpNoDash = false; this.fpDblJump = false; this.fpNight = false; this.fpFog = false; this.fpLowG = false; this.fpHighG = false; this.fpRain = false; this.fpMaintenance = false; this._rainbowT = 0; this.dashDir = new THREE.Vector3(); this.sprinting = false; this.lastW = 0; this.magnetT = 0; this.shield = false; this.tpCd = 0; this.cpHit = new Set(); this.cpTotal = (this.world?.parts || []).filter(p => p.k === 'checkpoint').length; this.inLowg = false; this.inWater = false; this.inSafe = false; this.tag = null; this._tagCd = 0; this._tagRing = null; this.fps = null; this._fpsBots = []; this._fpsPoint = null; this._fpsRing = null;
+    if (this.world?.fps) this.fps = this.newFpsState();
+    this.buildDom(); this.build3D(); this.bind();
+    this.spawn(true);
+    if (this.world?.fps) this.startFps();
+    if (!opts.test) { this.connect(); this.initVoice(); if (opts.autoVoice) this.voice.toggle().then(on => this.voiceBtn?.classList.toggle('on', !!on)); } else this.sys('Test mode - press Stop to return to Studio.');
+    if (this.objective) { this.sys(`🎯 ${objectiveLabel(this.objective, this.difficulty)} — good luck!`); this.updateObjHUD(); }
+    // Steal a Blob detection: sanitizeWorld() strips the stealablob flag from
+    // stored worlds, so also detect the template by its parts (Conveyor + Base1-8),
+    // which survive sanitizing. Covers the seeded game + Studio-made blob games.
+    const __isBlobWorld = this.world.stealablob || (Array.isArray(this.world.parts) && this.world.parts.some(p => p.name === 'Conveyor') && this.world.parts.some(p => /^Base[1-8]$/.test(p.name || '')));
+    if (__isBlobWorld) import('./stealablob.js?v=ba2160cb').then(m => { if (!this.destroyed) this.stealablob = m.startStealABlob(this); });
+    this.last = performance.now();
+    this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
+  }
+
+  // ---------- DOM / HUD ----------
+  buildDom() {
+    const touch = localStorage.ff_touch ? localStorage.ff_touch === '1' : matchMedia('(pointer: coarse)').matches;
+    this.c.innerHTML = `
+    <div class="game-root${touch ? ' touch' : ''}">
+      <canvas class="game-canvas"></canvas>
+      <div class="hud-topleft">
+        <button class="hud-btn menu-btn" title="Menu (Esc)"><span class="ff-mini">${LOGO}</span></button>
+        <button class="hud-btn chat-toggle" title="Chat">${chatIcon}</button>
+        <button class="hud-btn emote-btn" title="Emotes"><span class="ic">${icons.smile}</span></button>
+        <button class="hud-btn jam-btn" title="Jam tracks"><span class="ic">${icons.music}</span></button>
+        ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<button class="hud-btn funpanel-btn" title="FunPanel (F4)"><span class="ic">${icons.shield}</span></button>` : ''}
+      </div>
+      <div class="chat-box"><div class="chat-log"></div><input class="chat-input" maxlength="200" placeholder="To chat click here or press &quot;/&quot; key"></div>
+      <div class="tag-hud" style="display:none"></div>
+      <div class="obj-hud tag-hud" style="display:none"></div>
+      <div class="fps-hud tag-hud" style="display:none"></div>
+      <div class="hud-topright">
+        <div class="lb"><div class="lb-head"><span>${esc(this.o.gameName || 'Game')}</span></div><div class="lb-list"></div></div>
+        <div class="health"><div class="health-fill"></div></div>
+      </div>
+      <div class="touch-ui"><div class="joy-zone"><div class="joy"><div class="joy-knob"></div></div></div><button class="jump-btn" aria-label="Jump"><svg viewBox="0 0 24 24" width="42" height="42"><path fill="currentColor" d="M12 4l8 9h-5v7H9v-7H4z"/></svg></button></div>
+      <div class="hud-bottom"><div class="funbux-hud" title="FunTix">${tix} <span class="tx-count">${this.o.funtix ?? ''}</span></div>${this.o.test ? '<button class="stop-btn">Stop</button>' : ''}</div>
+      <div class="inv-bar" title="Your gear (tap to use)"></div>
+      <div class="kill-feed"></div><div class="fps-hud"></div>
+      <div class="big-msg"></div>
+      ${['owner', 'admin', 'moderator'].includes(this.me.role) ? `<div class="funpanel hidden">
+        <h3><span class="ic">${icons.shield}</span> FunPanel <button class="funpanel-close">×</button></h3>
+        <h4>Players</h4>
+        <div class="fp-players"></div>
+        <h4>Self Powers</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary fp-fly"><span class="ic">${icons.send}</span> Fly: OFF</button>
+          <button class="btn-secondary fp-noclip"><span class="ic">${icons.x}</span> Noclip: OFF</button>
+          <button class="btn-secondary fp-speed"><span class="ic">${icons.zap}</span> Speed: OFF</button>
+          <button class="btn-secondary fp-spawn">TP to Spawn</button>
+          <button class="btn-secondary" data-fps="god">🛡️ God: OFF</button>
+          <button class="btn-secondary" data-fps="superjump">🚀 Super Jump: OFF</button>
+          <button class="btn-secondary" data-fps="heal">❤️ Heal</button>
+          <button class="btn-secondary" data-fps="big">🔍 Big: OFF</button>
+          <button class="btn-secondary" data-fps="small">🔎 Small: OFF</button>
+          <button class="btn-secondary" data-fps="rainbow">🌈 Rainbow: OFF</button>
+          <button class="btn-secondary" data-fps="tprand">🎲 TP to Random Player</button>
+          <button class="btn-secondary" data-fps="tpspot">📍 TP to Random Spot</button>
+          <button class="btn-secondary" data-fps="spin">🌀 Spin Me</button>
+          <button class="btn-secondary" data-fps="nightvision">🔦 Night Vision: OFF</button>
+          <button class="btn-secondary" data-fps="slowmo">🐢 Slow-Mo: OFF</button>
+          <button class="btn-secondary" data-fps="fastfwd">⏩ Fast-Forward: OFF</button>
+          <button class="btn-secondary" data-fps="flyspeed">💨 Fly Speed: OFF</button>
+          <button class="btn-secondary" data-fps="nodash">♾️ No Dash Cooldown: OFF</button>
+          <button class="btn-secondary" data-fps="dbljump">☁️ Always Double Jump: OFF</button>
+          <button class="btn-secondary" data-fps="reset">💀 Reset Character</button>
+          <button class="btn-secondary" data-fps="clearfx">🧹 Clear All Effects</button>
+        </div>
+        <h4>World</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpw="daynight">🌙 Night: OFF</button>
+          <button class="btn-secondary" data-fpw="fog">🌫️ Fog: OFF</button>
+          <button class="btn-secondary" data-fpw="lowg">🌕 Low Gravity: OFF</button>
+          <button class="btn-secondary" data-fpw="highg">⬇️ High Gravity: OFF</button>
+          <button class="btn-secondary" data-fpw="rain">🌧️ Rain: OFF</button>
+          <button class="btn-secondary" data-fpw="confetti">🎉 Confetti Burst</button>
+          <button class="btn-secondary" data-fpw="fireworks">🎆 Fireworks</button>
+          <button class="btn-secondary" data-fpw="skycolor">🎨 Cycle Sky Color</button>
+        </div>
+        <h4>Everyone</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpb="freezeall">❄️ Freeze All</button>
+          <button class="btn-secondary" data-fpb="unfreezeall">☀️ Unfreeze All</button>
+          <button class="btn-secondary" data-fpb="bringall">🧲 Bring All to Me</button>
+          <button class="btn-secondary" data-fpb="muteall">🔇 Mute All</button>
+          <button class="btn-secondary" data-fpb="unmuteall">🔊 Unmute All</button>
+          <button class="btn-secondary" data-fpb="giftall">🎁 Gift All FunTix</button>
+          <button class="btn-secondary" data-fpb="danceall">💃 Make All Dance</button>
+          <button class="btn-secondary" data-fpb="launchall">🚀 Launch All</button>
+        </div>
+        <h4>Fun</h4>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpf="confetti">🎉 Confetti for Everyone</button>
+          <button class="btn-secondary" data-fpf="dance">💃 Everyone Dances</button>
+          <button class="btn-secondary" data-fpf="shake">📳 Shake Everyone's Screen</button>
+          <button class="btn-secondary" data-fpf="tixrain">🌧️ FunTix Rain</button>
+          <button class="btn-secondary" data-fpf="glitchall">👾 Glitch Everyone's Screen</button>
+        </div>
+        ${['owner', 'admin'].includes(this.me.role) ? `<h4>Server</h4>
+        <div class="fp-row"><input class="fp-announce" placeholder="Announce to server..." maxlength="200"><button class="btn-primary fp-announce-send">Send</button></div>
+        <div class="fp-grid">
+          <button class="btn-secondary" data-fpserver="clearannounce">🧹 Clear Announcement</button>
+          <button class="btn-secondary" data-fpserver="maintenance">🔧 Maintenance: OFF</button>
+          <button class="btn-secondary" data-fpserver="playercount">👥 Player Count</button>
+          <button class="btn-secondary" data-fpserver="modlog">📋 Mod Log</button>
+        </div>
+        ${this.me.role === 'owner' ? '<div class="fp-row"><button class="btn-danger fp-kickall">Kick everyone</button></div>' : ''}` : ''}
+      </div>` : ''}
+      <div class="picker-pop emote-picker hidden"></div>
+      <div class="picker-pop jam-picker hidden"></div>
+      <div class="esc-menu hidden">
+        <div class="esc-panel">
+          <div class="esc-tabs"><b>${esc(this.o.gameName || 'Game')}</b></div>
+          <div class="esc-players"></div>
+          <div class="esc-actions">
+            <button data-a="reset" class="btn-secondary">Reset Character <kbd>R</kbd></button>
+            <button data-a="leave" class="btn-secondary">Leave <kbd>L</kbd></button>
+            <button data-a="resume" class="btn-primary">Resume Game <kbd>Esc</kbd></button>
+          </div>
+          <label class="esc-opt"><input type="checkbox" data-o="shadows" checked> Shadows</label>
+          <label class="esc-opt"><input type="checkbox" data-o="sound" ${sfx.enabled ? 'checked' : ''}> Sound</label>
+          <label class="esc-opt"><input type="checkbox" data-o="touch" ${touch ? 'checked' : ''}> Touch controls</label>
+          <div class="esc-help">WASD / arrows: move &middot; Space: jump &middot; Right-drag: rotate camera &middot; Wheel: zoom &middot; Shift: shift-lock &middot; /: chat &middot; /e dance, /e spin, /e dab &middot; /jam<br>Touch: left thumbstick to move &middot; jump button &middot; drag to look &middot; pinch to zoom</div>
+        </div>
+      </div>
+      <div class="loading"><div class="loading-card"><div class="ff-logo-big">${LOGO}Funtopia</div><div class="loading-name">${esc(this.o.gameName || '')}</div><div class="loading-sub">${this.o.test ? 'Starting test...' : 'Joining server...'}</div><div class="spinner"></div><div class="loading-tip">💡 ${esc(GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)])}</div></div></div>
+    </div>`;
+    const q = s => this.c.querySelector(s);
+    this.canvas = q('.game-canvas'); this.chatLog = q('.chat-log'); this.chatInput = q('.chat-input');
+    this.lbList = q('.lb-list'); this.escMenu = q('.esc-menu'); this.bigMsg = q('.big-msg');
+    this.healthFill = q('.health-fill'); this.txCount = q('.tx-count'); this.root = q('.game-root');
+    q('.menu-btn').onclick = () => this.toggleMenu();
+    q('.chat-toggle').onclick = () => q('.chat-box').classList.toggle('hidden');
+    if (!document.getElementById('ff-picker-css')) {
+      const st = document.createElement('style'); st.id = 'ff-picker-css';
+      st.textContent = `.picker-pop{position:absolute;bottom:76px;left:12px;background:var(--card,#222242);border:1px solid var(--line,#3a3a66);border-radius:12px;padding:10px;display:grid;grid-template-columns:repeat(4,auto);gap:8px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.4)}.picker-pop.hidden{display:none}.picker-pop button{font-size:24px;background:rgba(255,255,255,.07);border:1px solid transparent;border-radius:10px;padding:8px 10px;cursor:pointer;line-height:1}.picker-pop button:hover{border-color:var(--blue,#7c6cf5);transform:scale(1.08)}.picker-pop .pk-label{grid-column:1/-1;font-size:12px;opacity:.65;text-align:center}`;
+      document.head.appendChild(st);
+    }
+    const ep = q('.emote-picker');
+    ep.innerHTML = '<div class="pk-label">Emotes — /e name</div>' + EMOTES.map(x => `<button data-e="${x.id}" title="${x.name}">${x.icon}</button>`).join('');
+    ep.onclick = (e) => { const b = e.target.closest('button[data-e]'); if (b) this.doEmote(b.dataset.e); };
+    const jp = q('.jam-picker');
+    jp.innerHTML = '<div class="pk-label">Jam tracks — /jam</div>' + JAM_TRACKS.map(x => `<button data-j="${x.id}" title="${x.name}">${x.icon}</button>`).join('') + '<button data-j="stop" title="Stop">⏹️</button>';
+    jp.onclick = (e) => { const b = e.target.closest('button[data-j]'); if (b) this.doJam(b.dataset.j); };
+    q('.emote-btn').onclick = (e) => { e.stopPropagation(); this.togglePicker('.emote-picker', '.jam-picker'); };
+    q('.jam-btn').onclick = (e) => { e.stopPropagation(); this.togglePicker('.jam-picker', '.emote-picker'); };
+    const fpb = q('.funpanel-btn');
+    if (fpb) fpb.onclick = () => this.toggleFunPanel();
+    const fpc = q('.funpanel-close');
+    if (fpc) fpc.onclick = () => this.toggleFunPanel(false);
+    const flyB = q('.fp-fly');
+    if (flyB) flyB.onclick = () => { this.fly = !this.fly; flyB.textContent = `Fly: ${this.fly ? 'ON' : 'OFF'}`; this.sys(`Fly ${this.fly ? 'enabled (Space up / C down)' : 'disabled'}`); };
+    const ncB = q('.fp-noclip');
+    if (ncB) ncB.onclick = () => { this.noclip = !this.noclip; ncB.textContent = `Noclip: ${this.noclip ? 'ON' : 'OFF'}`; this.sys(`Noclip ${this.noclip ? 'enabled (Space up / C down)' : 'disabled'}`); };
+    const sp2B = q('.fp-speed');
+    if (sp2B) sp2B.onclick = () => { this.speedBoost = !this.speedBoost; sp2B.textContent = `Speed: ${this.speedBoost ? 'ON' : 'OFF'}`; this.sys(`Speed boost ${this.speedBoost ? 'enabled' : 'disabled'}`); };
+    const spB = q('.fp-spawn');
+    if (spB) spB.onclick = () => this.spawn();
+    q('.funpanel')?.querySelectorAll('[data-fps]').forEach(b => b.onclick = () => this.fpSelfAction(b.dataset.fps, b));
+    q('.funpanel')?.querySelectorAll('[data-fpw]').forEach(b => b.onclick = () => this.fpWorldAction(b.dataset.fpw, b));
+    q('.funpanel')?.querySelectorAll('[data-fpb]').forEach(b => b.onclick = () => this.fpBulkAction(b.dataset.fpb));
+    q('.funpanel')?.querySelectorAll('[data-fpf]').forEach(b => b.onclick = () => this.fpFunAction(b.dataset.fpf));
+    q('.funpanel')?.querySelectorAll('[data-fpserver]').forEach(b => b.onclick = () => this.fpServerAction(b.dataset.fpserver, b));
+    const annS = q('.fp-announce-send');
+    if (annS) annS.onclick = async () => {
+      const v = q('.fp-announce')?.value.trim();
+      if (!v) return;
+      try { await this.fpApi('POST', '/api/mod/announce', { text: v }); q('.fp-announce').value = ''; this.sys('Announcement sent'); }
+      catch (e) { this.sys('Announce failed: ' + e.message); }
+    };
+    const kaB = q('.fp-kickall');
+    if (kaB) kaB.onclick = async () => {
+      if (!confirm('Kick EVERYONE from this game server?')) return;
+      try { await this.fpApi('POST', '/api/admin/site/command', { command: 'kick_all' }); } catch (e) { this.sys('Kick failed: ' + e.message); }
+    };
+    if (q('.stop-btn')) q('.stop-btn').onclick = () => this.exit();
+    this.escMenu.onclick = (e) => {
+      const a = e.target.closest('[data-a]')?.dataset.a;
+      if (a === 'reset') { this.toggleMenu(false); this.die(); }
+      if (a === 'leave') this.exit();
+      if (a === 'resume') this.toggleMenu(false);
+      if (e.target === this.escMenu) this.toggleMenu(false);
+    };
+    this.escMenu.querySelector('[data-o=shadows]').onchange = (e) => { this.renderer.shadowMap.enabled = e.target.checked; this.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); };
+    this.escMenu.querySelector('[data-o=sound]').onchange = (e) => { sfx.enabled = e.target.checked; };
+    this.escMenu.querySelector('[data-o=touch]').onchange = (e) => { localStorage.ff_touch = e.target.checked ? '1' : '0'; this.root.classList.toggle('touch', e.target.checked); };
+    this.chatInput.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { this.sendChat(this.chatInput.value); this.chatInput.value = ''; this.chatInput.blur(); }
+      if (e.key === 'Escape') this.chatInput.blur();
+    });
+    this.updateLeaderboard();
+    this.renderInv();
+    // Shooter games give everyone a free Arena Blaster — with a 1-gear hotbar
+    // there's no list to pick it from, so hand it to gear-less players on join.
+    if (this.o.shooter && (!this.me.avatar?.gear || this.me.avatar.gear === 'gear_none') && !(this.me.inventory || []).includes('gear_blaster'))
+      this.equipGear('gear_blaster', true);
+  }
+  // ---------- in-game hotbar: exactly ONE gear — the one you have equipped ----------
+  renderInv() {
+    const bar = this.c.querySelector('.inv-bar');
+    if (!bar) return;
+    const cur = this.me.avatar?.gear;
+    const it = cur && cur !== 'gear_none' ? ITEM[cur] : null;
+    bar.innerHTML = `<div class="inv-inner">${it ? `<button class="inv-item active" data-id="${it.id}" title="${esc(it.name)} — tap to use"><span class="inv-emoji">${it.emoji || '📦'}</span><span class="inv-name">${esc(it.name)}</span></button>`
+      : `<div class="inv-empty">No gear equipped — pick one in the Locker</div>`}</div>`;
+    bar.querySelectorAll('.inv-item').forEach(b => b.onclick = () => this.useGear());
+    bar.style.display = 'flex';
+  }
+  // ---------- Tag mode ----------
+  // "It" runs into someone to tag them. The server is the authority on who
+  // is "it"; the client only reports a touch and renders the state.
+  tagTick(dt) {
+    if (!this.world?.tag || !this.tag || this.dead) return;
+    if (this._tagCd > 0) this._tagCd -= dt;
+    // Red ring under whoever is "it" right now.
+    if (!this._tagRing) {
+      const geo = new THREE.RingGeometry(1.4, 2, 32);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xff2233, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
+      this._tagRing = new THREE.Mesh(geo, mat);
+      this._tagRing.rotation.x = -Math.PI / 2;
+      this.scene.add(this._tagRing);
+    }
+    const itId = this.tag.itId;
+    let itPos = null;
+    if (itId === this.myId) itPos = this.pos;
+    else { const p = this.players.get(itId); if (p) itPos = p.char.position; }
+    if (itPos) { this._tagRing.visible = true; this._tagRing.position.set(itPos.x, 0.15, itPos.z); }
+    else this._tagRing.visible = false;
+    // If I'm "it", a touch tags the nearest player in reach.
+    if (itId !== this.myId || this._tagCd > 0) return;
+    for (const p of this.players.values()) {
+      const d = p.char.position.clone().sub(this.pos); d.y = 0;
+      if (d.length() < 3.5) { this._tagCd = 1; this.send({ t: 'tag', id: p.id }); return; }
+    }
+  }
+  updateTagHUD() {
+    const el = this.c.querySelector('.tag-hud');
+    if (!el) return;
+    if (!this.world?.tag || !this.tag) { el.style.display = 'none'; return; }
+    const secs = Math.max(0, Math.ceil((this.tag.roundEnd - Date.now()) / 1000));
+    const itName = this.tag.itId === this.myId ? 'YOU' : (this.tag.it || '???');
+    const mine = (this.tag.counts || {})[this.myId] || 0;
+    el.innerHTML = `🏷️ TAG — ${this.tag.itId === this.myId ? '<b>YOU ARE IT!</b> Tag someone!' : `IT: <b>${esc(itName)}</b> — run!`} <span class="tag-timer">${secs}s</span> · Your tags: <b>${mine}</b>`;
+    el.style.display = 'block';
+  }
+  // Health bar updater. This was called in several places (Rivals damage,
+  // enemy hits, heals) but never defined — defining it fixes that latent crash.
+  updateHud() { if (this.healthFill) this.healthFill.style.width = Math.max(0, this.health) + '%'; }
+  // ---------- Objectives ----------
+  // A world objective (Capture / Collect / Race / Survive) turns the win
+  // pad and coins into a real goal with a timer and a score. Worlds
+  // without one play exactly like before: touch the win pad, win.
+  fmtTime(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
+  updateObjHUD() {
+    const el = this.c.querySelector('.obj-hud');
+    if (!el) return;
+    const o = this.objective;
+    if (!o || this.objDone) { el.style.display = 'none'; return; }
+    const icon = { capture: '🎯', collect: '🪙', race: '🏁', survive: '🛡️' }[o.kind] || '🎯';
+    let prog = '';
+    if (o.kind === 'capture') prog = ` · Holding ${Math.floor(this.objCapT)}s/${o.score}s`;
+    else if (o.kind === 'collect') prog = ` · ${this.objCoins}/${o.score} coins`;
+    else if (o.kind === 'race') prog = ` · Reach the finish!`;
+    else if (o.kind === 'survive') prog = ` · Stay alive!`;
+    el.innerHTML = `${icon} ${esc(o.winCondition)}${prog} <span class="tag-timer">${this.fmtTime(this.objTimeLeft)}</span>`;
+    el.style.display = 'block';
+  }
+  onWinPad() {
+    // Same overlap test as triggersCheck, against the win-pad triggers.
+    const P = this.pos;
+    for (const b of this.triggers) {
+      if (b.p.k !== 'win') continue;
+      if (P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2]) return true;
+    }
+    return false;
+  }
+  objTick(dt) {
+    const o = this.objective;
+    if (!o || this.objDone || this.dead) return;
+    if (o.timerSec > 0) {
+      this.objTimeLeft -= dt;
+      if (this.objTimeLeft <= 0) {
+        this.objTimeLeft = 0;
+        if (o.kind === 'survive') this.winObjective('🛡️ YOU SURVIVED!');
+        else this.loseObjective('⏰ Time\'s up!', o.kind === 'capture' ? 'The point was not captured in time — try again!' : o.kind === 'collect' ? `You collected ${this.objCoins}/${o.score} coins — try again!` : 'You did not reach the finish in time — try again!');
+        this.updateObjHUD();
+        return;
+      }
+    }
+    if (o.kind === 'capture' && this.onWinPad()) {
+      this.objCapT += dt;
+      if (this.objCapT >= o.score) this.winObjective('🎯 POINT CAPTURED!');
+    }
+    this.updateObjHUD();
+  }
+  winObjective(title) {
+    if (this.won) return;
+    this.won = true; this.objDone = true;
+    sfx.win();
+    this.showBig(title || (this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`), 4000);
+    this.send({ t: 'win' });
+    if (!reduceMotion()) confetti(this.c);
+    this.showEndPanel('🏆 YOU WIN!', this.o.test ? '' : `+${ECON.WIN_TIX} FunTix`);
+  }
+  loseObjective(title, sub) {
+    if (this.won) return;
+    this.won = true; this.objDone = true;
+    sfx.oof();
+    this.showBig(title, 4000);
+    this.showEndPanel(title, sub || '');
+  }
+  showEndPanel(title, sub) {
+    const panel = document.createElement('div'); panel.className = 'win-panel';
+    panel.innerHTML = `<h2>${title}</h2><p>${sub || ''}</p><button class="btn-primary win-again">Play again</button><button class="btn-secondary win-next">Next game</button>`;
+    this.c.appendChild(panel);
+    panel.querySelector('.win-again').onclick = () => { panel.remove(); this.resetObjectiveRun(); };
+    panel.querySelector('.win-next').onclick = () => this.exit();
+  }
+  resetObjectiveRun() {
+    this.won = false; this.objDone = false; this.checkpoint = null; this.collected.clear();
+    this.objCoins = 0; this.objCapT = 0;
+    this.objTimeLeft = this.objective ? effectiveTimer(this.objective, this.difficulty) : 0;
+    for (const [id, m] of this.meshes) { const pp = (this.world?.parts || []).find(x => x.id === id); if (pp?.k === 'coin') m.visible = true; }
+    this.spawn();
+    this.updateObjHUD();
+  }
+  // ---------- Strike Arena FPS mode ----------
+  // Round-based control-point battles. The server is NOT involved: each
+  // client runs the same deterministic rules from the positions it sees
+  // (teams by sorted player id, capture from whoever stands on the point),
+  // and damage still flows through the server's gearHit routing, like Rivals.
+  newFpsState() {
+    const ammo = {};
+    for (const w of FPS_WEAPONS) ammo[w] = RIVALS_WEAPONS[w].mag;
+    return { team: null, phase: 'playing', round: 1, rounds: { red: 0, blue: 0 }, score: { red: 0, blue: 0 },
+      timeLeft: FPS_ROUND_MS / 1000, capV: 0, owner: null, weapon: 'rifle', ammo, reloading: false, lastShot: -9, endT: 0, overT: 0 };
+  }
+  startFps() {
+    const el = this.c.querySelector('.fps-hud');
+    if (el) el.style.display = 'block';
+    // FPS weapons replace the 1-gear hotbar (same as Rivals).
+    this.c.querySelector('.inv-bar') && (this.c.querySelector('.inv-bar').style.display = 'none');
+    if (!this.c.querySelector('.fps-hitmark')) {
+      const hm = document.createElement('div');
+      hm.className = 'fps-hitmark';
+      hm.textContent = '✕';
+      hm.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;font-weight:900;color:#fff;text-shadow:0 0 6px #000;opacity:0;pointer-events:none;z-index:7;transition:opacity .12s';
+      this.c.querySelector('.game-root')?.appendChild(hm);
+    }
+    // Pulsing ring on the control point (color follows the holder).
+    const pt = this.fpsPoint();
+    if (pt && !this._fpsRing) {
+      const geo = new THREE.RingGeometry(pt.r - 0.6, pt.r, 40);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffd400, transparent: true, opacity: 0.8, side: THREE.DoubleSide });
+      this._fpsRing = new THREE.Mesh(geo, mat);
+      this._fpsRing.rotation.x = -Math.PI / 2;
+      this._fpsRing.position.set(pt.x, 0.35, pt.z);
+      this.scene.add(this._fpsRing);
+    }
+    this.maybeSpawnBots();
+    this.sys('🎯 Strike Arena — capture the mid point, hold it to score, first to 5 rounds wins!');
+    this.updateFpsHUD();
+  }
+  fpsPoint() {
+    if (this._fpsPoint) return this._fpsPoint;
+    const p = (this.world.parts || []).find(x => x.name === 'ControlPoint');
+    if (!p) return null;
+    this._fpsPoint = { x: p.p[0], z: p.p[2], r: Math.max(p.s[0], p.s[2]) / 2 };
+    return this._fpsPoint;
+  }
+  // Teams alternate by sorted player id, so every client agrees without the
+  // server tracking teams. The team locks in when the client first knows its
+  // own id (on 'welcome'; immediately in test mode).
+  computeFpsTeam() {
+    if (!this.myId) return 'red';
+    const ids = [this.myId, ...this.players.keys()].map(String).sort();
+    return ids.indexOf(String(this.myId)) % 2 === 0 ? 'red' : 'blue';
+  }
+  fpsTeamOf(id) {
+    if (!this.myId) return 'blue';
+    const ids = [this.myId, ...this.players.keys()].map(String).sort();
+    const i = ids.indexOf(String(id));
+    return i < 0 ? 'blue' : (i % 2 === 0 ? 'red' : 'blue');
+  }
+  fpsSpawnPoint(team) {
+    const name = team === 'red' ? 'SpawnRed' : 'SpawnBlue';
+    const spots = (this.world.parts || []).filter(p => p.k === 'spawn' && p.name === name);
+    const list = spots.length ? spots : (this.world.parts || []).filter(p => p.k === 'spawn');
+    if (list.length) { const s = list[(Math.random() * list.length) | 0]; return new THREE.Vector3(s.p[0], s.p[1] + s.s[1] / 2, s.p[2]); }
+    return findSpawn(this.world);
+  }
+  respawnAtBase() {
+    if (!this.fps?.team) return;
+    const p = this.fpsSpawnPoint(this.fps.team);
+    this.pos.copy(p); this.vel.set(0, 0, 0);
+    this.char.position.copy(this.pos);
+    if (this.dead) { this.dead = false; this.health = 100; this.char.visible = true; }
+  }
+  // Bots fill the enemy team while the room is near-empty, so Strike Arena
+  // is fun solo. They leave as soon as 2+ DISTINCT humans are in the room.
+  // Two sessions of the same account count as ONE human (same username),
+  // so a duplicate login can't scare the bots away from a solo player.
+  maybeSpawnBots() {
+    if (!this.fps) return;
+    const names = new Set();
+    const myName = (this.me?.name || '').toLowerCase();
+    if (myName) names.add(myName);
+    for (const p of this.players.values()) { const n = (p.name || '').toLowerCase(); if (n) names.add(n); }
+    const humans = Math.max(1, names.size);
+    if (humans >= 2) { if (this._fpsBots.length) this.removeFpsBots(); return; }
+    if (this._fpsBots.length) return;
+    const enemy = (this.fps.team || 'red') === 'red' ? 'blue' : 'red';
+    FPS_BOT_NAMES.forEach((n, i) => this.spawnFpsBot(n, enemy, i));
+  }
+  spawnFpsBot(name, team, i) {
+    const torso = team === 'red' ? '#e53935' : '#1e88e5';
+    const avatar = {
+      colors: { head: '#eceff1', torso, larm: '#eceff1', rarm: '#eceff1', lleg: '#37474f', rleg: '#37474f' },
+      hat: 'hat_none', face: 'face_smile', shirt: 'shirt_none', head: 'head_classic', pet: 'pet_none', gear: 'gear_none', rig: 'r6',
+    };
+    const char = buildChar(avatar, { pet: false, gear: false });
+    const tag = makeNameTag('🤖 ' + name); tag.userData.isTag = true; char.add(tag);
+    this.scene.add(char);
+    const bot = { name, team, char, hp: 100, dead: false, respawnT: 0, fireCd: 1 + i * 0.4, losT: 0, hasLos: false, avoidT: 0, avoidDir: { x: 0, z: 0 }, strafeDir: 1, strafeT: 0 };
+    this._fpsBots.push(bot);
+    this.respawnFpsBot(bot);
+    return bot;
+  }
+  respawnFpsBot(bot) {
+    const p = this.fpsSpawnPoint(bot.team);
+    bot.char.position.copy(p);
+    bot.char.rotation.y = bot.team === 'red' ? 0 : Math.PI;
+    bot.char.visible = true;
+    bot.hp = 100; bot.dead = false; bot.respawnT = 0; bot.fireCd = 1; bot.hasLos = false;
+  }
+  removeFpsBots() {
+    for (const b of this._fpsBots) this.scene.remove(b.char);
+    this._fpsBots = [];
+  }
+  fpsTracer(from, to, color) {
+    const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
+    this.scene.add(line);
+    setTimeout(() => { this.scene.remove(line); g.dispose(); }, 90);
+  }
+  fpsBotLos(b, targetPos) {
+    const from = b.char.position.clone(); from.y += 3.4;
+    const to = targetPos.clone(); to.y += 2.5;
+    const dir = to.clone().sub(from); const dist = dir.length(); dir.normalize();
+    const ray = new THREE.Raycaster(from, dir, 0.1, dist);
+    const hits = ray.intersectObjects([...this.meshes.values()], false);
+    return hits.length === 0 || hits[0].distance >= dist - 0.5;
+  }
+  fpsBotsTick(dt) {
+    for (const b of this._fpsBots) {
+      if (b.dead) { b.respawnT -= dt; if (b.respawnT <= 0) this.respawnFpsBot(b); continue; }
+      // Nearest enemy: the local player, or a remote player on the enemy team.
+      let target = null, targetPos = null, bestD = Infinity;
+      const consider = (pos, ref) => { const d = Math.hypot(pos.x - b.char.position.x, pos.z - b.char.position.z); if (d < bestD) { bestD = d; target = ref; targetPos = pos; } };
+      if (!this.dead && this.fps.team !== b.team) consider(this.pos, 'me');
+      for (const p of this.players.values()) if (this.fpsTeamOf(p.id) !== b.team) consider(p.char.position, p);
+      const pt = this.fpsPoint();
+      const dest = targetPos || (pt ? new THREE.Vector3(pt.x, 0, pt.z) : null);
+      if (dest) {
+        const dx = dest.x - b.char.position.x, dz = dest.z - b.char.position.z;
+        const dist = Math.hypot(dx, dz);
+        let mx = 0, mz = 0;
+        if (target && dist < 30) {
+          b.strafeT -= dt;
+          if (b.strafeT <= 0) { b.strafeT = 1.5 + Math.random(); b.strafeDir = Math.random() < 0.5 ? 1 : -1; }
+          if (dist > 18) { mx = dx / dist; mz = dz / dist; }
+          else if (dist < 8) { mx = -dx / dist; mz = -dz / dist; }
+          else { mx = -dz / dist * b.strafeDir; mz = dx / dist * b.strafeDir; }
+        } else if (dist > 1.5) { mx = dx / dist; mz = dz / dist; }
+        const step = FPS_BOT_SPEED * dt;
+        if (b.avoidT > 0) { b.avoidT -= dt; mx = b.avoidDir.x; mz = b.avoidDir.z; }
+        if (mx || mz) {
+          const nx = b.char.position.x + mx * step, nz = b.char.position.z + mz * step;
+          if (!this.blockedAt(nx, 0.5, nz)) { b.char.position.x = nx; b.char.position.z = nz; }
+          else if (!this.blockedAt(b.char.position.x + mx * step, 0.5, b.char.position.z)) b.char.position.x += mx * step;
+          else if (!this.blockedAt(b.char.position.x, 0.5, b.char.position.z + mz * step)) b.char.position.z += mz * step;
+          else if (b.avoidT <= 0) { b.avoidT = 0.8; const s = Math.random() < 0.5 ? 1 : -1; b.avoidDir = { x: -mz * s, z: mx * s }; }
+          b.char.rotation.y = Math.atan2(mx, mz);
+          animateCharacter(b.char, 'walk', this.t, dt);
+        } else animateCharacter(b.char, 'idle', this.t, dt);
+      }
+      b.fireCd -= dt; b.losT -= dt;
+      if (target && bestD <= FPS_BOT_RANGE) {
+        if (b.losT <= 0) { b.losT = 0.4; b.hasLos = this.fpsBotLos(b, targetPos); }
+        if (b.hasLos && b.fireCd <= 0) {
+          b.fireCd = 0.9 + Math.random() * 0.4;
+          const from = b.char.position.clone(); from.y += 3.4;
+          const to = targetPos.clone(); to.y += 2.5;
+          this.fpsTracer(from, to, '#ff5252');
+          if (Math.random() < 0.55) {
+            if (target === 'me') this.applyFpsDamage(FPS_BOT_DMG, b.name);
+            else this.send({ t: 'gearHit', id: target.id, dmg: FPS_BOT_DMG });
+          }
+          sfx.shoot?.();
+        }
+      }
+    }
+  }
+  fpsWeapon() { return RIVALS_WEAPONS[this.fps.weapon]; }
+  showFpsHitmarker(hs, kill) {
+    const el = this.c.querySelector('.fps-hitmark'); if (!el) return;
+    el.style.color = kill ? '#ff5252' : hs ? '#ffd400' : '#fff';
+    el.style.opacity = '1';
+    clearTimeout(this._fpsHmT);
+    this._fpsHmT = setTimeout(() => { el.style.opacity = '0'; }, 180);
+  }
+  fireFps() {
+    const f = this.fps; if (!f || this.dead || f.reloading) return;
+    const w = this.fpsWeapon(), now = this.t;
+    if (now - (f.lastShot || -9) < w.interval) return;
+    if (f.ammo[f.weapon] <= 0) { this.fpsReload(); return; }
+    f.lastShot = now; f.ammo[f.weapon]--;
+    const pellets = w.pellets || 1;
+    let best = null; // {kind, ref, point, hs, dmg}
+    for (let i = 0; i < pellets; i++) {
+      const dir = new THREE.Vector3();
+      this.camera.getWorldDirection(dir);
+      dir.x += (Math.random() - 0.5) * w.spread * 2; dir.y += (Math.random() - 0.5) * w.spread * 2; dir.z += (Math.random() - 0.5) * w.spread * 2;
+      dir.normalize();
+      const ray = new THREE.Raycaster(this.camera.position.clone(), dir, 0.5, w.range);
+      ray.camera = this.camera; // sprites (name tags) need raycaster.camera set, else raycast throws
+      const targets = [];
+      for (const p of this.players.values()) { p.char.updateMatrixWorld(); targets.push(p.char); }
+      for (const b of this._fpsBots) if (!b.dead) { b.char.updateMatrixWorld(); targets.push(b.char); }
+      const hits = ray.intersectObjects(targets, true);
+      let pHit = null, pDist = Infinity, pRef = null, pKind = null;
+      for (const h of hits) {
+        let o = h.object, ref = null, kind = null;
+        while (o) {
+          for (const p of this.players.values()) if (p.char === o) { ref = p; kind = 'player'; break; }
+          if (!ref) for (const b of this._fpsBots) if (!b.dead && b.char === o) { ref = b; kind = 'bot'; break; }
+          if (ref || !o.parent) break;
+          o = o.parent;
+        }
+        if (ref && h.distance < pDist) { pDist = h.distance; pHit = h; pRef = ref; pKind = kind; }
+      }
+      const from = this.pos.clone(); from.y += 3.4;
+      const wallHits = ray.intersectObjects([...this.meshes.values()], false);
+      const wDist = wallHits.length ? wallHits[0].distance : Infinity;
+      if (pHit && pDist < wDist) {
+        const localY = pHit.point.y - pRef.char.position.y;
+        const hs = localY > 4.6;
+        const dmg = hs ? w.hs : w.dmg;
+        if (!best || dmg > best.dmg) best = { kind: pKind, ref: pRef, point: pHit.point, hs, dmg };
+        this.fpsTracer(from, pHit.point, w.tracer);
+      } else if (wDist < Infinity) {
+        this.fpsTracer(from, wallHits[0].point, w.tracer);
+      } else {
+        this.fpsTracer(from, this.camera.position.clone().addScaledVector(dir, w.range), w.tracer);
+      }
+    }
+    sfx.shoot?.() || sfx.click?.();
+    if (best) {
+      if (best.kind === 'player') {
+        this.send({ t: 'gearHit', id: best.ref.id, dmg: best.dmg });
+        const willKill = (best.ref._rhp ?? 100) - best.dmg <= 0;
+        this.showFpsHitmarker(best.hs, willKill);
+        best.ref._rhp = (best.ref._rhp ?? 100) - best.dmg;
+      } else {
+        this.showFpsHitmarker(best.hs, best.ref.hp - best.dmg <= 0);
+        this.damageFpsBot(best.ref, best.dmg);
+      }
+    }
+    this.updateFpsHUD();
+  }
+  damageFpsBot(bot, dmg) {
+    if (bot.dead) return;
+    bot.hp -= dmg;
+    if (bot.hp <= 0) {
+      bot.dead = true; bot.respawnT = 3; bot.char.visible = false;
+      this.onKill(bot.name);
+      this.sys(`💥 You eliminated ${bot.name}!`);
+    }
+  }
+  fpsReload() {
+    const f = this.fps; if (!f || f.reloading || this.dead) return;
+    const w = this.fpsWeapon();
+    if (f.ammo[f.weapon] >= w.mag) return;
+    f.reloading = true; this.updateFpsHUD();
+    sfx.click?.();
+    setTimeout(() => { if (this.destroyed) return; f.reloading = false; f.ammo[f.weapon] = w.mag; this.updateFpsHUD(); }, w.reload * 1000);
+  }
+  fpsSwitch(slot) {
+    const f = this.fps; if (!f || this.dead) return;
+    const id = FPS_WEAPONS[slot - 1];
+    if (!id || f.weapon === id) return;
+    f.weapon = id; f.reloading = false;
+    sfx.click?.(); this.updateFpsHUD();
+  }
+  applyFpsDamage(dmg, from) {
+    if (this.dead || !this.fps) return;
+    this.health -= dmg;
+    this.updateHud();
+    sfx.oof();
+    if (this.health <= 0) { this.health = 0; this.die(); }
+  }
+  fpsTick(dt) {
+    if (!this.world?.fps || !this.fps) return;
+    const f = this.fps;
+    if (!f.team && (this.o.test || this.myId)) {
+      f.team = this.computeFpsTeam();
+      if (this._fpsBots.length && this._fpsBots[0].team === f.team) this.removeFpsBots();
+      this.maybeSpawnBots();
+      this.respawnAtBase();
+      this.updateFpsHUD();
+    }
+    if (f.phase === 'over') { f.overT -= dt; if (f.overT <= 0) this.resetFpsMatch(); return; }
+    if (f.phase === 'roundEnd') { f.endT -= dt; if (f.endT <= 0) this.nextFpsRound(); return; }
+    if (!f.team) return; // waiting on team assignment (real play: until 'welcome')
+    f.timeLeft -= dt;
+    // Control-point capture: only one team present moves the point their way;
+    // both present = contested (frozen); empty = drifts back toward neutral.
+    const pt = this.fpsPoint();
+    if (pt) {
+      let redIn = 0, blueIn = 0;
+      const inZone = (x, z) => { const dx = x - pt.x, dz = z - pt.z; return dx * dx + dz * dz < pt.r * pt.r; };
+      if (!this.dead && inZone(this.pos.x, this.pos.z)) { if (f.team === 'red') redIn++; else blueIn++; }
+      for (const p of this.players.values()) if (inZone(p.char.position.x, p.char.position.z)) { if (this.fpsTeamOf(p.id) === 'red') redIn++; else blueIn++; }
+      for (const b of this._fpsBots) if (!b.dead && inZone(b.char.position.x, b.char.position.z)) { if (b.team === 'red') redIn++; else blueIn++; }
+      if (redIn > 0 && blueIn === 0) f.capV = Math.min(100, f.capV + FPS_CAP_RATE * dt);
+      else if (blueIn > 0 && redIn === 0) f.capV = Math.max(-100, f.capV - FPS_CAP_RATE * dt);
+      else if (redIn === 0 && blueIn === 0 && f.capV !== 0) f.capV -= Math.sign(f.capV) * Math.min(Math.abs(f.capV), FPS_DECAY_RATE * dt);
+      if (f.capV >= 100) f.owner = 'red';
+      else if (f.capV <= -100) f.owner = 'blue';
+      if (f.owner === 'red') f.score.red += dt;
+      else if (f.owner === 'blue') f.score.blue += dt;
+      if (this._fpsRing) {
+        const col = f.owner === 'red' ? 0xff5252 : f.owner === 'blue' ? 0x448aff : 0xffd400;
+        this._fpsRing.material.color.setHex(col);
+        const s = 1 + Math.sin(this.t * 2.5) * 0.05;
+        this._fpsRing.scale.set(s, s, 1);
+      }
+    }
+    if (f.score.red >= FPS_SCORE_TARGET || f.score.blue >= FPS_SCORE_TARGET || f.timeLeft <= 0) this.endFpsRound();
+    this.maybeSpawnBots();
+    this.fpsBotsTick(dt);
+    this.updateFpsHUD();
+  }
+  updateFpsHUD() {
+    const el = this.c.querySelector('.fps-hud');
+    if (!el || !this.fps) return;
+    if (!this.world?.fps) { el.style.display = 'none'; return; }
+    const f = this.fps;
+    const secs = Math.max(0, Math.ceil(f.timeLeft));
+    const w = this.fpsWeapon();
+    const redW = Math.max(0, Math.round(f.capV)), blueW = Math.max(0, -Math.round(f.capV));
+    el.innerHTML = `🎯 STRIKE ARENA · ROUND ${f.round} &nbsp; <b style="color:#ff5252">RED ${Math.floor(f.score.red)}</b> — ${Math.floor(f.score.blue)} <b style="color:#448aff">BLUE</b> &nbsp; <span class="tag-timer">${secs}s</span><br>` +
+      `<span style="font-size:12px">YOU: ${f.team ? f.team.toUpperCase() : '…'} · ${w.name} ${f.reloading ? 'RELOADING…' : f.ammo[f.weapon] + ' / ' + w.mag} · [1] Rifle [2] Shotgun [3] Sniper · 💥 ${this.kills}</span>` +
+      `<div style="height:8px;background:rgba(255,255,255,.25);border-radius:4px;margin-top:4px;overflow:hidden;display:flex"><div style="width:${redW}%;background:#ff5252"></div><div style="width:${blueW}%;background:#448aff;margin-left:auto"></div></div>` +
+      `<div style="font-size:12px">${f.owner ? '🔒 ' + f.owner.toUpperCase() + ' holds the point — stand on it to take it back!' : '⚪ Point is neutral — stand on it to capture!'}</div>`;
+    el.style.display = 'block';
+  }
+  endFpsRound() {
+    const f = this.fps; if (!f || f.phase !== 'playing') return;
+    let winner = null;
+    if (f.score.red >= FPS_SCORE_TARGET || f.score.blue >= FPS_SCORE_TARGET) winner = f.score.red >= f.score.blue ? 'red' : 'blue';
+    else if (f.timeLeft <= 0) winner = f.score.red > f.score.blue ? 'red' : f.score.blue > f.score.red ? 'blue' : f.owner;
+    if (winner) f.rounds[winner]++;
+    const won = winner === f.team;
+    f.phase = 'roundEnd'; f.endT = 4;
+    this.showBig(winner ? (won ? '✅ ROUND WON!' : '❌ ROUND LOST') : '🤝 ROUND DRAW', 3000);
+    if (winner) this.sys(`🏆 ${winner.toUpperCase()} takes round ${f.round} — ${f.rounds.red}–${f.rounds.blue}`);
+    else this.sys('🤝 Round draw — no point awarded.');
+    if (f.rounds.red >= FPS_ROUNDS_TO_WIN || f.rounds.blue >= FPS_ROUNDS_TO_WIN) {
+      const champ = f.rounds.red >= FPS_ROUNDS_TO_WIN ? 'red' : 'blue';
+      f.phase = 'over'; f.overT = 8;
+      const iWon = champ === f.team;
+      this.showBig(iWon ? '🏆 YOUR TEAM WINS THE MATCH!' : `🏆 ${champ.toUpperCase()} TEAM WINS`, 6000);
+      this.sys(`🏆 ${champ.toUpperCase()} team wins Strike Arena, ${f.rounds.red}–${f.rounds.blue}!`);
+      if (iWon) { this.send({ t: 'win' }); sfx.win(); } else sfx.oof();
+    } else if (winner) won ? sfx.win() : sfx.oof();
+    this.updateFpsHUD();
+  }
+  nextFpsRound() {
+    const f = this.fps;
+    f.round++; f.score = { red: 0, blue: 0 }; f.timeLeft = FPS_ROUND_MS / 1000; f.capV = 0; f.owner = null; f.phase = 'playing';
+    for (const k of Object.keys(f.ammo)) f.ammo[k] = RIVALS_WEAPONS[k].mag;
+    f.reloading = false;
+    this.health = 100;
+    this.respawnAtBase();
+    for (const b of this._fpsBots) this.respawnFpsBot(b);
+    this.showBig(`ROUND ${f.round}`, 1800);
+    this.updateFpsHUD();
+  }
+  resetFpsMatch() {
+    const keepTeam = this.fps.team;
+    this.fps = this.newFpsState();
+    this.fps.team = keepTeam;
+    this.health = 100;
+    this.respawnAtBase();
+    for (const b of this._fpsBots) this.respawnFpsBot(b);
+    this.sys('🎯 New Strike Arena match — capture the point, first to 5 rounds!');
+    this.updateFpsHUD();
+  }
+  ownedVehicle() {
+    const inv = this.me?.inventory || [];
+    const sel = this.me?.avatar?.vehicle;
+    if (sel && sel !== 'vehicle_none' && inv.includes(sel) && VEHICLES.includes(sel)) return sel;
+    return VEHICLES.find(id => inv.includes(id)) || null;
+  }
+  toggleVehicle() {
+    if (this.dead || this.o.test) return;
+    if (this.vehicleId) this.exitVehicle();
+    else {
+      const id = this.ownedVehicle();
+      if (!id) { this.sys('You need a vehicle! Buy one in the Marketplace 🚗'); return; }
+      this.enterVehicle(id);
+    }
+  }
+  enterVehicle(id) {
+    this.vehicleId = id; this.carSpeed = 0;
+    this.vehicleMesh = buildVehicle(id);
+    this.avatarKids = this.char.children.slice();
+    this.avatarKids.forEach(c => c.visible = false);
+    this.char.add(this.vehicleMesh);
+    this.sys(`Driving ${ITEM[id]?.name || 'vehicle'}! E or V to exit.`);
+    sfx.click?.();
+  }
+  exitVehicle() {
+    if (this.vehicleMesh) { this.char.remove(this.vehicleMesh); this.vehicleMesh = null; }
+    if (this.avatarKids) { this.avatarKids.forEach(c => c.visible = true); this.avatarKids = null; }
+    this.vehicleId = null; this.carSpeed = 0;
+  }
+  // ---------- NPCs ----------
+  spawnNPC(p) {
+    const seed = [...String(p.id)].reduce((a, c) => a + c.charCodeAt(0), 0);
+    const torsos = ['#0d69ac', '#c4281c', '#287f47', '#7c4dff', '#ff8f00', '#00acc1'];
+    const avatar = {
+      colors: { head: '#f5cd30', torso: torsos[seed % torsos.length], larm: '#f5cd30', rarm: '#f5cd30', lleg: '#5c6bc0', rleg: '#5c6bc0' },
+      hat: 'hat_none', face: 'face_smile', shirt: 'shirt_none', head: 'head_classic', pet: 'pet_none', gear: 'gear_none',
+    };
+    const char = buildChar(avatar, { pet: false, gear: false });
+    const tag = makeNameTag(p.enemy ? '👹 ' + (p.name || 'Enemy') : (p.name || 'NPC')); tag.userData.isTag = true; char.add(tag);
+    const baseY = p.p[1] - p.s[1] / 2;
+    char.position.set(p.p[0], baseY, p.p[2]);
+    this.scene.add(char);
+    const bubble = document.createElement('div');
+    bubble.className = 'npc-bubble hidden';
+    bubble.textContent = (p.dialog || '').slice(0, 200) || 'Hello!';
+    this.c.appendChild(bubble);
+    this.npcs.push({ p, char, bubble, base: new THREE.Vector3(p.p[0], baseY, p.p[2]), phase: (seed % 100) / 100 * Math.PI * 2, radius: 5 + (seed % 4) });
+  }
+  updateNPCs(dt) {
+    const w = this.c.clientWidth, h = this.c.clientHeight;
+    for (const n of this.npcs) {
+      const a = this.t * 0.3 + n.phase;
+      const d = n.char.position.distanceTo(this.pos);
+      if (n.p.enemy && !this.dead) {
+        // 👹 enemy: chase the player (leashed to its spawn area)
+        const dx = this.pos.x - n.char.position.x, dz = this.pos.z - n.char.position.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.6) {
+          const step = 17 * (this._enemyMul || 1) * dt;
+          const nx = n.char.position.x + dx / (dist || 1) * step, nz = n.char.position.z + dz / (dist || 1) * step;
+          if (Math.hypot(nx - n.base.x, nz - n.base.z) < 50) { n.char.position.x = nx; n.char.position.z = nz; }
+          n.char.rotation.y = Math.atan2(dx, dz);
+        }
+        animateCharacter(n.char, 'walk', this.t, dt);
+        n._hitCd = Math.max(0, (n._hitCd || 0) - dt);
+        if (dist < 4.5 && n._hitCd <= 0) {
+          n._hitCd = 1;
+          if (this.inSafe) { /* safe zones block enemy damage */ }
+          else if (this.shield) { this.shield = false; this.showBig('🛡️ Shield saved you!', 1200); sfx.checkpoint(); }
+          else {
+            this.health -= Math.round(20 * (this._enemyMul || 1)); this.updateHud(); sfx.oof();
+            this.vel.x = -dx / (dist || 1) * 60; this.vel.z = -dz / (dist || 1) * 60; this.vel.y = 45;
+            if (this.health <= 0) this.die(); else this.showBig('👹 Ouch! An enemy got you!', 1200);
+          }
+        }
+        n.bubble.classList.add('hidden');
+        continue;
+      }
+      if (n.p.wander !== false) {
+        n.char.position.set(n.base.x + Math.cos(a) * n.radius, n.base.y, n.base.z + Math.sin(a) * n.radius);
+        n.char.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a));
+      }
+      animateCharacter(n.char, 'idle', this.t, dt);
+      if (d < 14 && (n.p.dialog || '').trim()) {
+        const v = n.char.position.clone(); v.y += 7; v.project(this.camera);
+        if (v.z > 1) { n.bubble.classList.add('hidden'); continue; }
+        n.bubble.classList.remove('hidden');
+        n.bubble.style.left = ((v.x * 0.5 + 0.5) * w) + 'px';
+        n.bubble.style.top = ((-v.y * 0.5 + 0.5) * h) + 'px';
+      } else n.bubble.classList.add('hidden');
+    }
+  }
+  drivePhysics(dt) {
+    this.dashCd = Math.max(0, this.dashCd - dt); this.magnetT = Math.max(0, this.magnetT - dt); this.tpCd = Math.max(0, this.tpCd - dt); this.hackTpCd = Math.max(0, this.hackTpCd - dt);
+    const k = this.keys;
+    const spec = ITEM[this.vehicleId] || {};
+    const maxSpeed = spec.speed || 32, turnRate = spec.turn || 2.4;
+    const throttle = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - this.joy.y;
+    const steer = (k.KeyA || k.ArrowLeft ? 1 : 0) - (k.KeyD || k.ArrowRight ? 1 : 0) + this.joy.x;
+    const braking = k.Space ? 1 : 0;
+    const target = braking ? 0 : throttle * maxSpeed;
+    const accel = braking ? 90 : 40;
+    const d = target - this.carSpeed;
+    this.carSpeed += Math.sign(d) * Math.min(Math.abs(d), accel * dt);
+    const dir = Math.sign(this.carSpeed) || (throttle >= 0 ? 1 : -1);
+    if (Math.abs(this.carSpeed) > 0.5) this.facing += steer * turnRate * dt * dir;
+    const mx = Math.sin(this.facing) * this.carSpeed, mz = Math.cos(this.facing) * this.carSpeed;
+    this.vel.y = Math.max(this.vel.y - GRAVITY * dt, -160);
+    this.wasGround = this.onGround; this.onGround = false; this.ground = null;
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(mx), Math.abs(this.vel.y), Math.abs(mz)) * dt / 0.4));
+    const sdt = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      this.moveAxis(0, mx * sdt, 2.2); this.moveAxis(2, mz * sdt, 2.2);
+      this.moveAxis(1, this.vel.y * sdt);
+    }
+    if (this.onGround) { this.coyote = 0.12; this.jumping = false; this.usedAirJump = false; this.usedAirJump2 = false; }
+    if (this.vehicleMesh) for (const w of this.vehicleMesh.userData.wheels || []) w.rotation.x += this.carSpeed * dt * 0.8;
+    this.anim = 'idle';
+    if (this.pos.y < -300) this.die();
+    this.triggersCheck();
+  }
+  async equipGear(id, temp = false) {
+    const it = ITEM[id];
+    if (!it || it.type !== 'gear' || this.o.test) return;
+    this.me.avatar = this.me.avatar || {};
+    // Only ONE ability item at a time: equipping an ability gear unequips
+    // ability items in the other slots (shirt/hat/head/face).
+    if (it.ability) for (const sl of ['shirt', 'hat', 'head', 'face']) { const cur = ITEM[this.me.avatar[sl]]; if (cur?.ability) this.me.avatar[sl] = sl + '_none'; }
+    this.me.avatar.gear = id;
+    this.setGear();
+    this.renderInv();
+    sfx.click?.();
+    if (temp) return; // arena loaner: don't save an unowned gear to the avatar
+    try {
+      await fetch('/api/me/avatar', { method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.o.token },
+        body: JSON.stringify(this.me.avatar) });
+    } catch {}
+  }
+  onKill(name) {
+    this.kills++;
+    const feed = this.c.querySelector('.kill-feed');
+    if (feed) {
+      const d = document.createElement('div');
+      d.className = 'kill-item';
+      d.innerHTML = `<b>${esc(this.me.name)}</b> 💥 ${esc(name)}`;
+      feed.prepend(d);
+      while (feed.children.length > 5) feed.lastChild.remove();
+      setTimeout(() => d.remove(), 6000);
+    }
+    this.updateLeaderboard();
+  }
+  // ============ RIVALS ============
+  startRivals(m) {
+    this.rivals = { opponent: m.opponent, loadout: m.loadout || { primary: 'rifle', secondary: 'pistol' },
+      weapon: (m.loadout || {}).primary || 'rifle', ammo: {}, reloading: false,
+      rounds: m.rounds || {}, round: m.round || 0, p1: m.p1, p2: m.p2, roundsToWin: m.roundsToWin || 5 };
+    for (const k of Object.keys(RIVALS_WEAPONS)) this.rivals.ammo[k] = RIVALS_WEAPONS[k].mag;
+    this.c.querySelector('.inv-bar') && (this.c.querySelector('.inv-bar').style.display = 'none');
+    let el = this.c.querySelector('.rivals-hud');
+    if (!el) { el = document.createElement('div'); el.className = 'rivals-hud'; el.innerHTML = `<div class="rv-round"></div><div class="rv-hitmark">✕</div><div class="rv-bottom"><div class="rv-hp"><div class="rv-hpfill"></div></div><div class="rv-ammo"></div></div>`; this.c.appendChild(el); }
+    this.updateRivalsHUD();
+    this.sys(`🎃 Rivals vs <b>${esc(m.opponent)}</b> — first to ${this.rivals.roundsToWin} rounds!`);
+  }
+  rivalsWeapon() { return RIVALS_WEAPONS[this.rivals.weapon]; }
+  // Ability from the equipped gear item (tokens wheel prizes). Returns the
+  // ability id ('speed' | 'doublejump' | 'magnet' | 'shield' | 'fly' | 'star' | 'universal') or ''.
+  ability() { const av = this.me?.avatar || {}; for (const slot of ['gear', 'shirt', 'hat', 'head', 'face']) { const it = ITEM[av[slot]]; if (it && it.ability) return it.ability; } return ''; }
+  hasAbility(a) { const ab = this.ability(); return ab === a || (a === 'speed' && (ab === 'star' || ab === 'universal' || ab === 'tornado')) || (a === 'magnet' && (ab === 'star' || ab === 'universal')) || (a === 'doublejump' && ab === 'universal'); }
+  updateRivalsHUD() {
+    const el = this.c.querySelector('.rivals-hud'); if (!el || !this.rivals) return;
+    const r = this.rivals, me = this.me.name;
+    const a = r.rounds[r.p1] || 0, b = r.rounds[r.p2] || 0;
+    const leftFirst = r.p1 === me;
+    el.querySelector('.rv-round').innerHTML = `ROUND ${r.round} &nbsp; <b>${esc(leftFirst ? me : r.p2)}</b> ${leftFirst ? a : b} — ${leftFirst ? b : a} <b>${esc(leftFirst ? r.p2 : me)}</b>`;
+    const w = this.rivalsWeapon();
+    el.querySelector('.rv-hpfill').style.width = Math.max(0, this.health) + '%';
+    el.querySelector('.rv-ammo').textContent = this.rivals.reloading ? 'RELOADING…' : `${w.name}  ${this.rivals.ammo[this.rivals.weapon]} / ${w.mag}`;
+  }
+  showHitmarker(hs, kill) {
+    const el = this.c.querySelector('.rv-hitmark'); if (!el) return;
+    el.className = 'rv-hitmark show' + (hs ? ' hs' : '') + (kill ? ' kill' : '');
+    clearTimeout(this._hmT);
+    this._hmT = setTimeout(() => el.classList.remove('show', 'hs', 'kill'), 180);
+  }
+  rivalsTracer(to, color) {
+    const from = this.pos.clone(); from.y += 3.4;
+    const g = new THREE.BufferGeometry().setFromPoints([from, to]);
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.9 }));
+    this.scene.add(line);
+    setTimeout(() => { this.scene.remove(line); g.dispose(); }, 90);
+  }
+  fireRivals() {
+    const r = this.rivals; if (!r || this.dead || r.reloading) return;
+    const w = this.rivalsWeapon(), now = this.t;
+    if (now - (r.lastShot || -9) < w.interval) return;
+    if (r.ammo[r.weapon] <= 0) { this.rivalsReload(); return; }
+    r.lastShot = now; r.ammo[r.weapon]--;
+    const pellets = w.pellets || 1;
+    let best = null; // {player, point, hs, dmg}
+    for (let i = 0; i < pellets; i++) {
+      const dir = new THREE.Vector3();
+      this.camera.getWorldDirection(dir);
+      dir.x += (Math.random() - 0.5) * w.spread * 2; dir.y += (Math.random() - 0.5) * w.spread * 2; dir.z += (Math.random() - 0.5) * w.spread * 2;
+      dir.normalize();
+      const ray = new THREE.Raycaster(this.camera.position.clone(), dir, 0.5, w.range);
+      ray.camera = this.camera; // sprites (name tags) need raycaster.camera set, else raycast throws
+      const targets = [];
+      for (const p of this.players.values()) { p.char.updateMatrixWorld(); targets.push(p.char); }
+      const hits = ray.intersectObjects(targets, true);
+      let pHit = null, pDist = Infinity, pObj = null;
+      for (const h of hits) {
+        let o = h.object, pl = null;
+        while (o) { for (const p of this.players.values()) if (p.char === o) { pl = p; break; } if (pl || !o.parent) break; o = o.parent; }
+        if (pl && h.distance < pDist) { pDist = h.distance; pHit = h; pObj = pl; }
+      }
+      const wallHits = ray.intersectObjects([...this.meshes.values()], false);
+      const wDist = wallHits.length ? wallHits[0].distance : Infinity;
+      if (pHit && pDist < wDist) {
+        const localY = pHit.point.y - pObj.char.position.y;
+        const hs = localY > 4.6; // head region
+        const dmg = hs ? w.hs : w.dmg;
+        if (!best || dmg > best.dmg) best = { player: pObj, point: pHit.point, hs, dmg };
+        this.rivalsTracer(pHit.point, w.tracer);
+      } else if (wDist < Infinity) {
+        this.rivalsTracer(wallHits[0].point, w.tracer);
+      } else {
+        this.rivalsTracer(this.camera.position.clone().addScaledVector(dir, w.range), w.tracer);
+      }
+    }
+    sfx.shoot?.() || sfx.click?.();
+    if (best) {
+      this.send({ t: 'gearHit', id: best.player.id, dmg: best.dmg });
+      const willKill = (best.player._rhp ?? 100) - best.dmg <= 0;
+      this.showHitmarker(best.hs, willKill);
+      best.player._rhp = (best.player._rhp ?? 100) - best.dmg;
+    }
+    this.updateRivalsHUD();
+  }
+  rivalsReload() {
+    const r = this.rivals; if (!r || r.reloading || this.dead) return;
+    const w = this.rivalsWeapon();
+    if (r.ammo[r.weapon] >= w.mag) return;
+    r.reloading = true; this.updateRivalsHUD();
+    sfx.click?.();
+    setTimeout(() => { if (this.destroyed) return; r.reloading = false; r.ammo[r.weapon] = w.mag; this.updateRivalsHUD(); }, w.reload * 1000);
+  }
+  rivalsSwitch(slot) {
+    const r = this.rivals; if (!r || this.dead) return;
+    const id = slot === 1 ? r.loadout.primary : r.loadout.secondary;
+    if (!RIVALS_WEAPONS[id] || r.weapon === id) return;
+    r.weapon = id; r.reloading = false;
+    sfx.click?.(); this.updateRivalsHUD();
+  }
+  applyRivalsDamage(dmg, from) {
+    if (this.dead || !this.rivals) return;
+    this.health -= dmg; this.updateHud(); this.updateRivalsHUD();
+    sfx.oof();
+    if (this.health <= 0) {
+      this.health = 0;
+      if (this.rivals) this.rivals.noRespawn = true; // server starts next round
+      this.send({ t: 'rivalsDeath', by: from });
+      this.die();
+    }
+  }
+  onRivalsRound(m) {
+    if (!this.rivals) return;
+    this.rivals.rounds = m.rounds; this.rivals.round = m.round;
+    this.rivals.noRespawn = false;
+    this.health = 100;
+    for (const k of Object.keys(RIVALS_WEAPONS)) this.rivals.ammo[k] = RIVALS_WEAPONS[k].mag;
+    for (const p of this.players.values()) p._rhp = 100;
+    this.spawn();
+    this.updateHud(); this.updateRivalsHUD();
+    this.showBig(`ROUND ${m.round}`, 1800);
+    sfx.click?.();
+  }
+  onRivalsRoundEnd(m) {
+    if (!this.rivals) return;
+    this.rivals.rounds = m.rounds;
+    this.rivals.noRespawn = true;
+    this.updateRivalsHUD();
+    const won = m.winner === this.me.name;
+    this.showBig(won ? '✅ ROUND WON' : '❌ ROUND LOST', 2200);
+    won ? sfx.win() : sfx.oof();
+  }
+  startTixRain(m) {
+    const amount = m.amount || 50, duration = (m.duration || 30) * 1000;
+    if (this.tixRain) { this.tixRain.until = Date.now() + duration; this.tixRain.amount = amount; return; }
+    const rain = this.tixRain = { amount, until: Date.now() + duration, tickets: [], lastSpawn: 0 };
+    this.sys(`🌧️ FunTix rain! Catch tickets for +${amount} each!`);
+    sfx.coin();
+    const ticketGeo = new THREE.PlaneGeometry(1.2, 0.7);
+    const ticketMat = new THREE.MeshBasicMaterial({ color: '#ffd400', side: THREE.DoubleSide });
+    rain.spawnTick = () => {
+      if (!this.tixRain || Date.now() > rain.until) { this.stopTixRain(); return; }
+      const now = Date.now();
+      if (now - rain.lastSpawn > 400 && rain.tickets.length < 40) {
+        rain.lastSpawn = now;
+        const t = new THREE.Mesh(ticketGeo, ticketMat);
+        const r = 25;
+        t.position.set(this.pos.x + (Math.random() - 0.5) * r * 2, this.pos.y + 20 + Math.random() * 10, this.pos.z + (Math.random() - 0.5) * r * 2);
+        t.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+        t.userData.vy = 6 + Math.random() * 4;
+        t.userData.spin = (Math.random() - 0.5) * 6;
+        this.scene.add(t); rain.tickets.push(t);
+      }
+      requestAnimationFrame(rain.spawnTick);
+    };
+    rain.spawnTick();
+  }
+  stopTixRain() {
+    const rain = this.tixRain; if (!rain) return;
+    for (const t of rain.tickets) { this.scene.remove(t); t.geometry.dispose(); }
+    this.tixRain = null;
+  }
+  initVoice() {
+    if (this.voice) return;
+    this.voice = new VoiceChat(this);
+    // Mic button in HUD
+    const btn = document.createElement('button');
+    this.voiceBtn = btn;
+    btn.className = 'voice-btn';
+    btn.innerHTML = '<span class="ic">' + icons.mic + '</span>';
+    btn.title = 'Voice chat (proximity)';
+    btn.onclick = async () => {
+      const on = await this.voice.toggle();
+      btn.classList.toggle('on', on);
+    };
+    this.c.appendChild(btn);
+    // Volume updates
+    setInterval(() => this.voice.updateVolumes(), 500);
+  }
+  updateSoccer(dt) {
+    // Ball physics: find ball, push when player touches
+    if (!this.ballMesh) {
+      for (const [id, m] of this.meshes) {
+        if (m.userData.part.k === 'ball') { this.ballMesh = m; this.ballVel = new THREE.Vector3(); break; }
+      }
+    }
+    if (this.ballMesh) {
+      const b = this.ballMesh;
+      // Player kick
+      const d = b.position.distanceTo(this.pos);
+      if (d < 3) {
+        const dir = b.position.clone().sub(this.pos).normalize();
+        this.ballVel.add(dir.multiplyScalar(20 * dt));
+        if (!this.lastKick || Date.now() - this.lastKick > 500) {
+          this.lastKick = Date.now(); sfx.coin();
+        }
+      }
+      // Friction + gravity
+      this.ballVel.multiplyScalar(1 - 2 * dt);
+      b.position.add(this.ballVel.clone().multiplyScalar(dt));
+      if (b.position.y > 1) b.position.y -= 10 * dt;
+      if (b.position.y < 0.75) { b.position.y = 0.75; this.ballVel.y = 0; }
+      // Goal detection (check triggers)
+      for (const [id, m] of this.meshes) {
+        const p = m.userData.part;
+        if (p.k === 'score' && b.position.distanceTo(m.position) < 3) {
+          if (!this.lastGoal || Date.now() - this.lastGoal > 3000) {
+            this.lastGoal = Date.now();
+            this.showBig(`⚽ GOAL for ${p.team}!`, 3000);
+            sfx.win(); confetti(this.c);
+            b.position.set(0, 1, 0); this.ballVel.set(0, 0, 0);
+            this.send({ t: 'goal', team: p.team });
+          }
+        }
+      }
+    }
+  }
+  updateMystery(dt) {
+    if (!this.cluesFound) this.cluesFound = new Set();
+    // Check clue pickups
+    for (const [id, m] of this.meshes) {
+      const p = m.userData.part;
+      if (p.k === 'clue' && !this.cluesFound.has(id)) {
+        if (m.position.distanceTo(this.pos) < 3) {
+          this.cluesFound.add(id); m.visible = false;
+          this.showBig(`🔍 Found clue! (${this.cluesFound.size}/5)`, 2000);
+          sfx.coin();
+          if (this.cluesFound.size >= 5) {
+            this.showBig('🎉 Mystery solved! You found all clues!', 4000);
+            sfx.win(); confetti(this.c);
+            this.send({ t: 'win' });
+          }
+        }
+      }
+    }
+  }
+  updateGarden(dt) {
+    if (!this.gardenPlots) this.gardenPlots = new Map();
+    // Click plot to plant/harvest (via trigger check)
+    for (const [id, m] of this.meshes) {
+      const p = m.userData.part;
+      if (p.k === 'plot') {
+        const state = this.gardenPlots.get(id) || { stage: 0, timer: 0 };
+        if (state.stage > 0 && state.stage < 3) {
+          state.timer += dt;
+          if (state.timer > 10) { state.stage++; state.timer = 0; this.gardenPlots.set(id, state); this.updatePlotVisual(m, state); }
+        }
+        // Proximity + jump to interact (simple)
+        if (m.position.distanceTo(this.pos) < 4 && this.keys['e'] && !state.cd) {
+          state.cd = true; setTimeout(() => state.cd = false, 1000);
+          if (state.stage === 0) {
+            state.stage = 1; state.timer = 0;
+            this.showBig('🌱 Planted!', 1500); sfx.coin();
+          } else if (state.stage === 3) {
+            state.stage = 0; state.timer = 0;
+            this.showBig('🌻 Harvested! +25 FunTix', 2000); sfx.win();
+            this.send({ t: 'scriptTix', amount: 25 });
+          }
+          this.gardenPlots.set(id, state); this.updatePlotVisual(m, state);
+        }
+      }
+    }
+  }
+  updatePlotVisual(mesh, state) {
+    // Clear old plant
+    if (mesh.userData.plant) { mesh.remove(mesh.userData.plant); mesh.userData.plant = null; }
+    if (state.stage === 0) return;
+    const colors = ['#7cb342', '#9ccc65', '#ffeb3b'];
+    const sizes = [0.5, 1, 1.5];
+    const plant = new THREE.Mesh(
+      new THREE.SphereGeometry(sizes[state.stage - 1], 10, 8),
+      new THREE.MeshStandardMaterial({ color: colors[state.stage - 1] })
+    );
+    plant.position.y = 1;
+    mesh.add(plant); mesh.userData.plant = plant;
+  }
+  showNews(b) {
+    if (typeof b === 'string') b = { type: 'video', video: b, title: 'Breaking News' };
+    if (!b || document.querySelector('.news-overlay')) return;
+    const ov = document.createElement('div');
+    ov.className = 'news-overlay news-glitch';
+    ov.innerHTML = `<div class="news-static"></div><div class="news-glitch-text">📡 SIGNAL INTERRUPTED</div>`;
+    this.c.appendChild(ov);
+    const close = () => { try { speechSynthesis.cancel(); } catch {} ov.remove(); };
+    setTimeout(() => {
+      if (this.destroyed) { ov.remove(); return; }
+      ov.classList.remove('news-glitch');
+      if (b.type === 'live' && b.script) {
+        ov.innerHTML = `
+          <div class="news-frame">
+            <div class="news-banner">📡 FUNTOPIA NEWS LIVE</div>
+            <div class="news-live-stage"><canvas class="news-anchor-canvas" width="400" height="400"></canvas></div>
+            <div class="news-lower3rd"><b>${esc(b.title)}</b><div class="news-script">${esc(b.script)}</div></div>
+          </div>`;
+        let talking = true, spoken = false;
+        const doSpeak = () => {
+          if (spoken) return; spoken = true;
+          try {
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(b.script);
+            const vs = speechSynthesis.getVoices();
+            const v = vs.find(v => v.name === b.voice) || vs.find(v => v.lang.startsWith('en'));
+            if (v) u.voice = v;
+            let closed = false;
+            const finish = () => { if (closed) return; closed = true; talking = false; setTimeout(() => { if (ov.isConnected) close(); }, 1500); };
+            u.onend = finish; u.onerror = finish;
+            const estMs = Math.max(8000, (b.script.length / 14) * 1000 + 4000);
+            setTimeout(() => { if (ov.isConnected) finish(); }, estMs);
+            speechSynthesis.speak(u);
+          } catch {}
+        };
+        const unlockFn = () => doSpeak();
+        document.addEventListener('pointerdown', unlockFn, { once: true });
+        const origClose = close;
+        close = () => { document.removeEventListener('pointerdown', unlockFn); origClose(); };
+        try {
+          const canvas = ov.querySelector('.news-anchor-canvas');
+          const av = b.anchor === 'bot' ? NEWSBOY_AVATAR : (b.avatar || this.me.avatar || NEWSBOY_AVATAR);
+          const r = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+          r.setSize(420, 420);
+          const sc = new THREE.Scene();
+          const studio = buildNewsStudio(THREE); sc.add(studio.group);
+          const ch = buildChar(av); ch.position.set(0, 0, 0); sc.add(ch);
+          const cam = new THREE.PerspectiveCamera(32, 1, 0.1, 100);
+          cam.position.set(0, 5.2, 13); cam.lookAt(0, 3.5, 0);
+          sc.add(new THREE.AmbientLight(0xffffff, 0.9));
+          const key = new THREE.DirectionalLight(0xffffff, 1.0); key.position.set(5, 10, 8); sc.add(key);
+          let last = performance.now();
+          const tick = (now) => {
+            if (!ov.isConnected) return; requestAnimationFrame(tick);
+            const dt = Math.min(0.05, (now - last) / 1000); last = now;
+            const t = now / 1000; studio.update(dt);
+            ch.rotation.y = Math.sin(t * 0.6) * 0.12;
+            if (talking) ch.position.y = Math.abs(Math.sin(t * 9)) * 0.1;
+            r.render(sc, cam);
+          };
+          requestAnimationFrame(tick);
+        } catch {}
+        doSpeak();
+      } else if (b.video) {
+        ov.innerHTML = `
+          <div class="news-frame">
+            <div class="news-banner">📡 FUNTOPIA NEWS</div>
+            <div class="news-video-wrap">
+              <video class="news-video-el" src="${esc(b.video)}" playsinline></video>
+              <button class="news-unmute">🔊 Tap for sound</button>
+            </div>
+            <div class="news-lower3rd"><b>${esc(b.title)}</b></div>
+          </div>`;
+        const v = ov.querySelector('video');
+        const unmute = ov.querySelector('.news-unmute');
+        unmute.onclick = () => { v.muted = false; v.play().catch(() => {}); unmute.remove(); };
+        v.muted = true; v.play().catch(() => {});
+        v.onended = close;
+      } else close();
+    }, 2600);
+  }
+  onTourneyEnd(m) {
+    const wasRivals = !!this.rivals;
+    this.rivals = null; this.tourney = null;
+    this.c.querySelector('.rivals-hud')?.remove();
+    this.c.querySelector('.tourney-hud')?.remove();
+    const won = m.winner === this.me.name;
+    const score = m.rounds ? ` (${m.rounds[this.me.name] || 0}–${m.rounds[Object.keys(m.rounds).find(k => k !== this.me.name)] || 0})` : '';
+    this.showBig(won ? '🏆 YOU WIN THE MATCH!' : `😞 ${esc(m.winner)} wins${score}`, 5000);
+    sfx.win();
+    if (wasRivals) this.sys(won ? '🎃 Tournament win recorded! +1 on the leaderboard.' : `🎃 ${esc(m.winner)} takes the match.`);
+  }
+  toggleMenu(v) {
+    const show = v ?? this.escMenu.classList.contains('hidden');
+    this.escMenu.classList.toggle('hidden', !show);
+    if (show) { if (document.pointerLockElement) document.exitPointerLock(); this.keys = {}; this.renderEscPlayers(); }
+  }
+  renderEscPlayers() {
+    const list = [this.me, ...this.players.values()];
+    this.c.querySelector('.esc-players').innerHTML = list.map(p => `<div class="esc-player"><img src="${avatarImage(p.avatar)}"><span>${badgeIcon(p.badge)}${esc(displayNameOf(p))}</span></div>`).join('');
+  }
+  isStaff() { return ['owner', 'admin', 'moderator'].includes(this.me.role); }
+  async fpApi(method, path, body) {
+    const r = await fetch(path, { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + this.o.token }, body: body ? JSON.stringify(body) : undefined });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Failed');
+    return j;
+  }
+  toggleFunPanel(show) {
+    if (!this.isStaff()) return;
+    const p = this.c.querySelector('.funpanel');
+    if (!p) return;
+    const willShow = show === undefined ? p.classList.contains('hidden') : show;
+    p.classList.toggle('hidden', !willShow);
+    if (willShow) this.renderFunPanel();
+  }
+  renderFunPanel() {
+    const box = this.c.querySelector('.fp-players');
+    if (!box) return;
+    const list = [...this.players.values()];
+    box.innerHTML = list.length ? list.map(p => `<div class="fp-player"><img src="${avatarImage(p.avatar)}"><span class="fp-name">${esc(displayNameOf(p))}</span>
+      <button class="btn-secondary" data-fp="tp" data-id="${p.id}" title="Teleport to them">TP</button>
+      <button class="btn-secondary" data-fp="bring" data-id="${p.id}" title="Teleport them to you">Bring</button>
+      <button class="btn-secondary" data-fp="freeze" data-id="${p.id}" title="Freeze/unfreeze them">${this.frozenIds?.has(p.id) ? 'Unfreeze' : 'Freeze'}</button>
+      <button class="btn-secondary" data-fp="mute" data-id="${p.id}" title="Mute 10 min">Mute</button>
+      <button class="btn-secondary" data-fp="unmute" data-id="${p.id}" title="Unmute them">Unmute</button>
+      <button class="btn-secondary" data-fp="tospawn" data-id="${p.id}" title="Teleport them to spawn">To Spawn</button>
+      <button class="btn-secondary" data-fp="slap" data-id="${p.id}" title="Slap them">👋 Slap</button>
+      <button class="btn-secondary" data-fp="launch" data-id="${p.id}" title="Launch them into the sky">🚀 Launch</button>
+      <button class="btn-secondary" data-fp="dance" data-id="${p.id}" title="Make them dance">💃 Dance</button>
+      <button class="btn-secondary" data-fp="dm" data-id="${p.id}" title="Send them a staff DM">📩 DM</button>
+      ${['owner', 'admin'].includes(this.me.role) ? `<button class="btn-secondary" data-fp="gift" data-id="${p.id}" title="Give FunTix"><span class="ic">${icons.gift}</span></button>` : ''}
+      ${this.me.role === 'owner' ? `<button class="btn-secondary" data-fp="take" data-id="${p.id}" title="Take FunTix from them">💸 Take Tix</button>
+      <button class="btn-secondary" data-fp="giveitem" data-id="${p.id}" title="Give them any item">🎁 Give Item</button>
+      <button class="btn-secondary" data-fp="resetav" data-id="${p.id}" title="Reset their avatar">🔄 Reset Avatar</button>` : ''}
+      <button class="btn-secondary" data-fp="kick" data-id="${p.id}" title="Kick from server">Kick</button>
+      <button class="btn-danger" data-fp="ban" data-id="${p.id}" title="Start a ban (needs a second staff to confirm)">Ban</button>
+    </div>`).join('') : '<p class="muted small">No other players here.</p>';
+    box.querySelectorAll('[data-fp]').forEach(b => b.onclick = () => this.funPanelAction(b.dataset.fp, b.dataset.id));
+  }
+  async funPanelAction(a, id) {
+    const p = this.players.get(id);
+    if (!p) return;
+    try {
+      if (a === 'tp') { this.pos.copy(p.char.position); this.pos.y += 4; this.vel.set(0, 0, 0); this.sys(`Teleported to ${p.name}`); }
+      else if (a === 'bring') {
+        await this.fpApi('POST', '/api/mod/send', { kind: 'bring', name: p.name, x: +this.pos.x.toFixed(2), y: +this.pos.y.toFixed(2), z: +this.pos.z.toFixed(2) });
+        this.sys(`Brought ${p.name} to you`);
+      }
+      else if (a === 'freeze') {
+        const on = !this.frozenIds?.has(p.id);
+        await this.fpApi('POST', '/api/mod/send', { kind: 'freeze', name: p.name, on });
+        (this.frozenIds ||= new Set())[on ? 'add' : 'delete'](p.id);
+        this.sys(`${on ? 'Froze' : 'Unfroze'} ${p.name}`); this.renderFunPanel();
+      }
+      else if (a === 'gift') {
+        const amt = prompt(`Give how many FunTix to ${p.name}? (1-10000)`, '100');
+        if (amt == null) return;
+        const r = await this.fpApi('POST', '/api/admin/funtix', { name: p.name, amount: +amt });
+        this.sys(`Gave ${p.name} ${amt} FunTix 🎉`);
+      }
+      else if (a === 'mute') { await this.fpApi('POST', '/api/mod/mute', { name: p.name, minutes: 10, reason: 'Muted in-game via FunPanel' }); this.sys(`Muted ${p.name} for 10 min`); }
+      else if (a === 'unmute') { await this.fpApi('POST', '/api/mod/unmute', { name: p.name }); this.sys(`Unmuted ${p.name}`); }
+      else if (a === 'tospawn') { await this.fpApi('POST', '/api/mod/send', { kind: 'tospawn', name: p.name }); this.sys(`Sent ${p.name} to spawn`); }
+      else if (a === 'slap') { await this.fpApi('POST', '/api/mod/send', { kind: 'slap', name: p.name }); this.sys(`Slapped ${p.name} 👋`); }
+      else if (a === 'launch') { await this.fpApi('POST', '/api/mod/send', { kind: 'launch', name: p.name }); this.sys(`Launched ${p.name} 🚀`); }
+      else if (a === 'dance') { await this.fpApi('POST', '/api/mod/send', { kind: 'emote', name: p.name, emote: 'dance' }); this.sys(`Made ${p.name} dance 💃`); }
+      else if (a === 'dm') { const text = prompt(`Staff DM to ${p.name}:`, ''); if (text == null || !text.trim()) return; await this.fpApi('POST', '/api/mod/send', { kind: 'dm', name: p.name, text: text.trim() }); this.sys(`DM sent to ${p.name} 📩`); }
+      else if (a === 'take') { const amt = prompt(`Take how many FunTix from ${p.name}? (1-100000)`, '100'); if (amt == null) return; await this.fpApi('POST', `/api/admin/users/${encodeURIComponent(p.name)}/command`, { command: 'take_tix', amount: +amt }); this.sys(`Took ${amt} FunTix from ${p.name} 💸`); }
+      else if (a === 'giveitem') { const item = prompt(`Give ${p.name} which item id? (e.g. gear_swiftboots)`, 'gear_swiftboots'); if (item == null || !item.trim()) return; await this.fpApi('POST', `/api/admin/users/${encodeURIComponent(p.name)}/command`, { command: 'grant_item', item: item.trim() }); this.sys(`Gave ${item.trim()} to ${p.name} 🎁`); }
+      else if (a === 'resetav') { if (!confirm(`Reset ${p.name}'s avatar to default?`)) return; await this.fpApi('POST', `/api/admin/users/${encodeURIComponent(p.name)}/command`, { command: 'reset_avatar' }); this.sys(`Reset ${p.name}'s avatar 🔄`); }
+      else if (a === 'kick') { if (!confirm(`Kick ${p.name} from the server?`)) return; await this.fpApi('POST', '/api/mod/kick', { name: p.name, reason: 'Kicked in-game via FunPanel' }); this.sys(`Kicked ${p.name}`); }
+      else if (a === 'ban') {
+        if (!confirm(`Start a BAN for ${p.name}? A second staff member must confirm it on the Moderation page.`)) return;
+        const r = await this.fpApi('POST', '/api/mod/ban/initiate', { name: p.name, reason: 'Banned in-game via FunPanel', duration: 0 });
+        this.sys(r.message || `Ban started for ${p.name}`);
+        alert((r.message || 'Ban initiated') + '\n\nA second staff member must confirm it on the Moderation page.');
+      }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  // ---------- FunPanel: Self Powers ----------
+  fpSelfAction(a, btn) {
+    const on = (flag, label) => { this[flag] = !this[flag]; if (btn) btn.textContent = `${label}: ${this[flag] ? 'ON' : 'OFF'}`; return this[flag]; };
+    if (a === 'god') { on('fpGod', '🛡️ God'); this.sys(`God mode ${this.fpGod ? 'ON — invincible' : 'OFF'}`); }
+    else if (a === 'superjump') { on('fpSuperJump', '🚀 Super Jump'); this.sys(`Super jump ${this.fpSuperJump ? 'ON' : 'OFF'}`); }
+    else if (a === 'heal') { this.health = 100; this.updateHud(); this.sys('Healed to full ❤️'); }
+    else if (a === 'big') { const v = on('fpBig', '🔍 Big'); if (v) this.fpSmall = false; this.applyFpScale(); }
+    else if (a === 'small') { const v = on('fpSmall', '🔎 Small'); if (v) this.fpBig = false; this.applyFpScale(); }
+    else if (a === 'rainbow') { on('fpRainbow', '🌈 Rainbow'); this.sys(`Rainbow ${this.fpRainbow ? 'ON' : 'OFF'}`); }
+    else if (a === 'tprand') { const ps = [...this.players.values()]; if (!ps.length) return this.sys('No other players to teleport to'); const p = ps[Math.floor(Math.random() * ps.length)]; this.pos.copy(p.char.position); this.pos.y += 4; this.vel.set(0, 0, 0); this.sys(`Teleported to ${p.name}`); }
+    else if (a === 'tpspot') { this.pos.set((Math.random() - 0.5) * 80, 10, (Math.random() - 0.5) * 80); this.vel.set(0, 0, 0); this.sys('Teleported to a random spot 📍'); }
+    else if (a === 'spin') { this.emote = 'spin'; this.emoteT = 2; this.sys('Spinning! 🌀'); }
+    else if (a === 'nightvision') { on('fpNightVision', '🔦 Night Vision'); this.applyFpLight(); }
+    else if (a === 'slowmo') { const v = on('fpSlowMo', '🐢 Slow-Mo'); if (v) this.fpFastFwd = false; this.sys(`Slow-mo ${this.fpSlowMo ? 'ON' : 'OFF'}`); }
+    else if (a === 'fastfwd') { const v = on('fpFastFwd', '⏩ Fast-Forward'); if (v) this.fpSlowMo = false; this.sys(`Fast-forward ${this.fpFastFwd ? 'ON' : 'OFF'}`); }
+    else if (a === 'flyspeed') { on('fpFlySpeed', '💨 Fly Speed'); this.sys(`Fly speed ${this.fpFlySpeed ? '2x' : 'normal'}`); }
+    else if (a === 'nodash') { on('fpNoDash', '♾️ No Dash Cooldown'); this.sys(`Dash cooldown ${this.fpNoDash ? 'removed' : 'restored'}`); }
+    else if (a === 'dbljump') { on('fpDblJump', '☁️ Always Double Jump'); this.sys(`Double jump ${this.fpDblJump ? 'always on' : 'normal'}`); }
+    else if (a === 'reset') { this.die(); this.sys('Character reset 💀'); }
+    else if (a === 'clearfx') { this.fpGod = this.fpSuperJump = this.fpBig = this.fpSmall = this.fpRainbow = this.fpNightVision = this.fpSlowMo = this.fpFastFwd = this.fpFlySpeed = this.fpNoDash = this.fpDblJump = false; this.applyFpScale(); this.applyFpLight(); this.sys('All FunPanel effects cleared 🧹'); this.renderFunPanel(); }
+  }
+  applyFpScale() {
+    if (!this.char) return;
+    const sc = this.fpBig ? 1.5 : this.fpSmall ? 0.6 : 1;
+    this.char.scale.setScalar(sc);
+  }
+  applyFpLight() {
+    if (!this.renderer) return;
+    this.renderer.toneMappingExposure = this.fpNightVision ? 2.2 : 1;
+  }
+  // ---------- FunPanel: World ----------
+  fpWorldAction(a, btn) {
+    const on = (flag, label) => { this[flag] = !this[flag]; if (btn) btn.textContent = `${label}: ${this[flag] ? 'ON' : 'OFF'}`; return this[flag]; };
+    if (a === 'daynight') { on('fpNight', '🌙 Night'); this.applyFpSky(); }
+    else if (a === 'fog') { on('fpFog', '🌫️ Fog'); this.applyFpSky(); }
+    else if (a === 'lowg') { const v = on('fpLowG', '🌕 Low Gravity'); if (v) this.fpHighG = false; this.sys(`Low gravity ${this.fpLowG ? 'ON — moon jump!' : 'OFF'}`); }
+    else if (a === 'highg') { const v = on('fpHighG', '⬇️ High Gravity'); if (v) this.fpLowG = false; this.sys(`High gravity ${this.fpHighG ? 'ON — heavy!' : 'OFF'}`); }
+    else if (a === 'rain') { on('fpRain', '🌧️ Rain'); this.applyFpRain(); }
+    else if (a === 'confetti') { if (!reduceMotion()) confetti(this.c); this.sys('🎉 Confetti!'); }
+    else if (a === 'fireworks') { this.fpFireworks(); }
+    else if (a === 'skycolor') { this._skyIdx = ((this._skyIdx || 0) + 1) % 6; this.applyFpSky(); this.sys('Sky color changed 🎨'); }
+  }
+  applyFpSky() {
+    if (!this.scene) return;
+    const skies = ['#87ceeb', '#ff9a3c', '#1a1a2e', '#ff6b9d', '#00e5ff', '#7b2ff7'];
+    const sky = skies[this._skyIdx || 0];
+    this.scene.background = new THREE.Color(this.fpNight ? '#0a0a1a' : sky);
+    this.scene.fog = this.fpFog ? new THREE.Fog(this.fpNight ? 0x0a0a1a : 0x87ceeb, 20, 90) : null;
+  }
+  applyFpRain() {
+    let r = this.c.querySelector('.fp-rain');
+    if (this.fpRain && !r) { r = document.createElement('div'); r.className = 'fp-rain'; r.innerHTML = Array.from({ length: 40 }, (_, i) => `<i style="left:${(i * 2.5) % 100}%;animation-delay:${(i % 10) * 0.09}s"></i>`).join(''); this.c.appendChild(r); }
+    else if (!this.fpRain && r) r.remove();
+  }
+  fpFireworks() {
+    if (!this.scene || !this.pos) return;
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        const c = new THREE.Color().setHSL(Math.random(), 0.9, 0.6);
+        const g = new THREE.Group();
+        for (let j = 0; j < 24; j++) {
+          const m = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 6), new THREE.MeshBasicMaterial({ color: c }));
+          const a = Math.random() * Math.PI * 2, b = Math.random() * Math.PI;
+          m.position.set(this.pos.x + Math.sin(a) * Math.cos(b) * 8, this.pos.y + 12 + Math.sin(b) * 6, this.pos.z + Math.cos(a) * Math.cos(b) * 8);
+          g.add(m);
+        }
+        this.scene.add(g);
+        setTimeout(() => { this.scene.remove(g); }, 1200);
+      }, i * 250);
+    }
+    this.sys('🎆 Fireworks!');
+  }
+  // ---------- FunPanel: Everyone (bulk) ----------
+  async fpBulkAction(a) {
+    const ps = [...this.players.values()];
+    if (!ps.length) return this.sys('No other players here');
+    try {
+      if (a === 'freezeall' || a === 'unfreezeall') {
+        const on = a === 'freezeall';
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'freeze', name: p.name, on });
+        this.sys(`${on ? 'Froze' : 'Unfroze'} all ${ps.length} players`);
+      } else if (a === 'bringall') {
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'bring', name: p.name, x: +this.pos.x.toFixed(2), y: +this.pos.y.toFixed(2), z: +this.pos.z.toFixed(2) });
+        this.sys(`Brought all ${ps.length} players to you 🧲`);
+      } else if (a === 'muteall' || a === 'unmuteall') {
+        const path = a === 'muteall' ? '/api/mod/mute' : '/api/mod/unmute';
+        for (const p of ps) await this.fpApi('POST', path, { name: p.name, minutes: 10, reason: 'FunPanel bulk action' });
+        this.sys(`${a === 'muteall' ? 'Muted' : 'Unmuted'} all ${ps.length} players`);
+      } else if (a === 'giftall') {
+        const amt = prompt(`Give how many FunTix to EVERYONE? (1-10000)`, '100');
+        if (amt == null) return;
+        for (const p of ps) await this.fpApi('POST', '/api/admin/funtix', { name: p.name, amount: +amt });
+        this.sys(`Gave all ${ps.length} players ${amt} FunTix 🎁`);
+      } else if (a === 'danceall') {
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'emote', name: p.name, emote: 'dance' });
+        this.sys(`Made all ${ps.length} players dance 💃`);
+      } else if (a === 'launchall') {
+        for (const p of ps) await this.fpApi('POST', '/api/mod/send', { kind: 'launch', name: p.name });
+        this.sys(`Launched all ${ps.length} players 🚀`);
+      }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  // ---------- FunPanel: Fun (broadcast effects) ----------
+  async fpFunAction(a) {
+    try {
+      if (a === 'confetti') { if (!reduceMotion()) confetti(this.c); this.sys('🎉 Confetti for you!'); }
+      else if (a === 'dance') { this.emote = 'dance'; this.emoteT = 5; this.sys('💃 You are dancing!'); }
+      else if (a === 'shake') { document.body.classList.add('glitching'); setTimeout(() => document.body.classList.remove('glitching'), 1500); this.sys('📳 Screen shake!'); }
+      else if (a === 'tixrain') { await this.fpApi('POST', '/api/admin/site/command', { command: 'funtix_rain', amount: 50 }); this.sys('🌧️ FunTix rain started!'); }
+      else if (a === 'glitchall') { const r = await this.fpApi('POST', '/api/mod/glitch-all', {}); this.sys(`👾 Glitched every screen in ${r.rooms || 0} game(s)!`); }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  // ---------- FunPanel: Server ----------
+  async fpServerAction(a, btn) {
+    try {
+      if (a === 'clearannounce') { await this.fpApi('POST', '/api/admin/site/command', { command: 'clear_announce' }); this.sys('Announcement cleared 🧹'); }
+      else if (a === 'maintenance') { this.fpMaintenance = !this.fpMaintenance; await this.fpApi('POST', '/api/admin/site/command', { command: 'maintenance', on: this.fpMaintenance }); if (btn) btn.textContent = `🔧 Maintenance: ${this.fpMaintenance ? 'ON' : 'OFF'}`; this.sys(`Maintenance mode ${this.fpMaintenance ? 'ON' : 'OFF'}`); }
+      else if (a === 'playercount') { const r = await this.fpApi('GET', '/api/player-count'); this.sys(`👥 ${r.count || 0} players online right now`); }
+      else if (a === 'modlog') { const r = await this.fpApi('GET', '/api/mod/log'); const lines = (r || []).slice(0, 8).map(x => `${x.by || '?'}: ${x.action || ''} ${x.target || ''}`).join('\n'); alert(lines || 'No mod actions logged yet.'); }
+    } catch (e) { this.sys('FunPanel: ' + e.message); }
+  }
+  updateLeaderboard() {
+    const list = [this.me, ...this.players.values()];
+    this.lbList.innerHTML = list.map((p, i) => `<div class="lb-row ${i === 0 ? 'me' : ''}">${chatTag(p)}${badgeIcon(p.badge)}${esc(p.name)}${vtag(p.name)}${i === 0 && this.kills ? ` <span class="lb-kills">💀${this.kills}</span>` : ''}</div>`).join('');
+  }
+  addChat(html) {
+    const d = document.createElement('div'); d.className = 'chat-line'; d.innerHTML = html;
+    this.chatLog.appendChild(d);
+    while (this.chatLog.children.length > 80) this.chatLog.firstChild.remove();
+    this.chatLog.scrollTop = this.chatLog.scrollHeight;
+  }
+  sys(text) { this.addChat(`<span class="chat-sys">${esc(text)}</span>`); }
+  showBig(text, ms = 2000) {
+    this.bigMsg.textContent = text; this.bigMsg.classList.add('show');
+    clearTimeout(this.bigT); this.bigT = setTimeout(() => this.bigMsg.classList.remove('show'), ms);
+  }
+  // A Glitch Token spin hacks every game: the whole screen glitches and a
+  // dreadful image of the hacker's avatar stares out at everyone.
+  showGlitch(m) {
+    const name = m.name || 'Someone';
+    let img = '';
+    try { img = avatarImage(m.avatar || {}, 'full'); } catch {}
+    const ov = document.createElement('div');
+    ov.className = 'glitch-overlay';
+    const dread = img
+      ? `<img src="${img}" alt="">`
+      : `<div class="glitch-dread-emoji">👾</div>`;
+    ov.innerHTML = `<div class="glitch-static"></div><div class="glitch-tear"></div><div class="glitch-dread">${dread}<div class="glitch-name">👾 ${esc(name).toUpperCase()} HAS HACKED THE GAME 👾</div><div class="glitch-sub">YOUR SCREEN HAS BEEN GLITCHED</div><div class="glitch-sub2">THE HACKER IS IN CONTROL</div></div>`;
+    this.c.appendChild(ov);
+    document.body.classList.add('glitching');
+    sfx.win();
+    setTimeout(() => { ov.remove(); document.body.classList.remove('glitching'); }, 6000);
+  }
+  sendChat(text) {
+    text = text.trim(); if (!text) return;
+    const jm = text.match(/^\/jam(?:\s+(\w+))?\s*$/i);
+    if (jm) { this.doJam((jm[1] || '').toLowerCase()); return; }
+    const em = text.match(/^\/e\s+(\w+)/i);
+    if (em) { const e = em[1].toLowerCase(); if (EMOTE_TIMES[e]) { this.doEmote(e); } else { this.sys('Emotes: ' + EMOTES.map(x => '/e ' + x.id).join(', ')); } return; }
+    if (this.o.test || !this.ws) { this.onChat({ id: 0, name: this.me.name, displayName: this.me.displayName || '', text, badge: this.me.badge }); return; }
+    this.send({ t: 'chat', text });
+  }
+  doEmote(e) {
+    if (!EMOTE_TIMES[e]) return;
+    this.emote = e; this.emoteT = EMOTE_TIMES[e];
+    this.send({ t: 'emote', e });
+    this.hidePickers();
+  }
+  doJam(arg) {
+    if (!arg) { this.sys('🎵 Jam tracks: ' + JAM_TRACKS.map((t, i) => `${i + 1}=${t.icon}${t.name}`).join('  ') + ' — /jam 1 (or /jam stop)'); return; }
+    if (arg === 'stop' || arg === 'off') { stopJam(); this.send({ t: 'jam', track: '' }); this.sys('🎵 Jam stopped'); this.hidePickers(); return; }
+    const tr = JAM_TRACKS.find(t => t.id === arg) || JAM_TRACKS[parseInt(arg, 10) - 1];
+    if (!tr) { this.sys('🎵 Unknown track — /jam to list'); return; }
+    if (startJam(tr.id)) { this.send({ t: 'jam', track: tr.id }); this.sys(`🎵 Now jamming: ${tr.icon} ${tr.name}`); }
+    this.hidePickers();
+  }
+  togglePicker(sel, other) {
+    const p = this.c.querySelector(sel), o = this.c.querySelector(other);
+    if (o) o.classList.add('hidden');
+    if (p) p.classList.toggle('hidden');
+  }
+  hidePickers() { for (const s of ['.emote-picker', '.jam-picker']) this.c.querySelector(s)?.classList.add('hidden'); }
+  onChat(m) {
+    if (!m.system) for (const fn of (this._scriptState?.chatFns || [])) { try { fn(m.name, m.text); } catch (e) { console.warn('onChat script error:', e); } }
+    if (m.system) return this.sys(m.text);
+    const color = nameColor(m.name);
+    const time = (() => { try { return localStorage.getItem('ff_chat_time') === '1' ? `<span class="chat-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> ` : ''; } catch { return ''; } })();
+    if (m.text.startsWith('/me ')) { this.addChat(`${time}<i>* ${esc(displayNameOf(m))} ${esc(m.text.slice(4))}</i>`); return; }
+    this.addChat(`${time}${chatTag(m)}<b style="color:${color}">${badgeIcon(m.badge)}${esc(displayNameOf(m))}${vtag(m.name)}:</b> ${esc(m.text)}`);
+    sfx.chat();
+    const ch = m.id === this.myId || m.id === 0 ? this.char : this.players.get(m.id)?.char;
+    if (ch) this.bubble(ch, m.text);
+  }
+  bubble(ch, text) {
+    if (ch.userData.bubble) ch.remove(ch.userData.bubble);
+    const c = document.createElement('canvas'); c.width = 512; c.height = 160;
+    const g = c.getContext('2d');
+    g.font = '36px Arial'; const lines = wrap(g, text, 460).slice(0, 3);
+    const h = 30 + lines.length * 40;
+    g.fillStyle = 'rgba(255,255,255,0.95)'; g.beginPath(); g.roundRect(6, 160 - h - 20, 500, h, 22); g.fill();
+    g.beginPath(); g.moveTo(240, 140); g.lineTo(256, 158); g.lineTo(272, 140); g.fill();
+    g.fillStyle = '#222'; g.textAlign = 'center';
+    lines.forEach((l, i) => g.fillText(l, 256, 160 - h - 20 + 46 + i * 40));
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+    s.scale.set(9, 2.8, 1); s.position.y = 8.6; s.renderOrder = 1000;
+    ch.add(s); ch.userData.bubble = s; ch.userData.bubbleT = 8;
+  }
+
+  // ---------- 3D ----------
+  build3D() {
+    const r = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
+    const adv = gfxAdvanced();
+    r.setPixelRatio(Math.min(devicePixelRatio, adv ? 3 : 2));
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.outputColorSpace = THREE.SRGBColorSpace;
+    if (adv) {
+      r.toneMapping = THREE.ACESFilmicToneMapping;
+      r.toneMappingExposure = 1.15;
+    }
+    this.scene = new THREE.Scene();
+    if (adv) this.scene.add(new THREE.HemisphereLight(0xbdd7ff, 0x3a2f2f, 0.55));
+    this.sun = setupLighting(this.scene, this.world.sky || '#8fc8ff', this.world.light);
+    this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 3000);
+    this.meshes = buildWorld(this.scene, this.world);
+    this.solids = []; this.triggers = [];
+    for (const p of this.world.parts) {
+      if (p.k === 'npc') continue;
+      const mkBox = (min, max, relMin, relMax) => {
+        const box = { p, min, max, _arrs: [] };
+        if (relMin) { box.relMin = relMin; box.relMax = relMax; }
+        (p._boxes ||= []).push(box);
+        return box;
+      };
+      const fullMin = [p.p[0] - p.s[0] / 2, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2];
+      const fullMax = [p.p[0] + p.s[0] / 2, p.p[1] + p.s[1] / 2, p.p[2] + p.s[2] / 2];
+      const fullBox = mkBox(fullMin, fullMax);
+      const addBox = (arr, box) => { arr.push(box); box._arrs.push(arr); };
+      if (p.k === 'coin' || p.k === 'heal') { fullBox.min = fullBox.min.map(v => v - 0.3); fullBox.max = fullBox.max.map(v => v + 0.3); addBox(this.triggers, fullBox); continue; }
+      if (p.cc !== false) {
+        if (p.sh === 'ramp') {
+          // 4 steps up the slope (low at -x, high at +x) so players can walk up it
+          for (let i = 0; i < 4; i++) {
+            const x0 = -p.s[0] / 2 + (i * p.s[0]) / 4, x1 = -p.s[0] / 2 + ((i + 1) * p.s[0]) / 4;
+            const y1 = -p.s[1] / 2 + ((i + 1) * p.s[1]) / 4;
+            addBox(this.solids, mkBox(
+              [p.p[0] + x0, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2],
+              [p.p[0] + x1, p.p[1] + y1, p.p[2] + p.s[2] / 2],
+              [x0, -p.s[1] / 2, -p.s[2] / 2], [x1, y1, p.s[2] / 2]));
+          }
+        } else addBox(this.solids, fullBox);
+      }
+      if (p.k !== 'part' && p.k !== 'spawn' || p.script?.onTouch) addBox(this.triggers, fullBox);
+    }
+    this.camMeshes = [...this.meshes.values()].filter(m => !['coin', 'heal', 'npc'].includes(m.userData.part.k) && m.userData.part.cc !== false && !(m.userData.part.tr > 0.5));
+    this.npcs = [];
+    for (const p of this.world.parts) {
+      if (p.k !== 'npc') continue;
+      const m = this.meshes.get(p.id); if (m) { this.scene.remove(m); this.meshes.delete(p.id); }
+      this.spawnNPC(p);
+    }
+    // dynamic parts: moving platforms/hazards (mv) + blinking platforms (blink)
+    this.movers = []; this.blinkers = [];
+    for (const p of this.world.parts) {
+      if (p.k === 'npc') continue;
+      if (p.mv && ['x', 'y', 'z'].includes(p.mv.a)) this.movers.push({ p, base: [...p.p] });
+      if (p.blink) {
+        const m = this.meshes.get(p.id);
+        if (m) { m.material = m.material.clone(); m.material.transparent = true; }
+        this.blinkers.push({ p, on: true });
+      }
+    }
+    this.char = buildChar(this.me.avatar, { pet: false, gear: false });
+    this.scene.add(this.char);
+    this.pos = new THREE.Vector3(); this.vel = new THREE.Vector3();
+    this.setPet(); this.setGear();
+    this.ray = new THREE.Raycaster();
+    this.resize();
+    this.runWorldScripts();
+  }
+  runWorldScripts() {
+    const scripts = this.world.scripts || [];
+    if (!scripts.length) return;
+    if (!this._scriptState) this._scriptState = { score: 0, tickFns: [], deathFns: [], chatFns: [] };
+    const st = this._scriptState;
+    const findMesh = name => {
+      const nm = String(name).toLowerCase();
+      for (const [id, m] of this.meshes) {
+        if ((m.userData.part.name || '').toLowerCase() === nm) return m;
+      }
+      return null;
+    };
+    // Script API available to world scripts
+    const api = {
+      onStart: fn => { try { fn(); } catch (e) { console.warn('Script onStart error:', e); } },
+      onTouch: (partName, fn) => {
+        if (!this._scriptTouch) this._scriptTouch = [];
+        this._scriptTouch.push({ partName: String(partName), fn });
+      },
+      onDeath: fn => { st.deathFns.push(fn); },
+      onChat: fn => { st.chatFns.push(fn); },
+      onTick: fn => { st.tickFns.push(fn); },
+      giveTix: (player, n) => {
+        const amt = Math.max(1, Math.min(100, Math.floor(Number(n) || 5)));
+        this.showBig(`+${amt} FunTix!`, 2000);
+        this.send({ t: 'scriptTix', amount: amt });
+      },
+      teleport: (player, x, y, z) => { this.pos.set(Number(x) || 0, Number(y) || 10, Number(z) || 0); this.vel.set(0, 0, 0); },
+      say: (player, msg) => this.showBig(String(msg).slice(0, 120), 2500),
+      sayAll: msg => { this.sendChat(String(msg).slice(0, 200)); },
+      kill: player => this.die(),
+      heal: (player, n) => { this.health = Math.min(100, this.health + (Number(n) || 25)); this.updateHud(); },
+      damage: (player, n) => {
+        this.health -= Number(n) || 10; this.updateHud();
+        if (this.health <= 0) this.die();
+      },
+      setCheckpoint: (x, y, z) => {
+        this.checkpoint = new THREE.Vector3(Number(x) || 0, Number(y) || 10, Number(z) || 0);
+        this.showBig('Checkpoint set!', 1500); sfx.checkpoint();
+      },
+      spawnPart: props => {
+        const p = {
+          id: 'dyn_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+          name: String(props.name || 'Part'), k: 'part',
+          s: props.size || [4, 1, 4], c: props.color || '#a3a2a5',
+          p: [Number(props.x) || 0, Number(props.y) || 10, Number(props.z) || 0],
+        };
+        this.world.parts.push(p);
+        const geo = new THREE.BoxGeometry(p.s[0], p.s[1], p.s[2]);
+        const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(p.c), roughness: 0.8 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.set(p.p[0], p.p[1], p.p[2]);
+        mesh.castShadow = mesh.receiveShadow = true;
+        mesh.userData.part = p;
+        this.scene.add(mesh);
+        this.meshes.set(p.id, mesh);
+        const sbox = { p, min: [p.p[0] - p.s[0] / 2, p.p[1] - p.s[1] / 2, p.p[2] - p.s[2] / 2], max: [p.p[0] + p.s[0] / 2, p.p[1] + p.s[1] / 2, p.p[2] + p.s[2] / 2], _arrs: [this.solids] };
+        this.solids.push(sbox);
+        (p._boxes ||= []).push(sbox);
+        return p.id;
+      },
+      movePart: (name, x, y, z) => {
+        const m = findMesh(name);
+        if (!m) return;
+        const p = m.userData.part;
+        p.p = [Number(x), Number(y), Number(z)];
+        m.position.set(p.p[0], p.p[1], p.p[2]);
+        this.syncPartBoxes(p);
+      },
+      hidePart: name => { const m = findMesh(name); if (m) { m.visible = false; this.setPartActive(m.userData.part, false); } },
+      showPart: name => { const m = findMesh(name); if (m) { m.visible = true; this.setPartActive(m.userData.part, true); } },
+      playSound: name => { if (sfx[name]) sfx[name](); },
+      setScore: n => { st.score = Number(n) || 0; },
+      getScore: () => st.score,
+      addScore: n => { st.score += Number(n) || 0; return st.score; },
+      getPos: () => ({ x: this.pos.x, y: this.pos.y, z: this.pos.z }),
+      getHealth: () => this.health,
+      getPlayers: () => {
+        const list = [{ name: this.me.name, x: this.pos.x, y: this.pos.y, z: this.pos.z, me: true }];
+        for (const pl of this.players.values()) list.push({ name: pl.name, x: pl.char.position.x, y: pl.char.position.y, z: pl.char.position.z });
+        return list;
+      },
+      world: this.world,
+      game: this,
+    };
+    const names = Object.keys(api);
+    for (const s of scripts) {
+      if (s.id === '__objective__') continue; // hidden objective data, not a script
+      if (s.kind === 'visual') {
+        try { this.runVisualScript(s, api); } catch (e) { console.warn('Visual script error in ' + s.name + ':', e); }
+        continue;
+      }
+      try {
+        const fn = new Function(...names, s.code || '');
+        fn(...names.map(k => api[k]));
+      } catch (e) { console.warn('Script error in ' + s.name + ':', e); }
+    }
+  }
+  // Visual (no-code) scripts built with the Studio HTML builder
+  runVisualScript(s, api) {
+    const t = s.trigger || {};
+    const run = () => {
+      for (const a of (s.actions || [])) {
+        try { this.runVisualAction(a, api); } catch (e) { console.warn('Visual action error:', e); }
+      }
+    };
+    if (t.type === 'touch') api.onTouch(t.part || '', run);
+    else if (t.type === 'death') api.onDeath(run);
+    else if (t.type === 'chat') api.onChat((name, text) => {
+      if (!t.word || String(text).toLowerCase().includes(String(t.word).toLowerCase())) run();
+    });
+    else if (t.type === 'tick') api.onTick(run);
+    else api.onStart(run);
+  }
+  runVisualAction(a, api) {
+    const P = a.params || {};
+    const N = (v, d) => { const n = Number(v); return Number.isFinite(n) ? n : d; };
+    const T = v => String(v ?? '');
+    switch (a.type) {
+      case 'giveTix': api.giveTix(null, Math.max(1, Math.min(100, Math.floor(N(P.amount, 5))))); break;
+      case 'say': api.say(null, T(P.text).slice(0, 120)); break;
+      case 'sayAll': api.sayAll(T(P.text).slice(0, 200)); break;
+      case 'teleport': api.teleport(null, N(P.x, 0), N(P.y, 10), N(P.z, 0)); break;
+      case 'kill': api.kill(); break;
+      case 'heal': api.heal(null, N(P.amount, 25)); break;
+      case 'damage': api.damage(null, N(P.amount, 10)); break;
+      case 'setCheckpoint': api.setCheckpoint(N(P.x, 0), N(P.y, 10), N(P.z, 0)); break;
+      case 'movePart': api.movePart(T(P.part), N(P.x, 0), N(P.y, 0), N(P.z, 0)); break;
+      case 'hidePart': api.hidePart(T(P.part)); break;
+      case 'showPart': api.showPart(T(P.part)); break;
+      case 'spawnPart': api.spawnPart({ name: T(P.name) || 'Part', size: [N(P.sx, 4), N(P.sy, 1), N(P.sz, 4)], color: T(P.color) || '#a3a2a5', x: N(P.x, 0), y: N(P.y, 10), z: N(P.z, 0) }); break;
+      case 'playSound': api.playSound(T(P.sound) || 'coin'); break;
+      case 'setScore': api.setScore(N(P.n, 0)); break;
+      case 'addScore': api.addScore(N(P.n, 1)); break;
+    }
+  }
+  syncPartBoxes(p) {
+    for (const b of (p._boxes || [])) {
+      const mn = b.relMin || [-p.s[0] / 2, -p.s[1] / 2, -p.s[2] / 2];
+      const mx = b.relMax || [p.s[0] / 2, p.s[1] / 2, p.s[2] / 2];
+      b.min = [p.p[0] + mn[0], p.p[1] + mn[1], p.p[2] + mn[2]];
+      b.max = [p.p[0] + mx[0], p.p[1] + mx[1], p.p[2] + mx[2]];
+    }
+  }
+  setPartActive(p, on) {
+    for (const b of (p._boxes || [])) for (const arr of (b._arrs || [])) {
+      const i = arr.indexOf(b);
+      if (on && i === -1) arr.push(b);
+      if (!on && i !== -1) arr.splice(i, 1);
+    }
+  }
+  fireScriptTouch(partName) {
+    for (const t of (this._scriptTouch || [])) {
+      if (t.partName.toLowerCase() === String(partName).toLowerCase()) {
+        try { t.fn(); } catch (e) { console.warn('Script onTouch error:', e); }
+      }
+    }
+  }
+  resize() {
+    const w = this.c.clientWidth || innerWidth, h = this.c.clientHeight || innerHeight;
+    this.renderer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+  }
+
+  setPet() {
+    if (this.pet) { this.scene.remove(this.pet); this.pet = null; }
+    const pet = buildPet(this.me.avatar?.pet);
+    if (pet) { this.pet = pet; pet.position.copy(this.pos); this.scene.add(pet); }
+  }
+  updatePet(pet, ownerPos, yaw, dt) {
+    if (!pet || !ownerPos) return;
+    const u = pet.userData;
+    const tx = ownerPos.x + Math.sin(yaw + 2.6) * 1.9;
+    const tz = ownerPos.z + Math.cos(yaw + 2.6) * 1.9;
+    const k = 1 - Math.exp(-6 * dt);
+    pet.position.x += (tx - pet.position.x) * k;
+    pet.position.z += (tz - pet.position.z) * k;
+    pet.position.y += (ownerPos.y - pet.position.y) * k;
+    if (!u.last) u.last = pet.position.clone();
+    const dx = pet.position.x - u.last.x, dz = pet.position.z - u.last.z;
+    const moving = Math.hypot(dx, dz) > 0.02;
+    u.last.copy(pet.position);
+    if (moving) {
+      let dy = Math.atan2(dx, dz) - pet.rotation.y;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      pet.rotation.y += dy * Math.min(1, dt * 10);
+    }
+    u.body.position.y = moving ? Math.abs(Math.sin(this.t * 11)) * 0.5 : Math.sin(this.t * 2.5) * 0.06 + 0.06;
+  }
+  setGear() {
+    if (this.gearMesh) { this.gearMesh.parent?.remove(this.gearMesh); this.gearMesh = null; }
+    const gearId = this.me.avatar?.gear;
+    const g = buildGear(gearId);
+    if (g) {
+      const limbs = this.char.userData.limbs || {};
+      const hand = limbs.rhand || limbs.rarm;
+      g.position.set(0, limbs.rhand ? -0.3 : -2, 0.5);
+      (hand || this.char).add(g);
+      this.gearMesh = g;
+    } else {
+      // UGC gear: hold its 3D model (GLB) in-hand, same as the avatar preview does.
+      const it = ITEM[gearId];
+      if (it?.model_url) {
+        const limbs = this.char.userData.limbs || {};
+        const hand = limbs.rhand || limbs.rarm;
+        const anchor = new THREE.Group();
+        anchor.position.set(0, limbs.rhand ? -0.3 : -2, 0.5);
+        (hand || this.char).add(anchor);
+        this.gearMesh = anchor;
+        loadUgcGlb(it.model_url, 1.1, it.model_transform).then(m => { if (anchor.parent) anchor.add(m); }).catch(() => {});
+      }
+    }
+  }
+  useGear() {
+    if (this.rivals) { this.fireRivals(); return; }
+    if (this.fps) { this.fireFps(); return; }
+    const id = this.me.avatar?.gear;
+    if (!id || id === 'gear_none' || this.dead || this.o.test) return;
+    const now = this.t;
+    if (now - (this.lastGearUse || -9) < (GEAR_COOLDOWN[id] || 1)) return;
+    this.lastGearUse = now;
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+    const bh = GEAR_BEHAVIOR[id] || 'melee';
+    if (bh === 'melee') this.swingSword();
+    else if (bh === 'pellet') this.fireProjectile('pellet', dir, 70, 1.4);
+    else if (bh === 'freeze') this.fireProjectile('freeze', dir, 70, 1.4);
+    else if (bh === 'rocket') this.fireProjectile('rocket', dir, 38, 5);
+    else if (bh === 'grapple') this.fireGrapple(dir);
+    else if (bh === 'boombox') this.useBoombox();
+    else if (bh === 'mic') this.useMic();
+    else if (bh === 'pumpkin') this.swingPumpkin();
+  }
+  swingSword() {
+    this.gearSwingT = 0.35;
+    sfx.swing?.() || sfx.click?.();
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(this.char.quaternion);
+    for (const p of this.players.values()) {
+      const d = p.char.position.clone().sub(this.pos); d.y = 0;
+      if (d.length() < 5.5 && d.normalize().dot(fwd) > 0.4) { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); break; }
+    }
+  }
+  useBoombox() {
+    // Boombox: everyone in the room dances for 3 seconds.
+    this.emote = 'dance'; this.emoteT = 3;
+    this.send({ t: 'gearBoombox' });
+    if (!reduceMotion()) confetti(this.c);
+    sfx.win();
+    this.sys('📻 Boombox! Everybody dance!');
+  }
+  useMic() {
+    // Microphone: shout a big message the whole room sees.
+    const text = prompt('🎤 Shout to the whole room:', '');
+    if (text == null || !text.trim()) return;
+    this.send({ t: 'gearShout', text: text.trim() });
+    this.showBig('🎤 ' + text.trim().slice(0, 60), 3000);
+  }
+  swingPumpkin() {
+    // Pumpkin Sword: a melee swing that hits EVERYONE in range + pumpkin burst.
+    this.gearSwingT = 0.35;
+    sfx.swing?.() || sfx.click?.();
+    const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(this.char.quaternion);
+    let hits = 0;
+    for (const p of this.players.values()) {
+      const d = p.char.position.clone().sub(this.pos); d.y = 0;
+      if (d.length() < 6.5 && d.normalize().dot(fwd) > 0.3) { this.send({ t: 'gearHit', id: p.id }); hits++; }
+    }
+    if (hits) { this.onKill(hits === 1 ? 'a player' : hits + ' players'); this.sys(`🎃 Pumpkin Sword hit ${hits} player${hits > 1 ? 's' : ''}!`); }
+    if (!reduceMotion()) confetti(this.c);
+  }
+  fireProjectile(kind, dir, speed, radius) {
+    const isRocket = kind === 'rocket';
+    const isFreeze = kind === 'freeze';
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(isRocket ? 0.55 : 0.28, 10, 8),
+      new THREE.MeshStandardMaterial({ color: isRocket ? '#e53935' : isFreeze ? '#00e5ff' : '#a1887f', emissive: isRocket ? '#ff5722' : isFreeze ? '#00b0ff' : '#000000', emissiveIntensity: 0.7, roughness: 0.5 }));
+    const start = this.pos.clone(); start.y += 3.2;
+    start.addScaledVector(dir, 1.5);
+    mesh.position.copy(start);
+    this.scene.add(mesh);
+    this.projectiles.push({ mesh, vel: dir.clone().multiplyScalar(speed), life: 3, kind, radius });
+    sfx.shoot?.() || sfx.click?.();
+  }
+  fireGrapple(dir) {
+    const ray = new THREE.Raycaster(this.camera.position.clone(), dir.clone(), 0.5, 70);
+    const hits = ray.intersectObjects([...this.meshes.values()], false);
+    if (!hits.length) return;
+    const pt = hits[0].point;
+    const pull = new THREE.Vector3(pt.x - this.pos.x, 0, pt.z - this.pos.z);
+    const dist = pull.length();
+    if (dist < 4) return;
+    pull.normalize().multiplyScalar(Math.min(dist * 5, 70));
+    this.vel.x = pull.x; this.vel.z = pull.z;
+    this.vel.y = Math.max(this.vel.y + 8, 22);
+    sfx.grapple?.() || sfx.click?.();
+    // visual: quick line flash
+    const lg = new THREE.BufferGeometry().setFromPoints([this.pos.clone().add(new THREE.Vector3(0, 3, 0)), pt]);
+    const line = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: '#90a4ae' }));
+    this.scene.add(line);
+    setTimeout(() => this.scene.remove(line), 350);
+  }
+  explode(at, radius) {
+    const flash = new THREE.Mesh(new THREE.SphereGeometry(radius, 14, 10),
+      new THREE.MeshBasicMaterial({ color: '#ff9800', transparent: true, opacity: 0.85 }));
+    flash.position.copy(at); this.scene.add(flash);
+    const t0 = this.t;
+    this.effects.push({ mesh: flash, until: t0 + 0.35, kind: 'flash' });
+    sfx.boom?.() || sfx.click?.();
+    for (const p of this.players.values()) {
+      const d = p.char.position.clone().sub(at); d.y *= 0.4;
+      if (d.length() < radius + 1) { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); break; }
+    }
+  }
+  spawn(first = false) {
+    const p = this.fps?.team ? this.fpsSpawnPoint(this.fps.team) : this.checkpoint ? this.checkpoint.clone() : findSpawn(this.world);
+    this.pos.copy(p).add(new THREE.Vector3((Math.random() - 0.5) * 2, 0.2, (Math.random() - 0.5) * 2));
+    this.vel.set(0, 0, 0); this.dead = false; this.health = 100;
+    this.jumpBuf = 0; this.coyote = 0; this.jumping = false;
+    if (this.debris) { for (const d of this.debris) this.scene.remove(d.m); this.debris = null; }
+    this.scene.remove(this.char);
+    this.char = buildChar(this.me.avatar, { pet: false, gear: false }); this.scene.add(this.char);
+    this.setGear();
+    this.char.position.copy(this.pos);
+    if (this.pet) { this.pet.position.copy(this.pos); this.pet.visible = true; }
+    if (first) this.camYaw = Math.PI;
+  }
+
+  die() {
+    if (this.dead) return;
+    if (this.vehicleId) this.exitVehicle();
+    this.dead = true; this.health = 0; sfx.oof();
+    for (const fn of (this._scriptState?.deathFns || [])) { try { fn(); } catch (e) { console.warn('onDeath error:', e); } }
+    this.debris = breakApart(this.scene, this.char, this.vel);
+    this.char.visible = false;
+    if (this.pet) this.pet.visible = false;
+    setTimeout(() => { if (!this.destroyed && !(this.rivals && this.rivals.noRespawn)) this.spawn(); }, 3000);
+  }
+
+  // ---------- input ----------
+  bind() {
+    this.onKey = (e) => {
+      if (document.activeElement === this.chatInput) return;
+      const down = e.type === 'keydown';
+      if (down && e.key === '/') { e.preventDefault(); this.chatInput.focus(); return; }
+      if (down && e.key === 'Escape') { this.toggleMenu(); return; }
+      if (!this.escMenu.classList.contains('hidden')) {
+        if (down && e.key.toLowerCase() === 'r') { this.toggleMenu(false); this.die(); }
+        if (down && e.key.toLowerCase() === 'l') this.exit();
+        return;
+      }
+      if (down && e.key === 'Shift' && !e.repeat) this.toggleShiftLock();
+      if (down && !e.repeat && e.code === 'F4' && this.isStaff()) { e.preventDefault(); this.toggleFunPanel(); return; }
+      if (down && !e.repeat && e.code === 'KeyV') { this.toggleVehicle(); return; }
+      if (down && !e.repeat && e.code === 'KeyE' && this.vehicleId) { this.exitVehicle(); return; }
+      if (down && !e.repeat && /^Digit[1-9]$/.test(e.code)) { if (this.rivals && +e.code.slice(5) <= 2) this.rivalsSwitch(+e.code.slice(5)); else if (this.fps && +e.code.slice(5) <= 3) this.fpsSwitch(+e.code.slice(5)); return; }
+      if (down && !e.repeat && e.code === 'KeyR' && this.rivals) { this.rivalsReload(); return; }
+      if (down && !e.repeat && e.code === 'KeyR' && this.fps) { this.fpsReload(); return; }
+      this.keys[e.code] = down;
+      if (down && !e.repeat && e.code === 'KeyW') { const now = performance.now(); if (now - (this.lastW || 0) < 280) this.sprinting = true; this.lastW = now; }
+      if (!down && e.code === 'KeyW') this.sprinting = false;
+      if (down && !e.repeat && e.code === 'KeyQ' && !this.dead && this.dashCd <= 0) { const tor = this.hasAbility('tornado'); this.dashT = tor ? 0.4 : 0.18; this.dashCd = tor ? 1.2 : 2; this.dashDir.set(Math.sin(this.facing), 0, Math.cos(this.facing)); this.tornadoSpin = tor; sfx.jump(); }
+      if (down && !e.repeat && e.code === 'KeyT' && !this.dead && this.hasAbility('teleport') && this.hackTpCd <= 0) { this.hackTpCd = 3; this.pos.x += Math.sin(this.facing) * 12; this.pos.z += Math.cos(this.facing) * 12; this.vel.set(0, 0, 0); this.showBig('👾 HACKED: Teleported!', 1200); sfx.checkpoint(); }
+      if (e.code === 'Space') {
+        if (down) { if (!e.repeat) this.jumpBuf = 0.15; e.preventDefault(); }
+        else this.cutJump();
+      }
+    };
+    addEventListener('keydown', this.onKey); addEventListener('keyup', this.onKey);
+    this.onResize = () => this.resize(); addEventListener('resize', this.onResize);
+    const ptrs = new Map(); let pinch = 0;
+    this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+    this.canvas.addEventListener('pointerdown', e => {
+      this.chatInput.blur();
+      if (e.button === 0 && e.pointerType !== 'touch' && !this.o.test) { this.firing = true; this.useGear(); return; }
+      if (e.button !== 2 && e.pointerType !== 'touch') return;
+      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); this.canvas.setPointerCapture(e.pointerId);
+      if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+    });
+    const ptrUp = e => { ptrs.delete(e.pointerId); pinch = 0; if (e.button === 0) this.firing = false; };
+    this.canvas.addEventListener('pointerup', ptrUp); this.canvas.addEventListener('pointercancel', ptrUp);
+    this.canvas.addEventListener('pointermove', e => {
+      if (document.pointerLockElement === this.canvas) { this.rotateCam(e.movementX, e.movementY); return; }
+      const p = ptrs.get(e.pointerId); if (!p) return;
+      if (ptrs.size >= 2) {
+        p.x = e.clientX; p.y = e.clientY;
+        const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch && d) this.camDist = THREE.MathUtils.clamp(this.camDist * pinch / d, 0.5, 80);
+        pinch = d; return;
+      }
+      const k = e.pointerType === 'touch' ? 1.3 : 1;
+      this.rotateCam((e.clientX - p.x) * k, (e.clientY - p.y) * k); p.x = e.clientX; p.y = e.clientY;
+    });
+    this.bindTouch();
+    this.canvas.addEventListener('wheel', e => { e.preventDefault(); this.camDist = THREE.MathUtils.clamp(this.camDist * (e.deltaY > 0 ? 1.12 : 0.89), 0.5, 80); }, { passive: false });
+  }
+  bindTouch() {
+    const zone = this.c.querySelector('.joy-zone'), base = this.c.querySelector('.joy'), knob = this.c.querySelector('.joy-knob');
+    const R = 52; let id = null, cx = 0, cy = 0;
+    zone.addEventListener('pointerdown', e => {
+      if (id !== null) return; e.preventDefault(); this.chatInput.blur();
+      id = e.pointerId; zone.setPointerCapture(id);
+      const r = zone.getBoundingClientRect(); cx = e.clientX; cy = e.clientY;
+      base.style.left = (cx - r.left) + 'px'; base.style.top = (cy - r.top) + 'px'; base.classList.add('active');
+    });
+    zone.addEventListener('pointermove', e => {
+      if (e.pointerId !== id) return;
+      let dx = e.clientX - cx, dy = e.clientY - cy; const l = Math.hypot(dx, dy);
+      if (l > R) { dx *= R / l; dy *= R / l; }
+      knob.style.transform = `translate(${dx}px, ${dy}px)`;
+      const dead = l < 6 ? 0 : 1; this.joy.x = dead * dx / R; this.joy.y = dead * dy / R;
+    });
+    const end = e => {
+      if (e.pointerId !== id) return; id = null; this.joy.x = this.joy.y = 0;
+      knob.style.transform = ''; base.style.left = base.style.top = ''; base.classList.remove('active');
+    };
+    zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
+    const jb = this.c.querySelector('.jump-btn');
+    jb.addEventListener('pointerdown', e => { e.preventDefault(); this.touchJump = true; this.jumpBuf = 0.15; jb.classList.add('down'); });
+    const jup = () => { this.touchJump = false; this.cutJump(); jb.classList.remove('down'); };
+    jb.addEventListener('pointerup', jup); jb.addEventListener('pointercancel', jup); jb.addEventListener('pointerleave', jup);
+    jb.addEventListener('contextmenu', e => e.preventDefault());
+  }
+  rotateCam(dx, dy) { this.camYaw -= dx * 0.006; this.camPitch = THREE.MathUtils.clamp(this.camPitch + dy * 0.006, -1.35, 1.4); }
+  toggleShiftLock() {
+    this.shiftLock = !this.shiftLock;
+    if (this.shiftLock) this.canvas.requestPointerLock?.(); else if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  // ---------- network ----------
+  connect() {
+    this._sendQueue = [];
+    const ws = this.ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws');
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ t: 'join', token: this.o.token, gameId: this.o.gameId, server: this.o.server || null }));
+      // Flush anything queued while the socket was connecting (e.g. the
+      // auto-voice voice_join) — join goes first, then the queued messages.
+      const q = this._sendQueue || []; this._sendQueue = [];
+      for (const m of q) { try { ws.send(JSON.stringify(m)); } catch {} }
+    };
+    ws.onmessage = (ev) => {
+      const m = JSON.parse(ev.data);
+      if (m.t === 'welcome') {
+        this.myId = m.id; this.me.club = !!m.club; this.me.badge = m.badge; this.hideLoading(); this.setMoney(m);
+        for (const p of m.players) this.addPlayer(p);
+        this.updateLeaderboard();
+      } else if (m.t === 'joined') { this.addPlayer(m); this.updateLeaderboard(); this.maybeSpawnBots(); }
+      else if (m.t === 'left') { const p = this.players.get(m.id); if (p) { this.scene.remove(p.char); if (p.pet) this.scene.remove(p.pet); this.players.delete(m.id); } this.updateLeaderboard(); this.maybeSpawnBots(); }
+      else if (m.t === 'S') {
+        for (const s of m.p) { if (s[0] === this.myId) continue; const p = this.players.get(s[0]); if (p) p.target = s; }
+      } else if (m.t === 'chat') this.onChat(m);
+      else if (m.t === 'money') { this.setMoney(m); if (m.reason === 'play') this.sys(`+${m.amount} FunTix for playing!`); if (m.looneyCoins != null) { this.showBig(`🪙 Looney Coin earned! (${m.looneyCoins}/20)`, 3500); sfx.win(); } }
+      else if (m.t === 'tokenDrop') { this.showBig(`🪙 YOU GOT A ${String(m.name || 'TOKEN').toUpperCase()}!`, 4500); sfx.win(); if (!reduceMotion()) confetti(this.c); }
+      else if (m.t === 'glitch') { this.showGlitch(m); }
+      else if (m.t === 'tagStart') { this.tag = { it: m.it, itId: m.itId, roundEnd: m.roundEnd, counts: m.counts || {} }; this.updateTagHUD(); if (m.itId === this.myId) { this.showBig('🏷️ YOU ARE IT! Tag someone!', 3000); sfx.checkpoint(); } else this.sys(`🏷️ ${m.it} is IT!`); }
+      else if (m.t === 'tagged') { if (this.tag) { this.tag.it = m.to; this.tag.itId = m.toId; this.tag.counts = m.counts || this.tag.counts || {}; } this.updateTagHUD(); this.sys(`🏷️ ${m.from} tagged ${m.to}!`); if (m.toId === this.myId) { this.showBig('🏷️ YOU ARE IT! Tag someone!', 3000); sfx.checkpoint(); } }
+      else if (m.t === 'tagEnd') { if (this.tag) this.tag.counts = m.counts || this.tag.counts || {}; this.updateTagHUD(); this.showBig(`🏆 ${m.winner} wins Tag with ${m.tags} tags!`, 5000); sfx.win(); if (m.winnerId === this.myId) this.send({ t: 'win' }); }
+      else if (m.t === 'pong') { this._ping = Math.max(0, Math.round(performance.now() - (m.id || performance.now()))); }
+      else if (m.t === 'emote') { const p = this.players.get(m.id); if (p && EMOTE_TIMES[m.e]) { p.emote = m.e; p.emoteT = EMOTE_TIMES[m.e]; } }
+
+      else if (m.t === 'jam' && typeof m.track === 'string' && m.track.startsWith('blob:')) { if (this.stealablob) { try { this.stealablob.onBlobWire(m.id, m.track); } catch (e) { console.warn('stealablob wire error:', e); } } }
+      else if (m.t === 'jam') {
+        const tr = JAM_TRACKS.find(t => t.id === m.track);
+        const nm = this.players.get(m.id)?.name || 'Someone';
+        if (tr) { startJam(tr.id); this.sys(`🎵 ${nm} started jam: ${tr.icon} ${tr.name}`); }
+        else { stopJam(); this.sys(`🎵 ${nm} stopped the jam`); }
+      }
+      else if (m.t === 'gearHit' && this.rivals && m.dmg) { this.applyRivalsDamage(m.dmg, m.from); }
+      else if (m.t === 'gearHit' && this.fps && m.dmg) { this.applyFpsDamage(m.dmg, m.from); }
+      else if (m.t === 'gearHit') { if (!this.dead) this.die(); }
+      else if (m.t === 'scriptTpDo') { this.pos.set(Number(m.x) || 0, Number(m.y) || 10, Number(m.z) || 0); this.vel.set(0, 0, 0); }
+      else if (m.t === 'tp') { this.pos.set(m.x, m.y, m.z); this.vel.set(0, 0, 0); this.sys('Teleported by a moderator'); }
+      else if (m.t === 'freeze') {
+        this.frozen = !!m.on;
+        if (this.frozen && this.vehicleId) this.exitVehicle();
+        this.sys(this.frozen ? '❄️ You were frozen' + (m.from ? ` by ${m.from}'s Freeze Ray!` : ' by a moderator') : 'You were unfrozen');
+        if (this.frozen && m.from) { clearTimeout(this._gearFreezeT); this._gearFreezeT = setTimeout(() => { if (this.frozen) { this.frozen = false; this.sys('🧊 Thawed out!'); } }, 3000); }
+      }
+      else if (m.t === 'slap') { this.vel.x += (Math.random() - 0.5) * 60; this.vel.z += (Math.random() - 0.5) * 60; this.vel.y = 40; this.sys('👋 Slapped by a moderator!'); sfx.oof(); }
+      else if (m.t === 'launch') { this.vel.y = 120; this.sys('🚀 Launched by a moderator!'); sfx.jump(); }
+      else if (m.t === 'forceEmote') { if (EMOTE_TIMES[m.e]) { this.emote = m.e; this.emoteT = EMOTE_TIMES[m.e]; } }
+      else if (m.t === 'shout') { this.showBig(`🎤 ${m.name}: ${m.text}`, 4000); this.sys(`🎤 ${m.name} shouted: ${m.text}`); }
+      else if (m.t === 'sys') this.sys(m.text);
+      else if (m.t === 'rivals') { this.startRivals(m); }
+      else if (m.t === 'rivalsRound') { this.onRivalsRound(m); }
+      else if (m.t === 'rivalsRoundEnd') { this.onRivalsRoundEnd(m); }
+      else if (m.t === 'tourneyEnd') this.onTourneyEnd(m);
+      else if (m.t === 'news') this.showNews(m);
+      else if (m.t === 'tix_rain') this.startTixRain(m);
+      else if (m.t === 'voice_peer') this.voice?.onPeer(m);
+      else if (m.t === 'voice_signal') this.voice?.onSignal(m);
+      else if (m.t === 'error') { this.hideLoading(); this.showBig(m.error, 6000); this.sys(m.error); }
+    };
+    ws.onclose = () => { if (!this.destroyed) { this.sys('Disconnected from server.'); this.showBig('Disconnected', 5000); } };
+  }
+  send(m) {
+    if (this.ws?.readyState === 1) { this.ws.send(JSON.stringify(m)); return; }
+    // Socket not open yet — queue it instead of silently dropping it.
+    // (This was losing the auto-voice voice_join, so the Voice Lounge
+    // never knew a player had voice on.)
+    this._sendQueue = this._sendQueue || [];
+    if (this._sendQueue.length < 50) this._sendQueue.push(m);
+  }
+  setMoney(m) {
+    if (m.funtix != null) this.txCount.textContent = m.funtix;
+    this.o.onMoney?.({ funtix: m.funtix });
+  }
+  hideLoading() { const l = this.c.querySelector('.loading'); if (l) { l.classList.add('fade'); setTimeout(() => l.remove(), 500); } }
+  addPlayer(p) {
+    if (this.players.has(p.id)) return;
+    const char = buildChar(p.avatar, { pet: false, gear: false }); const tag = makeNameTag(displayNameOf(p), p.badge); tag.userData.isTag = true; char.add(tag);
+    this.scene.add(char);
+    const pet = buildPet(p.avatar?.pet);
+    if (pet) { pet.position.copy(char.position); this.scene.add(pet); }
+    const gear = buildGear(p.avatar?.gear);
+    if (gear) { const limbs = char.userData.limbs || {}; const hand = limbs.rhand || limbs.rarm; gear.position.set(0, limbs.rhand ? -0.3 : -2, 0.5); (hand || char).add(gear); }
+    else { const git = ITEM[p.avatar?.gear]; if (git?.model_url) { const limbs = char.userData.limbs || {}; const hand = limbs.rhand || limbs.rarm; const anchor = new THREE.Group(); anchor.position.set(0, limbs.rhand ? -0.3 : -2, 0.5); (hand || char).add(anchor); loadUgcGlb(git.model_url, 1.1, git.model_transform).then(m => { if (anchor.parent) anchor.add(m); }).catch(() => {}); } }
+    const pl = { id: p.id, name: p.name, avatar: p.avatar, club: p.club, badge: p.badge, char, pet: pet || null, target: p.s ? [p.id, ...p.s] : null, emote: null };
+    if (pl.target) char.position.set(pl.target[1], pl.target[2], pl.target[3]);
+    this.players.set(p.id, pl);
+    for (const fn of (this._scriptJoin || [])) { try { fn({ name: p.name, id: p.id }); } catch (e) { console.warn('Script onJoin error:', e); } }
+  }
+
+  // ---------- physics ----------
+  cutJump() {
+    if (this.jumping && this.vel.y > 20) this.vel.y = 20;
+    this.jumping = false;
+  }
+  overlaps(b, x, y, z, hw = HW) {
+    return x + hw > b.min[0] && x - hw < b.max[0] && y + H > b.min[1] && y < b.max[1] && z + hw > b.min[2] && z - hw < b.max[2];
+  }
+  blockedAt(x, y, z) { for (const b of this.solids) if (this.overlaps(b, x, y, z)) return true; return false; }
+  moveAxis(ax, d, hw = HW) {
+    const P = this.pos; P.setComponent(ax, P.getComponent(ax) + d);
+    if (this.noclip) return;
+    for (const b of this.solids) {
+      if (!this.overlaps(b, P.x, P.y, P.z, hw)) continue;
+      if (ax === 1) {
+        if (d <= 0) { P.y = b.max[1]; if (this.vel.y < 0) this.vel.y = 0; this.onGround = true; this.ground = b; }
+        else { P.y = b.min[1] - H; if (this.vel.y > 0) this.vel.y = 0; }
+      } else {
+        const step = b.max[1] - P.y;
+        if (step > 0 && step <= 1.3 && this.wasGround && !this.blockedAt(P.x, b.max[1] + 0.01, P.z)) { P.y = b.max[1] + 0.01; continue; }
+        if (d > 0) P.setComponent(ax, b.min[ax] - hw - 0.001); else P.setComponent(ax, b.max[ax] + hw + 0.001);
+      }
+    }
+  }
+  // Moving + blinking parts. Runs before physics so a player standing on a
+  // mover is carried by exactly the distance it moved this frame.
+  updateDynamics() {
+    const t = this.t;
+    for (const mv of this.movers) {
+      const p = mv.p;
+      const sp = Math.max(0.2, Math.min(4, Number(p.mv.s) || 1));
+      const d = Math.max(-120, Math.min(120, Number(p.mv.d) || 10));
+      const off = Math.sin(t * sp * 1.6 + (Number(p.mv.ph) || 0)) * d;
+      const nx = mv.base[0] + (p.mv.a === 'x' ? off : 0);
+      const ny = mv.base[1] + (p.mv.a === 'y' ? off : 0);
+      const nz = mv.base[2] + (p.mv.a === 'z' ? off : 0);
+      const dx = nx - p.p[0], dy = ny - p.p[1], dz = nz - p.p[2];
+      if (!dx && !dy && !dz) continue;
+      p.p = [nx, ny, nz];
+      const m = this.meshes.get(p.id); if (m) m.position.set(nx, ny, nz);
+      this.syncPartBoxes(p);
+      if (this.ground && this.ground.p === p) { this.pos.x += dx; this.pos.y += dy; this.pos.z += dz; }
+    }
+    for (const bl of this.blinkers) {
+      const p = bl.p;
+      const onT = Math.max(0.3, Math.min(30, Number(p.blink.on) || 2));
+      const offT = Math.max(0.3, Math.min(30, Number(p.blink.off) || 1.5));
+      const cyc = (t + (Number(p.blink.ph) || 0)) % (onT + offT);
+      const on = cyc < onT;
+      const m = this.meshes.get(p.id);
+      if (on !== bl.on) { bl.on = on; if (m) m.visible = on; this.setPartActive(p, on); }
+      if (m && on) m.material.opacity = cyc > onT - 0.45 ? 0.35 : 1; // flicker warning before it vanishes
+    }
+  }
+  physics(dt) {
+    if (this.frozen) { this.vel.set(0, 0, 0); this.carSpeed = 0; this.anim = 'idle'; return; }
+    if (this.vehicleId && !this.dead) { this.drivePhysics(dt); return; }
+    if (this.hasAbility('magnet') || this.hasAbility('coinhack')) this.magnetT = Math.max(this.magnetT, 1); // coin-magnet ability: coins always in range
+    if (this.hasAbility('shield')) this.shield = true; // aegis ability: kill parts always blocked
+    if (this.fpGod) { this.shield = true; this.health = 100; } // FunPanel god mode
+    if (this.fpNoDash) this.dashCd = 0; // FunPanel: no dash cooldown
+    const k = this.keys;
+    const f = (k.KeyW || k.ArrowUp ? 1 : 0) - (k.KeyS || k.ArrowDown ? 1 : 0) - this.joy.y;
+    const s = (k.KeyD ? 1 : 0) - (k.KeyA ? 1 : 0) + this.joy.x;
+    if (k.ArrowLeft) this.camYaw += dt * 2.5; if (k.ArrowRight) this.camYaw -= dt * 2.5;
+    const fwd = new THREE.Vector3(-Math.sin(this.camYaw), 0, -Math.cos(this.camYaw));
+    const right = new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw));
+    const move = fwd.multiplyScalar(f).add(right.multiplyScalar(s));
+    if (move.lengthSq() > 1) move.normalize();
+    const crouch = !!k.KeyC && !this.fly && !this.noclip && !this.vehicleId;
+    const speed = (this.speedTimer > 0 ? WALK * 2 : WALK) * (this.speedBoost ? 2.5 : 1) * (this.hasAbility('speed') ? 1.5 : 1) * (this.sprinting && f > 0 ? 1.45 : 1) * (this.inWater ? 0.55 : 1) * (crouch ? 0.6 : 1);
+    const tX = move.x * speed, tZ = move.z * speed;
+    if (this.onGround && this.ground?.p?.k === 'ice') { const bl = Math.min(1, dt * 2.2); this.vel.x += (tX - this.vel.x) * bl; this.vel.z += (tZ - this.vel.z) * bl; }
+    else { this.vel.x = tX; this.vel.z = tZ; }
+    if (this.dashT > 0) { this.dashT -= dt; const sp = this.tornadoSpin ? 85 : 55; this.vel.x = this.dashDir.x * sp; this.vel.z = this.dashDir.z * sp; if (this.tornadoSpin) this.facing += dt * 14; if (this.dashT <= 0) this.tornadoSpin = false; }
+    if (this.onGround) { this.coyote = 0.12; this.jumping = false; }
+    else this.coyote = Math.max(0, (this.coyote || 0) - dt);
+    this.jumpBuf = Math.max(0, (this.jumpBuf || 0) - dt);
+    if (this.fly && this.isStaff()) {
+      const fs = this.fpFlySpeed ? 70 : 34;
+      this.vel.y = (this.keys.Space ? fs : 0) - (this.keys.KeyC ? fs : 0);
+      this.onGround = false; this.jumping = false;
+    } else if (this.noclip) {
+      this.vel.y = (this.keys.Space ? 34 : 0) - (this.keys.KeyC ? 34 : 0);
+      this.onGround = false; this.jumping = false;
+    } else {
+      if (this.jumpBuf > 0 && (this.onGround || this.coyote > 0)) {
+        this.vel.y = JUMP * (this.fpSuperJump ? 2 : 1); this.onGround = false; this.coyote = 0; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+      } else if (this.jumpBuf > 0 && !this.usedAirJump && !this.onGround) {
+        this.vel.y = JUMP * 0.92 * (this.fpSuperJump ? 2 : 1); this.usedAirJump = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+      } else if (this.jumpBuf > 0 && this.usedAirJump && !this.usedAirJump2 && !this.onGround && (this.hasAbility('doublejump') || this.fpDblJump)) {
+        this.vel.y = JUMP * 0.92 * (this.fpSuperJump ? 2 : 1); this.usedAirJump2 = true; this.jumpBuf = 0; this.jumping = true; sfx.jump();
+      }
+      const grav = this.fpLowG ? GRAVITY * 0.25 : this.fpHighG ? GRAVITY * 2 : this.inLowg ? GRAVITY * 0.4 : this.inWater ? GRAVITY * 0.35 : GRAVITY;
+      this.vel.y = Math.max(this.vel.y - grav * dt, -160);
+      if (this.hasAbility('fly') && this.vel.y < 0 && k.Space) this.vel.y = Math.max(this.vel.y, -8); // glide
+      if (this.inWater) { if (k.Space) this.vel.y = 22; this.vel.y = Math.max(this.vel.y, -12); }
+    }
+    this.wasGround = this.onGround; this.onGround = false; this.ground = null;
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(this.vel.x), Math.abs(this.vel.y), Math.abs(this.vel.z)) * dt / 0.4));
+    const sdt = dt / steps;
+    for (let i = 0; i < steps; i++) {
+      this.moveAxis(0, this.vel.x * sdt); this.moveAxis(2, this.vel.z * sdt);
+      this.moveAxis(1, this.vel.y * sdt);
+    }
+    const gp = this.ground?.p; if (gp?.k === 'conv' && gp.conv) { this.pos.x += gp.conv[0] * dt; this.pos.z += gp.conv[1] * dt; }
+    if (move.lengthSq() > 0 && !this.shiftLock) this.facing = Math.atan2(move.x, move.z);
+    if (this.shiftLock) this.facing = this.camYaw + Math.PI;
+    if (move.lengthSq() > 0 && this.emote) this.emote = null;
+    this.anim = this.emote || (crouch ? 'crouch' : (!this.onGround ? (this.vel.y > 0 ? 'jump' : 'fall') : move.lengthSq() > 0 ? 'walk' : 'idle'));
+    if (this.pos.y < -300) this.die();
+    this.triggersCheck();
+  }
+  triggersCheck() {
+    const P = this.pos;
+    this.inLowg = false; this.inWater = false; this.inSafe = false;
+    for (const b of this.triggers) {
+      const q = b.p;
+      const zone = P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2];
+      if (zone) { if (q.k === 'lowg') this.inLowg = true; if (q.k === 'water') this.inWater = true; if (q.k === 'safe') this.inSafe = true; }
+    }
+    for (const b of this.triggers) {
+      const p = b.p;
+      const touching = P.x + HW + 0.1 > b.min[0] && P.x - HW - 0.1 < b.max[0] && P.y + H > b.min[1] && P.y - 0.15 < b.max[1] && P.z + HW + 0.1 > b.min[2] && P.z - HW - 0.1 < b.max[2];
+      if (!touching) continue;
+      if (p.k === 'kill') { if (this.inSafe) continue; if (this.hasAbility('noclip')) continue; if (this.shield) { this.shield = false; this.vel.y = 50; this.showBig('🛡️ Shield saved you!', 1500); sfx.checkpoint(); continue; } this.die(); return; }
+      if (p.k === 'bounce' && this.vel.y <= 0.1) { this.vel.y = 110; this.onGround = false; sfx.bounce(); }
+      if (p.k === 'jump' && this.vel.y <= 0.1) { this.vel.y = Number(p.power) || 180; this.onGround = false; sfx.bounce(); this.showBig('Boing! 🚀', 900); }
+      if (p.k === 'heal' && !this.collected.has('heal:' + p.id) && this.health < 100 && !this.dead) {
+        this.collected.add('heal:' + p.id);
+        this.health = Math.min(100, this.health + 30); this.updateHud(); sfx.checkpoint();
+        this.showBig('+30 Health! ❤️', 1200);
+        const hm = this.meshes.get(p.id); if (hm) hm.visible = false;
+        setTimeout(() => { this.collected.delete('heal:' + p.id); const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 15000);
+      }
+      if (p.k === 'speed') { if (this.speedTimer <= 0) this.showBig('Speed boost!', 1200); this.speedTimer = 5; }
+      if (p.k === 'checkpoint') {
+        const cp = new THREE.Vector3(p.p[0], p.p[1] + p.s[1] / 2, p.p[2]);
+        if (!this.checkpoint || !this.checkpoint.equals(cp)) { this.checkpoint = cp; sfx.checkpoint(); this.cpHit.add(p.id); this.showBig(this.cpTotal > 1 ? `Checkpoint ${this.cpHit.size}/${this.cpTotal}!` : 'Checkpoint reached!', 1500); }
+      }
+      if (p.k === 'magnet' && !this.collected.has('magnet:' + p.id)) { this.collected.add('magnet:' + p.id); this.magnetT = 20; this.showBig('🧲 Coin magnet! 20s', 1500); sfx.coin(); const hm = this.meshes.get(p.id); if (hm) hm.visible = false; setTimeout(() => { this.collected.delete('magnet:' + p.id); const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 15000); }
+      if (p.k === 'shield' && !this.shield) { this.shield = true; this.showBig('🛡️ Shield up!', 1500); sfx.checkpoint(); const hm = this.meshes.get(p.id); if (hm) hm.visible = false; setTimeout(() => { this.shield = false; const mm = this.meshes.get(p.id); if (mm) mm.visible = true; }, 30000); }
+      if (p.k === 'tp' && this.tpCd <= 0) { const other = (this.world?.parts || []).find(q => q.k === 'tp' && q.id !== p.id && q.name === p.name); if (other) { this.tpCd = 1; this.pos.set(other.p[0], other.p[1] + 3, other.p[2]); this.vel.set(0, 0, 0); this.showBig('🌀 Teleported!', 1200); sfx.checkpoint(); } }
+      if (p.k === 'win' && !this.won) {
+        if (this.objective) {
+          // Capture: the pad IS the point — holding it wins (objTick counts
+          // it), so touching it does not win instantly. Survive: the pad is
+          // scenery — the timer is the goal. Race / Collect: the pad is the
+          // finish line, exactly like the classic win.
+          if (this.objective.kind === 'capture' || this.objective.kind === 'survive') { /* handled by objTick / the timer */ }
+          else this.winObjective();
+        } else {
+          this.won = true; sfx.win(); this.showBig(this.o.test ? 'YOU WIN!' : `YOU WIN! +${ECON.WIN_TIX} FunTix`, 4000); this.send({ t: 'win' }); if (!reduceMotion()) confetti(this.c);
+          const panel = document.createElement('div'); panel.className = 'win-panel';
+          panel.innerHTML = `<h2>🏆 YOU WIN!</h2><p>${this.o.test ? '' : `+${ECON.WIN_TIX} FunTix`}</p><button class="btn-primary win-again">Play again</button><button class="btn-secondary win-next">Next game</button>`;
+          this.c.appendChild(panel);
+          panel.querySelector('.win-again').onclick = () => { panel.remove(); this.won = false; this.checkpoint = null; this.collected.clear(); for (const [id, m] of this.meshes) { const pp = (this.world?.parts || []).find(x => x.id === id); if (pp?.k === 'coin') m.visible = true; } this.spawn(); };
+          panel.querySelector('.win-next').onclick = () => this.exit();
+        }
+      }
+      if (p.k === 'coin' && !this.collected.has(p.id)) {
+        this.collected.add(p.id); this.meshes.get(p.id).visible = false; sfx.coin();
+        this.send({ t: 'coin', part: p.id });
+        if (this.o.test) this.txCount.textContent = this.collected.size + ' coins';
+        this.countCoin();
+      }
+      this.fireScriptTouch(p.name);
+      const sc = p.script?.onTouch;
+      if (sc && sc.action && sc.action !== 'none') {
+        const now = performance.now();
+        if (!this._scriptCd) this._scriptCd = new Map();
+        const last = this._scriptCd.get(p.id) || 0;
+        if (now - last > 2000) {
+          this._scriptCd.set(p.id, now);
+          if (sc.action === 'message') this.showBig(String(sc.text || 'Hello!').slice(0, 120), 2000);
+          else if (sc.action === 'kill') this.die();
+          else if (sc.action === 'teleport') {
+            this.pos.set(Number(sc.x) || 0, Number(sc.y) || 10, Number(sc.z) || 0);
+            this.vel.set(0, 0, 0);
+            this.showBig('Teleported!', 1500);
+          } else if (sc.action === 'tix') {
+            const amt = Math.max(1, Math.min(100, Math.floor(Number(sc.amount) || 5)));
+            this.showBig(`+${amt} FunTix!`, 2000);
+            this.send({ t: 'scriptTix', amount: amt });
+          }
+        }
+      }
+    }
+    if (this.magnetT > 0) { const vacR = this.hasAbility('coinhack') ? 400 : 144; for (const b of this.triggers) { const q = b.p; if (q.k !== 'coin' || this.collected.has(q.id)) continue; const dx = q.p[0] - P.x, dz = q.p[2] - P.z; if (dx * dx + dz * dz < vacR) { this.collected.add(q.id); const mm = this.meshes.get(q.id); if (mm) mm.visible = false; sfx.coin(); this.send({ t: 'coin', part: q.id }); this.countCoin(); } } }
+  }
+
+  // One coin toward a Collect objective (called from both the touch
+  // pickup and the coin-magnet vacuum). Wins the run at the target.
+  countCoin() {
+    if (this.objective?.kind !== 'collect' || this.objDone) return;
+    this.objCoins++;
+    this.updateObjHUD();
+    if (this.objCoins >= this.objective.score) this.winObjective('🪙 ALL COINS COLLECTED!');
+  }
+  // ---------- loop ----------
+  loop(now) {
+    if (this.destroyed) return;
+    this.raf = requestAnimationFrame(this.loop);
+    const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now; this.t += dt;
+    if (this.o.test && !this.loadHidden) { this.loadHidden = true; this.hideLoading(); }
+    if (this.speedTimer > 0) this.speedTimer -= dt;
+    if (this.emote && this.emoteT && (this.emoteT -= dt) <= 0) this.emote = null;
+    this._fpsN = (this._fpsN || 0) + 1; const nowMs = performance.now(); if (!this._fpsT) this._fpsT = nowMs;
+    if (nowMs - this._fpsT >= 500) { this._fps = Math.round(this._fpsN * 1000 / (nowMs - this._fpsT)); this._fpsN = 0; this._fpsT = nowMs; }
+    if (!this._pingT || nowMs - this._pingT > 5000) { this._pingT = nowMs; this._pingSent = nowMs; this.send({ t: 'ping', id: nowMs }); }
+    const fh = this.c.querySelector('.fps-hud');
+    if (fh) { let show = false; try { show = localStorage.getItem('ff_fps') === '1'; } catch {} fh.style.display = show ? '' : 'none'; if (show) fh.textContent = `${this._fps || 0} FPS${this._ping ? ` · ${this._ping}ms` : ''}`; }
+    for (const fn of (this._scriptState?.tickFns || [])) { try { fn(dt, this.t); } catch (e) { console.warn('onTick error:', e); } }
+    if (!this.dead) {
+      this.updateDynamics();
+      this.physics(dt * (this.fpSlowMo ? 0.5 : this.fpFastFwd ? 1.5 : 1));
+      if (this.firing && this.rivals && this.rivalsWeapon().auto) this.fireRivals();
+      if (this.firing && this.fps && this.fpsWeapon().auto) this.fireFps();
+      this.char.position.copy(this.pos);
+      let dy = (this.facing ?? 0) - this.char.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      this.char.rotation.y += dy * Math.min(1, dt * 14);
+      if (this.fpRainbow && this.char) {
+        this._rainbowT = (this._rainbowT || 0) + dt;
+        const hue = (this._rainbowT * 0.25) % 1;
+        this.char.traverse(o => { if (o.material && o.material.color && !o.userData.isTag) o.material.color.setHSL(hue, 0.85, 0.55); });
+      }
+      animateCharacter(this.char, this.anim, this.t, dt);
+      this.updatePet(this.pet, this.pos, this.facing ?? 0, dt);
+    } else if (this.debris) stepDebris(this.debris, dt, this.solids);
+    // remote players
+    for (const p of this.players.values()) {
+      const s = p.target; if (!s) continue;
+      const ch = p.char; const k = Math.min(1, dt * 12);
+      const tgt = new THREE.Vector3(s[1], s[2], s[3]);
+      if (ch.position.distanceTo(tgt) > 30) ch.position.copy(tgt); else ch.position.lerp(tgt, k);
+      let dy = s[4] - ch.rotation.y; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); ch.rotation.y += dy * k;
+      let anim = ANIMS[s[5]] || 'idle';
+      const vcode = s[6] | 0;
+      if (vcode !== (p.vcode | 0)) {
+        p.vcode = vcode;
+        if (p.carMesh) { ch.remove(p.carMesh); p.carMesh = null; }
+        if (p.bodyKids) { p.bodyKids.forEach(c => c.visible = true); p.bodyKids = null; }
+        if (vcode > 0 && VEHICLES[vcode - 1]) {
+          p.bodyKids = ch.children.filter(c => !c.userData.isTag);
+          p.bodyKids.forEach(c => c.visible = false);
+          p.carMesh = buildVehicle(VEHICLES[vcode - 1]);
+          ch.add(p.carMesh);
+        }
+      }
+      if (p.emote && p.emoteT && (p.emoteT -= dt) <= 0) p.emote = null;
+      if (anim === 'idle' && p.emote) anim = p.emote; else if (anim !== 'idle') p.emote = null;
+      ch.visible = anim !== 'dead';
+      if (p.pet) { p.pet.visible = ch.visible; if (ch.visible) this.updatePet(p.pet, ch.position, ch.rotation.y, dt); }
+      animateCharacter(ch, anim, this.t, dt);
+    }
+    // NPCs
+    this.updateNPCs(dt);
+    // Steal a Blob mode
+    if (this.stealablob) { try { this.stealablob.tick(dt, this.t); } catch (e) { console.warn('stealablob tick error:', e); } }
+    // Tag mode
+    if (this.world?.tag) { try { this.tagTick(dt); this.updateTagHUD(); } catch (e) { console.warn('tag tick error:', e); } }
+    // Strike Arena FPS mode
+    if (this.world?.fps) { try { this.fpsTick(dt); } catch (e) { console.warn('fps tick error:', e); } }
+    // Objectives (Capture / Collect / Race / Survive)
+    if (this.objective) { try { this.objTick(dt); } catch (e) { console.warn('objective tick error:', e); } }
+    // gear swing animation
+    if (this.gearSwingT > 0 && !this.dead) {      this.gearSwingT -= dt;
+      const rarm = this.char.userData.limbs?.rarm;
+      if (rarm) rarm.rotation.x = -2.2 * Math.sin((0.35 - this.gearSwingT) / 0.35 * Math.PI);
+      if (this.gearSwingT <= 0 && rarm) rarm.rotation.x = 0;
+    }
+    // projectiles
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const pr = this.projectiles[i];
+      pr.life -= dt;
+      if (pr.kind === 'pellet') pr.vel.y -= 60 * dt;
+      pr.mesh.position.addScaledVector(pr.vel, dt);
+      let hit = pr.life <= 0;
+      const mp = pr.mesh.position;
+      if (!hit && this.blockedAt(mp.x, mp.y, mp.z)) hit = true;
+      if (!hit) for (const p of this.players.values()) {
+        const d = p.char.position.clone(); d.y += 2.5;
+        if (d.distanceTo(mp) < 1.6 + (pr.kind === 'rocket' ? 0.8 : 0)) {
+          if (pr.kind === 'freeze') { this.send({ t: 'gearFreeze', id: p.id }); this.sys(`🧊 Froze ${p.name}!`); }
+          else { this.send({ t: 'gearHit', id: p.id }); this.onKill(p.name); }
+          hit = true; break;
+        }
+      }
+      if (hit) {
+        this.scene.remove(pr.mesh);
+        this.projectiles.splice(i, 1);
+        if (pr.kind === 'rocket') this.explode(mp.clone(), pr.radius);
+      }
+    }
+    // effects (explosion flashes)
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const ef = this.effects[i];
+      if (this.t >= ef.until) { this.scene.remove(ef.mesh); this.effects.splice(i, 1); }
+      else if (ef.kind === 'flash') ef.mesh.scale.setScalar(1 + (0.35 - (ef.until - this.t)) * 6);
+    }
+    // bubbles & coins
+    this.scene.traverse(o => {
+      if (o.userData.bubble) { o.userData.bubbleT -= dt; if (o.userData.bubbleT <= 0) { o.remove(o.userData.bubble); o.userData.bubble = null; } }
+    });
+    // FunTix rain tickets
+    if (this.tixRain) {
+      const rain = this.tixRain;
+      for (let i = rain.tickets.length - 1; i >= 0; i--) {
+        const t = rain.tickets[i];
+        t.position.y -= t.userData.vy * dt;
+        t.rotation.z += t.userData.spin * dt;
+        t.rotation.x += t.userData.spin * 0.5 * dt;
+        // collect if near player
+        const dx = t.position.x - this.pos.x, dz = t.position.z - this.pos.z, dy = t.position.y - (this.pos.y + 2);
+        if (dx * dx + dz * dz < 4 && Math.abs(dy) < 3) {
+          this.scene.remove(t); rain.tickets.splice(i, 1);
+          this.send({ t: 'tix_collect' });
+          this.showBig(`🎫 +${rain.amount} FunTix!`, 1200);
+          sfx.coin();
+          continue;
+        }
+        // remove if below ground
+        if (t.position.y < this.pos.y - 5) { this.scene.remove(t); rain.tickets.splice(i, 1); }
+      }
+    }
+    // Template game modes
+    if (this.world.soccer) this.updateSoccer(dt);
+    if (this.world.mystery) this.updateMystery(dt);
+    if (this.world.garden) this.updateGarden(dt);
+    this.netT = (this.netT || 0) + dt;
+    if (this.netT > 0.066) { this.netT = 0; this.send({ t: 's', s: [+this.pos.x.toFixed(2), +this.pos.y.toFixed(2), +this.pos.z.toFixed(2), +this.char.rotation.y.toFixed(3), this.dead ? 6 : ANIMS.indexOf(this.anim), this.vehicleId ? VEHICLES.indexOf(this.vehicleId) + 1 : 0] }); }
+    this.updateCamera(dt);
+    this.healthFill.style.width = this.health + '%';
+    this.renderer.render(this.scene, this.camera);
+  }
+  updateCamera() {
+    const head = (this.dead && this.debris ? this.debris[0].m.position.clone() : this.pos.clone().add(new THREE.Vector3(0, 4.5, 0)));
+    const off = new THREE.Vector3(Math.sin(this.camYaw) * Math.cos(this.camPitch), Math.sin(this.camPitch), Math.cos(this.camYaw) * Math.cos(this.camPitch));
+    let dist = this.camDist;
+    if (dist > 1) {
+      this.ray.set(head, off); this.ray.far = dist;
+      const hit = this.ray.intersectObjects(this.camMeshes, false)[0];
+      if (hit) dist = Math.max(0.5, hit.distance - 0.4);
+    }
+    this.camera.position.copy(head).addScaledVector(off, dist);
+    this.camera.lookAt(head);
+    const fp = this.camDist < 1.2;
+    if (!this.dead) this.char.visible = !fp;
+    if (this.shiftLock && !fp) this.camera.position.addScaledVector(new THREE.Vector3(Math.cos(this.camYaw), 0, -Math.sin(this.camYaw)), 1.75);
+    this.sun.position.copy(this.pos).add(new THREE.Vector3(60, 120, 40)); this.sun.target.position.copy(this.pos);
+  }
+
+  exit() {
+    for (const pr of this.projectiles) this.scene.remove(pr.mesh);
+    this.projectiles = []; this.destroy(); this.o.onExit?.(); }
+  destroy() {
+    stopJam();
+    this.stealablob?.destroy();
+    this.removeFpsBots();
+    if (this._fpsRing) { this.scene.remove(this._fpsRing); this._fpsRing = null; }
+    this.destroyed = true; cancelAnimationFrame(this.raf);
+    removeEventListener('keydown', this.onKey); removeEventListener('keyup', this.onKey); removeEventListener('resize', this.onResize);
+    if (document.pointerLockElement) document.exitPointerLock();
+    this.ws?.close(); this.renderer.dispose();
+    this.scene.traverse(o => o.geometry?.dispose?.());
+    this.c.innerHTML = '';
+  }
+}
+
+function breakApart(scene, char, vel) {
+  const parts = [];
+  char.updateMatrixWorld(true);
+  const meshes = [];
+  char.traverse(o => { if (o.isMesh && o.geometry.type !== 'PlaneGeometry') meshes.push(o); });
+  for (const m of meshes) {
+    const c = m.clone(); m.getWorldPosition(c.position); m.getWorldQuaternion(c.quaternion); c.scale.set(1, 1, 1);
+    scene.add(c);
+    parts.push({ m: c, v: new THREE.Vector3(vel.x * 0.5 + (Math.random() - 0.5) * 18, 10 + Math.random() * 18, vel.z * 0.5 + (Math.random() - 0.5) * 18), av: new THREE.Vector3(Math.random() * 8, Math.random() * 8, Math.random() * 8) });
+  }
+  // head first so the camera follows it
+  parts.sort((a, b) => b.m.position.y - a.m.position.y);
+  return parts;
+}
+function stepDebris(debris, dt, solids) {
+  for (const d of debris) {
+    d.v.y -= GRAVITY * dt * 0.6;
+    d.m.position.addScaledVector(d.v, dt);
+    for (const b of solids) {
+      const p = d.m.position;
+      if (p.x > b.min[0] && p.x < b.max[0] && p.z > b.min[2] && p.z < b.max[2] && p.y - 0.5 < b.max[1] && p.y > b.min[1]) { p.y = b.max[1] + 0.5; d.v.y *= -0.3; d.v.x *= 0.7; d.v.z *= 0.7; d.av.multiplyScalar(0.8); }
+    }
+    d.m.rotation.x += d.av.x * dt; d.m.rotation.y += d.av.y * dt; d.m.rotation.z += d.av.z * dt;
+  }
+}
+function wrap(g, text, max) {
+  const words = text.split(' '), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > max && cur) { lines.push(cur); cur = w; } else cur = t; }
+  if (cur) lines.push(cur); return lines;
+}
+export function nameColor(name) {
+  const cols = ['#fd2943', '#01a2ff', '#02b857', '#a75eb8', '#f58225', '#f5cd30', '#e8bac8', '#d7c59a'];
+  let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return cols[h % cols.length];
+}
+function confetti(root) {
+  const box = document.createElement('div'); box.className = 'confetti';
+  for (let i = 0; i < 120; i++) { const s = document.createElement('i'); s.style.left = Math.random() * 100 + '%'; s.style.background = `hsl(${Math.random() * 360},90%,60%)`; s.style.animationDelay = Math.random() * 1.5 + 's'; s.style.animationDuration = 2 + Math.random() * 2 + 's'; box.appendChild(s); }
+  root.querySelector('.game-root').appendChild(box); setTimeout(() => box.remove(), 5000);
+}
+const chatIcon = '<svg viewBox="0 0 24 24" width="22" height="22" fill="#fff"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
+export const LOGO = '<svg class="ff-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fflg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><rect x="3" y="3" width="42" height="42" rx="12" fill="url(#fflg)"/><rect x="14" y="17" width="7" height="9" rx="2" fill="#fff"/><rect x="27" y="17" width="7" height="9" rx="2" fill="#fff"/><path d="M16 31q8 6 16 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path d="M41 2l1.7 4.6L47 8.3l-4.3 1.7L41 14.6 39.3 10 35 8.3l4.3-1.7z" fill="#22d3ee"/></svg>';
+export const CLUB = `<svg class="club-badge" viewBox="0 0 24 24" width="18" height="18"><title>FriendClub member</title><path fill="#ffd400" d="${CLUB_PATH}"/></svg>`;
+export const tix = '<svg class="tix" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="11" fill="currentColor"/><circle cx="12" cy="12" r="8" fill="none" stroke="#1b1d1f" stroke-width="1.4" opacity=".35"/><path fill="#1b1d1f" d="M7.5 7h9v2.6h-3.2V18h-2.6V9.6H7.5z"/></svg>';
+export const badgeIcon = (id, size = 18) => { const b = BADGES[id]; return b ? `<svg class="club-badge" viewBox="0 0 24 24" width="${size}" height="${size}"><title>${b.name}</title><path fill="${b.color}" d="${b.path}"/></svg>` : ''; };

@@ -1,0 +1,919 @@
+import * as THREE from 'three';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { setupLighting, applyLighting, makePartMesh, findSpawn, worldThumbnail } from './three-util.js?v=88ba247e';
+import { CATALOG } from './catalog.js?v=6e002cc3';
+import { icons } from './icons.js?v=1aa0a4d3';
+import { OBJECTIVE_KINDS, DIFFICULTIES, defaultObjective, normalizeObjective, readObjectiveEntry, syncObjectiveEntry, buildHardSection, shortObjectiveLabel } from './objectives.js?v=f3c44694';
+
+const GEARS = CATALOG.filter(i => i.type === 'gear' && i.id !== 'gear_none');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const PRESETS = {
+  part: { name: 'Part', s: [4, 1, 2], c: '#a3a2a5', k: 'part', m: 'plastic' },
+  spawn: { name: 'SpawnLocation', s: [6, 0.5, 6], c: '#6b6b6b', k: 'spawn', m: 'spawn' },
+  kill: { name: 'KillBrick', s: [4, 1, 4], c: '#ff2020', k: 'kill', m: 'neon' },
+  checkpoint: { name: 'Checkpoint', s: [5, 0.5, 5], c: '#2ec4ff', k: 'checkpoint', m: 'neon' },
+  coin: { name: 'Coin', s: [1.2, 1.2, 1.2], c: '#ffd400', k: 'coin', m: 'plastic' },
+  bounce: { name: 'BouncePad', s: [6, 1, 6], c: '#22ff88', k: 'bounce', m: 'neon' },
+  speed: { name: 'SpeedPad', s: [4, 0.5, 4], c: '#ff9800', k: 'speed', m: 'neon' },
+  win: { name: 'WinPad', s: [8, 0.5, 8], c: '#ffffff', k: 'win', m: 'neon' },
+  lava: { name: 'Lava', s: [4, 1, 4], c: '#ff4500', k: 'kill', m: 'neon' },
+  ice: { name: 'Ice', s: [4, 1, 4], c: '#a0e8ff', k: 'part', m: 'glass' },
+  wall: { name: 'Wall', s: [1, 12, 12], c: '#c0c0c0', k: 'part', m: 'brick' },
+  platform: { name: 'Platform', s: [12, 1, 12], c: '#8b9a6b', k: 'part', m: 'grass' },
+  npc: { name: 'NPC', s: [2, 5, 2], c: '#ffd400', k: 'npc', m: 'plastic' },
+  jump: { name: 'JumpPad', s: [4, 0.5, 4], c: '#b366ff', k: 'jump', m: 'neon' },
+  heal: { name: 'HealPack', s: [1.6, 1.6, 1.6], c: '#ff5b5b', k: 'heal', m: 'neon' },
+  mover: { name: 'Moving Platform', s: [6, 1, 6], c: '#26c6da', k: 'part', m: 'plastic', mv: { a: 'x', d: 12, s: 1 } },
+  blink: { name: 'Blink Platform', s: [6, 1, 6], c: '#ab47bc', k: 'part', m: 'plastic', blink: { on: 2, off: 1.5 } },
+  sweeper: { name: 'Sweeper (moving KillBrick)', s: [4, 1, 2], c: '#ff2020', k: 'kill', m: 'neon', mv: { a: 'x', d: 10, s: 1.4 } },
+  gem: { name: 'Gem', s: [1.5, 1.5, 1.5], c: '#00ffcc', k: 'coin', m: 'neon' },
+  pillar: { name: 'Pillar', s: [2, 12, 2], c: '#a3a2a5', k: 'part', m: 'concrete' },
+  tp: { name: 'Portal A', s: [5, 0.5, 5], c: '#ff00ff', k: 'tp', m: 'neon' },
+  conv: { name: 'Conveyor', s: [8, 0.5, 8], c: '#ff9800', k: 'conv', m: 'metal', conv: [8, 0] },
+  lowg: { name: 'Low-G Zone', s: [10, 6, 10], c: '#b39ddb', k: 'lowg', m: 'glass' },
+  iceslide: { name: 'Ice Slide', s: [10, 0.5, 10], c: '#a0e8ff', k: 'ice', m: 'glass' },
+  water: { name: 'Water', s: [10, 1, 10], c: '#29b6f6', k: 'water', m: 'glass' },
+  magnet: { name: 'Magnet', s: [1.6, 1.6, 1.6], c: '#e91e63', k: 'magnet', m: 'neon' },
+  shield: { name: 'Shield', s: [1.6, 1.6, 1.6], c: '#00bcd4', k: 'shield', m: 'neon' },
+  safezone: { name: 'Safe Zone', s: [8, 4, 8], c: '#66bb6a', k: 'safe', m: 'glass' },
+  megajump: { name: 'Mega JumpPad', s: [4, 0.5, 4], c: '#ff5722', k: 'jump', m: 'neon', power: 260 },
+};
+const MATERIALS = ['plastic', 'neon', 'grass', 'wood', 'brick', 'glass', 'concrete', 'sand', 'metal', 'baseplate', 'spawn'];
+const KINDS = ['part', 'spawn', 'kill', 'checkpoint', 'win', 'bounce', 'coin', 'speed', 'npc', 'jump', 'heal', 'tp', 'conv', 'lowg', 'ice', 'water', 'magnet', 'shield', 'safe'];
+const SHAPES = [['box', 'Box'], ['cyl', 'Cylinder'], ['sph', 'Sphere'], ['cone', 'Cone'], ['ramp', 'Ramp']];
+const toHex = c => '#' + new THREE.Color(c).getHexString();
+// ---------- Visual (no-code) script specs ----------
+const VS_TRIGGERS = [
+  { type: 'start', label: 'When the game starts' },
+  { type: 'touch', label: 'When a player touches a part', params: [['part', 'part', 'Part', '']] },
+  { type: 'death', label: 'When the player is defeated' },
+  { type: 'chat', label: 'When a player chats', params: [['word', 'text', 'Contains word', '']] },
+  { type: 'tick', label: 'Every frame (repeats)' },
+];
+const VS_ACTIONS = [
+  { type: 'giveTix', label: 'Give FunTix', params: [['amount', 'number', 'Amount', 5]] },
+  { type: 'say', label: 'Show message to player', params: [['text', 'text', 'Message', 'Hello!']] },
+  { type: 'sayAll', label: 'Shout to everyone', params: [['text', 'text', 'Message', 'Hello!']] },
+  { type: 'teleport', label: 'Teleport player to', params: [['x', 'number', 'X', 0], ['y', 'number', 'Y', 10], ['z', 'number', 'Z', 0]] },
+  { type: 'kill', label: 'Defeat player', params: [] },
+  { type: 'heal', label: 'Heal player', params: [['amount', 'number', 'Amount', 25]] },
+  { type: 'damage', label: 'Damage player', params: [['amount', 'number', 'Amount', 10]] },
+  { type: 'setCheckpoint', label: 'Set checkpoint at', params: [['x', 'number', 'X', 0], ['y', 'number', 'Y', 10], ['z', 'number', 'Z', 0]] },
+  { type: 'spawnPart', label: 'Create part', params: [['name', 'text', 'Name', 'Part'], ['color', 'color', 'Color', '#a3a2a5'], ['sx', 'number', 'W', 4], ['sy', 'number', 'H', 1], ['sz', 'number', 'D', 4], ['x', 'number', 'X', 0], ['y', 'number', 'Y', 10], ['z', 'number', 'Z', 0]] },
+  { type: 'movePart', label: 'Move part', params: [['part', 'part', 'Part', ''], ['x', 'number', 'X', 0], ['y', 'number', 'Y', 0], ['z', 'number', 'Z', 0]] },
+  { type: 'hidePart', label: 'Hide part', params: [['part', 'part', 'Part', '']] },
+  { type: 'showPart', label: 'Show part', params: [['part', 'part', 'Part', '']] },
+  { type: 'playSound', label: 'Play sound', params: [['sound', 'sound', 'Sound', 'coin']] },
+  { type: 'setScore', label: 'Set score to', params: [['n', 'number', 'Score', 0]] },
+  { type: 'addScore', label: 'Add score points', params: [['n', 'number', 'Points', 1]] },
+];
+const VS_SOUNDS = ['coin', 'jump', 'oof', 'checkpoint', 'bounce', 'win', 'chat'];
+
+export class Studio {
+  constructor(container, o) {
+    this.c = container; this.o = o;
+    this.world = structuredClone(o.world);
+    if (!Array.isArray(this.world.folders)) this.world.folders = [];
+    if (!Array.isArray(this.world.scripts)) this.world.scripts = [];
+    // An objective the creator picked earlier (or one that came back from
+    // the server inside the hidden scripts entry) — show it picked. No
+    // guessing here: worlds without an explicit objective stay classic.
+    this.world.objective = normalizeObjective(this.world.objective, this.world) || normalizeObjective(readObjectiveEntry(this.world), this.world) || null;
+    if (this.world.objective && !this.world.difficulty) this.world.difficulty = 'normal';
+    this.gameId = o.gameId || null; this.name = o.name || 'Untitled Game'; this.description = o.description || ''; this.icon = o.icon || '';
+    this.meshes = new Map(); this.sel = null; this.multi = []; this.exFilter = ''; this.closedFolders = new Set(); this.undoStack = []; this.redoStack = []; this.dirty = false;
+    this.snap = true; this.keys = {};
+    this.dom(); this.three(); this.bind(); this.rebuildAll();
+    const sp = findSpawn(this.world);
+    this.camPos = new THREE.Vector3(sp.x + 30, sp.y + 25, sp.z + 30); this.yaw = Math.PI / 4; this.pitch = -0.5;
+    this.last = performance.now(); this.loop = this.loop.bind(this); this.raf = requestAnimationFrame(this.loop);
+  }
+
+  dom() {
+    const tool = (id, label, icon, title) => `<button class="rb-btn" data-tool="${id}" title="${title}"><span class="rb-ico">${icon}</span>${label}</button>`;
+    const ins = (k, label, color) => `<button class="rb-btn" data-insert="${k}" title="Insert ${label}"><span class="rb-ico"><i class="sw" style="background:${color}"></i></span>${label}</button>`;
+    this.c.innerHTML = `
+    <div class="studio">
+      <div class="st-top">
+        <div class="st-title"><span class="ff-mini">FF</span> Funtopia Studio <span class="st-gname">${esc(this.name)}</span><span class="st-dirty"></span></div>
+        <div class="st-top-actions"><button class="st-act test" data-a="play" title="Playtest — play this game right now (F5)"><span class="ic">▶</span> Playtest</button><button class="st-act" data-a="save">Save</button><button class="st-act" data-a="fun" title="Download this game as a .fun file"><span class="ic">${icons.download}</span> .fun</button><button class="st-act pub" data-a="publish">Publish</button><button class="st-act" data-a="exit">Exit</button></div>
+      </div>
+      <div class="st-ribbon">
+        <div class="rb-group"><div class="rb-row">
+          ${tool('select', 'Select', '&#x2196;', 'Select (1)')}${tool('move', 'Move', '&#x2725;', 'Move (2)')}${tool('scale', 'Scale', '&#x2922;', 'Scale (3)')}${tool('rotate', 'Rotate', '&#x27F3;', 'Rotate (4)')}
+        </div><div class="rb-label">Tools</div></div>
+        <div class="rb-group"><div class="rb-row">
+          ${Object.entries(PRESETS).map(([k, pr]) => ins(k, pr.name, pr.c)).join('')}
+        </div><div class="rb-label">Insert</div></div>
+        <div class="rb-group"><div class="rb-row">
+          <label class="rb-btn" title="Color of selection"><input type="color" class="rb-color" value="#a3a2a5">Color</label>
+          <label class="rb-btn" title="Material of selection"><select class="rb-mat">${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select>Material</label>
+          <label class="rb-btn" title="Snap to grid"><input type="checkbox" class="rb-snap" checked>Snap</label>
+        </div><div class="rb-label">Part</div></div>
+        <div class="rb-group"><div class="rb-row">
+          <button class="rb-btn" data-a="dup" title="Duplicate (Ctrl+D)"><span class="rb-ico">&#x2750;</span>Duplicate</button>
+          <button class="rb-btn" data-a="del" title="Delete (Del)"><span class="rb-ico">&#x2716;</span>Delete</button>
+          <button class="rb-btn" data-a="undo" title="Undo (Ctrl+Z)"><span class="rb-ico">&#x21B6;</span>Undo</button>
+          <button class="rb-btn" data-a="redo" title="Redo (Ctrl+Y)"><span class="rb-ico">&#x21B7;</span>Redo</button>
+          <button class="rb-btn" data-a="stairs" title="Build an 8-step staircase from the selection">Stairs</button>
+          <button class="rb-btn" data-a="mirror" title="Mirror the selection across its center">Mirror</button>
+        </div><div class="rb-label">Edit</div></div>
+        <div class="rb-group"><div class="rb-row">
+          <button class="rb-btn play" data-a="play" title="Play test (F5)"><span class="rb-ico">&#x25B6;</span>Play</button>
+          <button class="rb-btn" data-a="testobby" title="Test if obby is completable"><span class="rb-ico"><span class="ic">${icons.target}</span></span>Obby</button>
+        </div><div class="rb-label">Test</div></div>
+        <div class="rb-group"><div class="rb-row">
+          ${Object.entries(OBJECTIVE_KINDS).map(([k, o]) => `<button class="rb-btn obj-btn${this.world.objective?.kind === k ? ' active' : ''}" data-obj="${k}" title="${o.desc}"><span class="rb-ico">${o.icon}</span>${o.label}</button>`).join('')}
+        </div><div class="rb-row">
+          <label class="rb-btn" title="Difficulty — enemy strength, timer tightness, hard-section size"><select class="rb-diff">${Object.entries(DIFFICULTIES).map(([k, d]) => `<option value="${k}"${(this.world.difficulty || 'normal') === k ? ' selected' : ''}>${d.label}</option>`).join('')}</select>Difficulty</label>
+          <button class="rb-btn" data-a="hardsec" title="Add a hard stretch: kill bricks, sweepers and blink platforms"><span class="rb-ico">💪</span>Hard section</button>
+        </div><div class="rb-label">Objective <span class="obj-sum">${this.world.objective ? shortObjectiveLabel(this.world.objective, this.world.difficulty) : 'Pick one to give this game a goal'}</span></div></div>
+        <div class="rb-group"><div class="rb-row rb-light">
+          <label class="rb-btn" title="Sky color"><input type="color" class="rb-sky" value="${toHex(this.world.sky || '#8fc8ff')}">Sky</label>
+          <label class="rb-slider" title="Time of day"><span class="ic">${icons.clock}</span><input type="range" class="rb-tod" min="0" max="24" step="0.5" value="${this.world.light?.tod ?? 12}"><b class="rb-tod-v">${this.world.light?.tod ?? 12}h</b></label>
+          <label class="rb-slider" title="Brightness"><span class="ic">${icons.sun}</span><input type="range" class="rb-amb" min="0" max="2" step="0.1" value="${this.world.light?.ambient ?? 1}"></label>
+          <label class="rb-slider" title="Fog"><span class="ic">${icons.cloud}</span><input type="range" class="rb-fog" min="0" max="1" step="0.05" value="${this.world.light?.fog ?? 0.35}"></label>
+        </div><div class="rb-label">Lighting</div></div>
+      </div>
+      <div class="st-main">
+        <div class="st-view"><canvas class="st-canvas"></canvas><div class="st-hint">Right-drag to look &middot; WASD/QE to fly &middot; Wheel to zoom &middot; F to focus &middot; Click to select &middot; Shift+click for multi-select</div></div>
+        <div class="st-side">
+          <div class="st-panel"><div class="st-panel-h st-ex-h">Explorer<span class="ex-count"></span><input class="ex-search" placeholder="Filter..."></div><div class="st-explorer"></div></div>
+          <div class="st-panel"><div class="st-panel-h">Properties</div><div class="st-props"><div class="st-empty">Select a part to see its properties</div></div></div>
+          ${this.o.aiAccess ? `<div class="st-panel"><div class="st-panel-h">AI Coder</div><div class="st-ai">
+            <textarea class="ai-prompt" placeholder="Describe what to build... e.g. 'make an obby with lava and coins'"></textarea>
+            <button class="rb-btn ai-gen">Generate</button>
+            <div class="ai-result"></div>
+          </div></div>` : ''}
+        </div>
+      </div>
+      <div class="st-play hidden"></div>
+    </div>`;
+    const q = s => this.c.querySelector(s);
+    this.canvas = q('.st-canvas'); this.explorer = q('.st-explorer'); this.props = q('.st-props');
+    this.c.querySelector('.studio').addEventListener('click', e => {
+      const t = e.target.closest('[data-tool]'); if (t) this.setTool(t.dataset.tool);
+      const i = e.target.closest('[data-insert]'); if (i) this.insert(i.dataset.insert);
+      const ob = e.target.closest('[data-obj]'); if (ob) this.setObjective(ob.dataset.obj);
+      const a = e.target.closest('[data-a]')?.dataset.a;
+      if (a === 'dup') this.duplicate(); if (a === 'del') this.remove(); if (a === 'undo') this.undo(); if (a === 'redo') this.redo(); if (a === 'stairs') this.stairs(); if (a === 'mirror') this.mirror();
+      if (a === 'play') this.play(); if (a === 'testobby') this.testObby(); if (a === 'hardsec') this.addHardSection(); if (a === 'save') this.save(); if (a === 'fun') this.downloadFun(); if (a === 'publish') this.publishDialog(); if (a === 'exit') this.exit();
+    });
+    q('.rb-color').oninput = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.c = e.target.value; this.refresh(p); } } };
+    q('.rb-mat').onchange = e => { if (this.multi.length) { this.pushUndo(); for (const p of this.multi) { p.m = e.target.value; this.refresh(p); } } };
+    q('.ex-search').oninput = e => { this.exFilter = e.target.value.trim().toLowerCase(); this.renderExplorer(); };
+    q('.rb-snap').onchange = e => { this.snap = e.target.checked; this.applySnap(); };
+    q('.rb-sky').oninput = e => { this.world.sky = e.target.value; const si = this.props.querySelector('[data-lf="sky"]'); if (si) si.value = toHex(e.target.value); this.applyLight(); this.markDirty(); };
+    const lightUpd = () => {
+      this.world.light = { tod: +q('.rb-tod').value, ambient: +q('.rb-amb').value, fog: +q('.rb-fog').value };
+      q('.rb-tod-v').textContent = q('.rb-tod').value + 'h';
+      const syncProp = (f, v) => { const inp = this.props.querySelector(`[data-lf="${f}"]`); if (inp) inp.value = v; };
+      syncProp('tod', q('.rb-tod').value); syncProp('ambient', q('.rb-amb').value); syncProp('fog', q('.rb-fog').value);
+      const tv = this.props.querySelector('[data-lf-v="tod"]'); if (tv) tv.textContent = q('.rb-tod').value + 'h';
+      this.applyLight(); this.markDirty();
+    };
+    q('.rb-tod').oninput = lightUpd; q('.rb-amb').oninput = lightUpd; q('.rb-fog').oninput = lightUpd;
+    q('.rb-diff').onchange = e => this.setDifficulty(e.target.value);
+    const aiBtn = q('.ai-gen');
+    if (aiBtn) aiBtn.onclick = async () => {
+      const promptEl = q('.ai-prompt');
+      const resultEl = q('.ai-result');
+      const prompt = (promptEl.value || '').trim();
+      if (!prompt) { resultEl.innerHTML = '<div class="st-empty">Describe what to build first.</div>'; return; }
+      resultEl.innerHTML = '<div class="st-empty">Generating...</div>';
+      try {
+        const token = localStorage.getItem('ff_token');
+        const r = await fetch('/api/ai/coder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || 'Generation failed');
+        this._aiParts = data.parts || [];
+        this._aiHtml = data.html || '';
+        this._aiScripts = data.scripts || [];
+        const escHtml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // Automatically add parts to the world
+        this.pushUndo();
+        for (const part of this._aiParts) {
+          part.id = this.newId();
+          this.world.parts.push(part);
+        }
+        // Automatically add scripts to the world
+        if (!Array.isArray(this.world.scripts)) this.world.scripts = [];
+        for (const script of this._aiScripts) {
+          script.id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+          this.world.scripts.push(script);
+        }
+        this.rebuildAll();
+        this.renderExplorer();
+        this.markDirty();
+        const scriptNames = this._aiScripts.map(s => escHtml(s.name)).join(', ');
+        resultEl.innerHTML = `<div class="ai-msg">Done! Added ${this._aiParts.length} parts${this._aiScripts.length ? ` and ${this._aiScripts.length} script${this._aiScripts.length > 1 ? 's' : ''} (${scriptNames})` : ''} automatically. <button class="rb-btn ai-undo" style="margin-left:8px">Undo</button></div>
+          ${this._aiScripts.length ? `<div class="ai-sec">Scripts</div>
+          ${this._aiScripts.map(s => `<div class="ai-script-item"><span><span class="ic">${icons.edit}</span> ${escHtml(s.name)}</span><button class="rb-btn ai-view-script" data-sid="${s.id}">Edit</button></div>`).join('')}` : ''}
+          ${this._aiHtml ? `<div class="ai-sec">HTML Script</div>
+          <pre class="ai-code">${escHtml(this._aiHtml.slice(0, 2000))}</pre>
+          <button class="rb-btn ai-copy">Copy HTML</button>` : ''}`;
+        resultEl.querySelector('.ai-undo').onclick = () => {
+          this.undo();
+          resultEl.querySelector('.ai-msg').textContent = 'Undid AI insertion.';
+        };
+        resultEl.querySelectorAll('.ai-view-script').forEach(btn => {
+          btn.onclick = () => this.openScriptEditor(btn.dataset.sid);
+        });
+        const copyBtn = resultEl.querySelector('.ai-copy');
+        if (copyBtn) copyBtn.onclick = async () => {
+          try { await navigator.clipboard.writeText(this._aiHtml); copyBtn.textContent = 'Copied!'; }
+          catch { copyBtn.textContent = 'Copy failed'; }
+        };
+      } catch (e) {
+        resultEl.innerHTML = '<div class="st-empty">Error: ' + promptEl.value.replace(/[<>&]/g, '') + ' - ' + String(e.message).replace(/[<>&]/g, '') + '</div>';
+      }
+    };
+  }
+
+  three() {
+    const r = this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, preserveDrawingBuffer: true });
+    r.setPixelRatio(Math.min(devicePixelRatio, 2)); r.shadowMap.enabled = true; r.outputColorSpace = THREE.SRGBColorSpace;
+    this.scene = new THREE.Scene(); setupLighting(this.scene, this.world.sky || '#8fc8ff');
+    this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 3000);
+    this.grid = new THREE.GridHelper(512, 128, 0x000000, 0x000000); this.grid.material.opacity = 0.08; this.grid.material.transparent = true; this.grid.position.y = 0.01;
+    this.scene.add(this.grid);
+    this.tc = new TransformControls(this.camera, this.canvas);
+    this.tc.addEventListener('dragging-changed', e => {
+      this.tcDragging = e.value;
+      if (e.value) { this.pushUndo(); this._dragStart = this.multi.map(p => ({ id: p.id, p: [...p.p] })); }
+      else { this.bakeTransform(); this._dragStart = null; }
+    });
+    this.tc.addEventListener('objectChange', () => this.liveTransform());
+    this.scene.add(this.tc);
+    this.selBox = new THREE.Box3Helper(new THREE.Box3(), 0x2f8cff); this.selBox.visible = false; this.scene.add(this.selBox);
+    this.ray = new THREE.Raycaster();
+    this.setTool('move'); this.applySnap(); this.resize();
+  }
+  resize() {
+    const v = this.c.querySelector('.st-view'); const w = v.clientWidth, h = v.clientHeight;
+    this.renderer.setSize(w, h, false); this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
+  }
+  setTool(t) {
+    this.tool = t;
+    this.c.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+    if (t === 'select') this.tc.detach(); else { this.tc.setMode(t === 'move' ? 'translate' : t === 'rotate' ? 'rotate' : 'scale'); if (this.sel) this.tc.attach(this.meshes.get(this.sel.id)); }
+  }
+  applySnap() { this.tc.setTranslationSnap(this.snap ? 1 : null); this.tc.setScaleSnap(this.snap ? 0.25 : null); this.tc.setRotationSnap(this.snap ? Math.PI / 12 : null); }
+
+  // ---------- world mesh management ----------
+  rebuildAll() {
+    for (const m of this.meshes.values()) { this.scene.remove(m); if (m.userData.part.k !== 'coin') m.geometry.dispose(); }
+    this.meshes.clear(); this.tc.detach();
+    for (const p of this.world.parts) this.addMesh(p);
+    this.multi = this.multi.map(m => this.world.parts.find(p => p.id === m.id)).filter(Boolean);
+    this.sel = this.multi.length ? this.multi[this.multi.length - 1] : null;
+    this._syncSel();
+    this.renderExplorer();
+  }
+  addMesh(p) { const m = makePartMesh(p); if (p.k === 'coin') m.userData.spin = false; this.scene.add(m); this.meshes.set(p.id, m); return m; }
+  refresh(p) {
+    const old = this.meshes.get(p.id); const wasAttached = this.tc.object === old;
+    if (old) { this.scene.remove(old); if (!old.userData.sharedGeo) old.geometry.dispose(); }
+    const m = this.addMesh(p); if (wasAttached) this.tc.attach(m);
+    this.markDirty(); this.renderProps(); this.renderExplorerItem(p);
+  }
+  markDirty() { this.dirty = true; this.c.querySelector('.st-dirty').textContent = ' *'; }
+  applyLight() { const L = this.scene.userData.lighting; if (L) applyLighting(this.scene, L.sun, L.hemi, this.world.sky || '#8fc8ff', this.world.light); }
+  newId() { let i = this.world.parts.length + 1; const ids = new Set(this.world.parts.map(p => p.id)); while (ids.has('p' + i)) i++; return 'p' + i; }
+
+  // ---------- selection ----------
+  selectService(name) {
+    this.sel = null; this.multi = []; this.selSvc = name; this.tc.detach(); this.selBox.visible = false;
+    this.explorer.querySelectorAll('.ex-item').forEach(e => e.classList.toggle('sel', e.dataset.service === name));
+    this.renderProps();
+  }
+  select(p, additive) {
+    this.selSvc = null;
+    if (!additive) this.multi = [];
+    if (p) {
+      const i = this.multi.findIndex(x => x.id === p.id);
+      if (additive && i >= 0) this.multi.splice(i, 1);
+      else if (i < 0) this.multi.push(p);
+    }
+    this.sel = this.multi.length ? this.multi[this.multi.length - 1] : null;
+    this._syncSel();
+  }
+  _syncSel() {
+    const p = this.sel;
+    if (p && this.tool !== 'select') this.tc.attach(this.meshes.get(p.id)); else this.tc.detach();
+    this.selBox.visible = !!p;
+    if (p) { this.c.querySelector('.rb-color').value = toHex(p.c); this.c.querySelector('.rb-mat').value = p.m; }
+    const ids = new Set(this.multi.map(x => x.id));
+    this.explorer.querySelectorAll('.ex-item').forEach(e => e.classList.toggle('sel', !!e.dataset.id && ids.has(e.dataset.id)));
+    const el = p && this.explorer.querySelector(`[data-id="${p.id}"]`); if (el) el.scrollIntoView({ block: 'nearest' });
+    this.renderProps();
+  }
+  renderExplorer() {
+    const folders = this.world.folders || [];
+    const scripts = (this.world.scripts || []).filter(s => s.id !== '__objective__'); // hidden objective data, not a script
+    const parts = this.world.parts || [];
+    const folderMap = {};
+    folders.forEach(f => folderMap[f.id] = f);
+    const qf = this.exFilter;
+    const match = n => !qf || String(n || '').toLowerCase().includes(qf);
+    const selIds = new Set(this.multi.map(x => x.id));
+    // Parts grouped by folder
+    const partsByFolder = { '': [] };
+    parts.forEach(p => { const fid = p.folder || ''; if (!partsByFolder[fid]) partsByFolder[fid] = []; partsByFolder[fid].push(p); });
+    const scriptsByFolder = { '': [] };
+    scripts.forEach(s => { const fid = s.folder || ''; if (!scriptsByFolder[fid]) scriptsByFolder[fid] = []; scriptsByFolder[fid].push(s); });
+
+    const renderFolder = (fid, depth) => {
+      const f = fid ? folderMap[fid] : null;
+      const isOpen = fid ? (qf ? true : !this.closedFolders.has(fid)) : true;
+      let html = '';
+      if (f) {
+        html += `<div class="ex-folder" data-fid="${f.id}" style="padding-left:${depth * 12}px">
+          <span class="ex-toggle">${isOpen ? '&#x25BE;' : '&#x25B8;'}</span>
+          <span class="ex-fico">&#x1F4C1;</span>
+          <span class="ex-fname">${esc(f.name)}</span>
+          <span class="ex-actions">
+            <button class="ex-act" data-act="rename-folder" title="Rename"><span class="ic">${icons.edit}</span></button>
+            <button class="ex-act" data-act="del-folder" title="Delete"><span class="ic">${icons.x}</span></button>
+          </span>
+        </div>`;
+      }
+      if (isOpen) {
+        // Subfolders
+        folders.filter(sf => (sf.parent || '') === fid).forEach(sf => { html += renderFolder(sf.id, depth + 1); });
+        // Scripts in this folder
+        (scriptsByFolder[fid] || []).filter(s => match(s.name)).forEach(s => {
+          html += `<div class="ex-item ex-script" data-sid="${s.id}" style="padding-left:${(depth + 1) * 12 + 16}px">
+            <span class="ex-sico">&#x1F4DD;</span>${esc(s.name)}
+            <span class="ex-actions"><button class="ex-act" data-act="del-script" title="Delete"><span class="ic">${icons.x}</span></button></span>
+          </div>`;
+        });
+        // Parts in this folder
+        (partsByFolder[fid] || []).filter(p => match(p.name)).forEach(p => {
+          html += `<div class="ex-item${selIds.has(p.id) ? ' sel' : ''}" data-id="${p.id}" style="padding-left:${(depth + 1) * 12 + 16}px"><i class="sw" style="background:${p.c}"></i>${esc(p.name)}</div>`;
+        });
+      }
+      return html;
+    };
+
+    this.explorer.innerHTML = `
+      <div class="ex-toolbar">
+        <button class="ex-tbtn" data-act="new-folder" title="New Folder"><span class="ic">${icons.box}</span>+</button>
+        <button class="ex-tbtn" data-act="new-script" title="New Script"><span class="ic">${icons.code}</span>+</button>
+      </div>
+      <div class="ex-root">&#x25B8; Workspace</div>
+      <div class="ex-item ex-service" data-service="lighting"><span class="ex-sico">&#x2600;&#xFE0F;</span>Lighting</div>` + renderFolder('', 0);
+
+    this.explorer.onclick = e => {
+      const actBtn = e.target.closest('.ex-act, .ex-tbtn');
+      if (actBtn) { this.explorerAction(actBtn.dataset.act, actBtn); return; }
+      const folderEl = e.target.closest('.ex-folder');
+      if (folderEl && !e.target.closest('.ex-actions')) {
+        const fid = folderEl.dataset.fid;
+        if (this.closedFolders.has(fid)) this.closedFolders.delete(fid); else this.closedFolders.add(fid);
+        this.renderExplorer(); return;
+      }
+      const scriptEl = e.target.closest('.ex-script');
+      if (scriptEl && !e.target.closest('.ex-actions')) { this.openScriptEditor(scriptEl.dataset.sid); return; }
+      const svcEl = e.target.closest('.ex-service');
+      if (svcEl) { this.selectService(svcEl.dataset.service); return; }
+      const it = e.target.closest('.ex-item');
+      if (it) this.select(this.world.parts.find(p => p.id === it.dataset.id), e.shiftKey);
+    };
+    const ec = this.c.querySelector('.ex-count'); if (ec) ec.textContent = `${(this.world.parts || []).length} parts`;
+  }
+  explorerAction(act, btn) {
+    if (act === 'new-folder') {
+      const name = prompt('Folder name:', 'New Folder');
+      if (!name) return;
+      const id = 'f' + Date.now().toString(36);
+      this.world.folders.push({ id, name: name.trim(), parent: '' });
+      this.markDirty(); this.renderExplorer();
+    } else if (act === 'new-script') {
+      const name = prompt('Script name:', 'My script');
+      if (!name) return;
+      const id = 's' + Date.now().toString(36);
+      this.world.scripts.push({ id, name: name.trim() || 'My script', folder: '', kind: 'visual', trigger: { type: 'start' }, actions: [] });
+      this.markDirty(); this.renderExplorer(); this.openScriptEditor(id);
+    } else if (act === 'rename-folder') {
+      const fid = btn.closest('.ex-folder').dataset.fid;
+      const f = this.world.folders.find(x => x.id === fid);
+      const name = prompt('Rename folder:', f.name);
+      if (name) { f.name = name.trim(); this.markDirty(); this.renderExplorer(); }
+    } else if (act === 'del-folder') {
+      const fid = btn.closest('.ex-folder').dataset.fid;
+      if (!confirm('Delete this folder? Items inside will move to root.')) return;
+      this.world.folders = this.world.folders.filter(x => x.id !== fid);
+      this.world.parts.forEach(p => { if (p.folder === fid) p.folder = ''; });
+      this.world.scripts.forEach(s => { if (s.folder === fid) s.folder = ''; });
+      this.markDirty(); this.renderExplorer();
+    } else if (act === 'del-script') {
+      const sid = btn.closest('.ex-script').dataset.sid;
+      if (!confirm('Delete this script?')) return;
+      this.world.scripts = this.world.scripts.filter(x => x.id !== sid);
+      this.markDirty(); this.renderExplorer();
+    }
+  }
+  // ---------- Visual script builder (HTML only, no code) ----------
+  vsParamInput(key, kind, label, val) {
+    const v = esc(String(val ?? ''));
+    const attr = `data-p="${key}"`;
+    let input;
+    if (kind === 'number') input = `<input type="number" ${attr} value="${v}">`;
+    else if (kind === 'color') input = `<input type="color" ${attr} value="${v || '#a3a2a5'}">`;
+    else if (kind === 'part') input = `<input type="text" list="vs-parts" ${attr} value="${v}" placeholder="Part name">`;
+    else if (kind === 'sound') input = `<select ${attr}>${VS_SOUNDS.map(x => `<option value="${x}"${x === val ? ' selected' : ''}>${x}</option>`).join('')}</select>`;
+    else input = `<input type="text" ${attr} value="${v}">`;
+    return `<label class="vs-p"><span>${esc(label)}</span>${input}</label>`;
+  }
+  vsTriggerParams(s) {
+    const spec = VS_TRIGGERS.find(t => t.type === s.trigger.type);
+    if (!spec || !spec.params) return '';
+    return spec.params.map(([key, kind, label, def]) => this.vsParamInput(key, kind, label, s.trigger[key] ?? def)).join('');
+  }
+  vsActionRow(a) {
+    const spec = VS_ACTIONS.find(x => x.type === a.type) || VS_ACTIONS[0];
+    const params = (spec.params || []).map(([key, kind, label, def]) => this.vsParamInput(key, kind, label, a.params?.[key] ?? def)).join('');
+    return `<div class="vs-action" data-aid="${a._id}">
+      <select class="vs-atype">${VS_ACTIONS.map(x => `<option value="${x.type}"${x.type === spec.type ? ' selected' : ''}>${x.label}</option>`).join('')}</select>
+      ${params}<button class="btn-danger btn-small vs-del" title="Remove"><span class="ic">${icons.x}</span></button></div>`;
+  }
+  openVisualEditor(sid) {
+    const s = this.world.scripts.find(x => x.id === sid);
+    if (!s) return;
+    const draft = JSON.parse(JSON.stringify({ trigger: s.trigger || { type: 'start' }, actions: Array.isArray(s.actions) ? s.actions : [] }));
+    for (const a of draft.actions) { if (!a._id) a._id = 'a' + Math.random().toString(36).slice(2, 8); if (!a.params) a.params = {}; }
+    const partNames = [...new Set((this.world.parts || []).map(p => p.name).filter(Boolean))];
+    const d = document.createElement('div'); d.className = 'modal-bg';
+    d.innerHTML = `<div class="modal modal-wide"><h2><span class="ic">${icons.code}</span> ${esc(s.name)}</h2>
+      <style>
+        .vs-block{background:rgba(255,255,255,.04);border:1px solid #3a3a3a;border-radius:8px;padding:12px;margin:12px 0}
+        .vs-when{font-weight:800;letter-spacing:.15em;color:#ffd400;font-size:12px;margin-bottom:8px}
+        .vs-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .vs-tparams{display:flex;gap:8px;flex-wrap:wrap}
+        .vs-action{display:flex;gap:10px;align-items:center;background:rgba(0,0,0,.3);border:1px solid #444;border-radius:6px;padding:8px 10px;margin:8px 0;flex-wrap:wrap}
+        .vs-atype{min-width:180px}
+        .vs-p{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#bbb}
+        .vs-p input[type=text],.vs-p input[type=number]{width:92px}
+        .vs-p input[type=color]{width:40px;height:26px;padding:0;border:none;background:none}
+      </style>
+      <p class="muted small">Build with blocks — no code needed. It runs automatically when the game plays.</p>
+      <div class="vs-block"><div class="vs-when">WHEN</div><div class="vs-row">
+        <select class="vs-trigger">${VS_TRIGGERS.map(t => `<option value="${t.type}"${draft.trigger.type === t.type ? ' selected' : ''}>${t.label}</option>`).join('')}</select>
+        <span class="vs-tparams">${this.vsTriggerParams(draft)}</span>
+      </div></div>
+      <div class="vs-block"><div class="vs-when">THEN DO</div><div class="vs-list"></div>
+        <button class="btn-secondary btn-small vs-add">+ Add action</button></div>
+      <datalist id="vs-parts">${partNames.map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary vs-close">Close</button>
+        <button type="button" class="btn-primary vs-save">Save Script</button>
+      </div></div>`;
+    document.body.appendChild(d);
+    const list = d.querySelector('.vs-list');
+    const tparams = d.querySelector('.vs-tparams');
+    const renderActions = () => {
+      list.innerHTML = draft.actions.length ? draft.actions.map(a => this.vsActionRow(a)).join('') : '<p class="muted small">No actions yet — add one below.</p>';
+    };
+    renderActions();
+    d.querySelector('.vs-trigger').onchange = e => { draft.trigger = { type: e.target.value }; tparams.innerHTML = this.vsTriggerParams(draft); };
+    tparams.onchange = e => { const k = e.target.dataset.p; if (k) draft.trigger[k] = e.target.value; };
+    d.querySelector('.vs-add').onclick = () => {
+      draft.actions.push({ _id: 'a' + Math.random().toString(36).slice(2, 8), type: 'giveTix', params: {} });
+      renderActions();
+    };
+    list.onchange = e => {
+      const row = e.target.closest('.vs-action'); if (!row) return;
+      const a = draft.actions.find(x => x._id === row.dataset.aid); if (!a) return;
+      if (e.target.classList.contains('vs-atype')) { a.type = e.target.value; a.params = {}; renderActions(); return; }
+      const k = e.target.dataset.p; if (k) a.params[k] = e.target.value;
+    };
+    list.onclick = e => {
+      const btn = e.target.closest('.vs-del'); if (!btn) return;
+      const row = btn.closest('.vs-action');
+      draft.actions = draft.actions.filter(x => x._id !== row.dataset.aid);
+      renderActions();
+    };
+    d.querySelector('.vs-close').onclick = () => d.remove();
+    d.onclick = e => { if (e.target === d) d.remove(); };
+    d.querySelector('.vs-save').onclick = () => {
+      for (const a of draft.actions) delete a._id;
+      s.trigger = draft.trigger; s.actions = draft.actions;
+      this.markDirty(); d.remove();
+      this.o.toast('Script saved');
+    };
+  }
+  openScriptEditor(sid) {
+    const s = this.world.scripts.find(x => x.id === sid);
+    if (!s) return;
+    if (s.kind === 'visual') return this.openVisualEditor(sid);
+    const d = document.createElement('div'); d.className = 'modal-bg';
+    d.innerHTML = `<div class="modal modal-wide"><h2><span class="ic">${icons.code}</span> ${esc(s.name)}</h2>
+      <p class="muted small">Script API: <code>onStart(fn)</code> · <code>onTouch(partName, fn)</code> · <code>giveTix(player, n)</code> · <code>teleport(player, x, y, z)</code> · <code>say(player, msg)</code> · <code>kill(player)</code></p>
+      <textarea class="script-code" spellcheck="false">${esc(s.code || '')}</textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary">Close</button>
+        <button type="button" class="btn-primary">Save Script</button>
+      </div></div>`;
+    document.body.appendChild(d);
+    const ta = d.querySelector('.script-code');
+    // Tab key inserts spaces
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Tab') { e.preventDefault(); const st = ta.selectionStart; ta.value = ta.value.slice(0, st) + '  ' + ta.value.slice(ta.selectionEnd); ta.selectionStart = ta.selectionEnd = st + 2; }
+    });
+    d.querySelector('.btn-secondary').onclick = () => d.remove();
+    d.onclick = e => { if (e.target === d) d.remove(); };
+    d.querySelector('.btn-primary').onclick = () => {
+      s.code = ta.value;
+      this.markDirty(); d.remove();
+      this.o.toast('Script saved');
+    };
+  }
+  renderExplorerItem(p) { const el = this.explorer.querySelector(`[data-id="${p.id}"]`); if (el) el.innerHTML = `<i class="sw" style="background:${p.c}"></i>${esc(p.name)}`; }
+  renderLightProps() {
+    const L = this.world.light || {};
+    const tod = L.tod ?? 12, amb = L.ambient ?? 1, fog = L.fog ?? 0.35;
+    this.props.innerHTML = `
+      <div class="pr-sec">Lighting</div>
+      <div class="pr-row"><span>Sky Color</span><input type="color" data-lf="sky" value="${toHex(this.world.sky || '#8fc8ff')}"></div>
+      <div class="pr-row"><span>Time Of Day</span><div class="pr-v3"><input type="range" data-lf="tod" min="0" max="24" step="0.5" value="${tod}" style="flex:1"><b data-lf-v="tod">${tod}h</b></div></div>
+      <div class="pr-row"><span>Brightness</span><input type="range" data-lf="ambient" min="0" max="2" step="0.1" value="${amb}"></div>
+      <div class="pr-row"><span>Fog</span><input type="range" data-lf="fog" min="0" max="1" step="0.05" value="${fog}"></div>`;
+    this.props.querySelectorAll('[data-lf]').forEach(inp => inp.addEventListener(inp.type === 'range' ? 'input' : 'change', () => {
+      const f = inp.dataset.lf;
+      if (f === 'sky') { this.world.sky = inp.value; this.c.querySelector('.rb-sky').value = inp.value; }
+      else {
+        if (!this.world.light) this.world.light = {};
+        this.world.light[f] = +inp.value;
+        const q = s => this.c.querySelector(s);
+        if (f === 'tod') { q('.rb-tod').value = inp.value; q('.rb-tod-v').textContent = inp.value + 'h'; }
+        if (f === 'ambient') q('.rb-amb').value = inp.value;
+        if (f === 'fog') q('.rb-fog').value = inp.value;
+      }
+      const v = this.props.querySelector('[data-lf-v="tod"]'); if (v && f === 'tod') v.textContent = inp.value + 'h';
+      this.applyLight(); this.markDirty();
+    }));
+  }
+  renderMultiProps() {
+    const n = this.multi.length;
+    this.props.innerHTML = `
+      <div class="pr-sec">${n} parts selected</div>
+      <div class="pr-row"><span>Color</span><input type="color" data-mf="c" value="#a3a2a5"></div>
+      <div class="pr-row"><span>Material</span><select data-mf="m">${MATERIALS.map(m => `<option>${m}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Shape</span><select data-mf="sh">${SHAPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Type</span><select data-mf="k">${KINDS.map(k => `<option>${k}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>CanCollide</span><input type="checkbox" data-mf="cc" checked></div>
+      <div class="modal-actions" style="margin-top:10px">
+        <button class="btn-secondary" data-mf-act="dup">Duplicate (${n})</button>
+        <button class="btn-danger" data-mf-act="del">Delete (${n})</button>
+      </div>
+      <p class="muted small">Shift+click parts to add/remove. Dragging the move gizmo moves the whole selection together.</p>`;
+    this.props.querySelectorAll('[data-mf]').forEach(inp => inp.addEventListener('change', () => {
+      this.pushUndo();
+      const f = inp.dataset.mf;
+      for (const p of this.multi) {
+        if (f === 'cc') { if (inp.checked) delete p.cc; else p.cc = false; }
+        else if (f === 'sh') { if (inp.value === 'box') delete p.sh; else p.sh = inp.value; }
+        else p[f] = inp.value;
+        this.refresh(p);
+      }
+      this.renderExplorer();
+    }));
+    this.props.querySelectorAll('[data-mf-act]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.mfAct === 'del') this.remove(); else this.duplicate();
+    }));
+  }
+  renderProps() {
+    if (this.selSvc === 'lighting') { this.renderLightProps(); return; }
+    if (this.multi.length > 1) { this.renderMultiProps(); return; }
+    const p = this.sel;
+    if (!p) { this.props.innerHTML = '<div class="st-empty">Select a part to see its properties</div>'; return; }
+    const v3 = (k, label) => `<div class="pr-row"><span>${label}</span><div class="pr-v3">${[0, 1, 2].map(i => `<input type="number" step="0.5" data-v3="${k}" data-i="${i}" value="${+p[k][i].toFixed(2)}">`).join('')}</div></div>`;
+    const script = p.script?.onTouch || { action: 'none' };
+    const scriptActions = ['none', 'message', 'tix', 'teleport', 'kill'];
+    this.props.innerHTML = `
+      <div class="pr-sec">Data</div>
+      <div class="pr-row"><span>Name</span><input data-f="name" value="${esc(p.name)}"></div>
+      <div class="pr-sec">Appearance</div>
+      <div class="pr-row"><span>Color</span><input type="color" data-f="c" value="${toHex(p.c)}"></div>
+      <div class="pr-row"><span>Material</span><select data-f="m">${MATERIALS.map(m => `<option ${m === p.m ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Shape</span><select data-f="sh">${SHAPES.map(([v, l]) => `<option value="${v}" ${ (p.sh || 'box') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Transparency</span><input type="number" min="0" max="1" step="0.1" data-f="tr" value="${p.tr || 0}"></div>
+      <div class="pr-sec">Behavior</div>
+      <div class="pr-row"><span>Type</span><select data-f="k">${KINDS.map(k => `<option ${k === p.k ? 'selected' : ''}>${k}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>CanCollide</span><input type="checkbox" data-f="cc" ${p.cc !== false ? 'checked' : ''}></div>
+      <div class="pr-sec">Motion</div>
+      <div class="pr-row"><span>Moving</span><input type="checkbox" data-mv="on" ${p.mv ? 'checked' : ''}></div>
+      ${p.mv ? `<div class="pr-row"><span>Axis</span><select data-mv="a">${['x', 'y', 'z'].map(a => `<option ${p.mv.a === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Distance</span><input type="number" step="1" min="-120" max="120" data-mv="d" value="${p.mv.d ?? 12}"></div>
+      <div class="pr-row"><span>Speed</span><input type="number" step="0.2" min="0.2" max="4" data-mv="s" value="${p.mv.s ?? 1}"></div>` : ''}
+      <div class="pr-row"><span>Blinking</span><input type="checkbox" data-blink="on" ${p.blink ? 'checked' : ''}></div>
+      ${p.blink ? `<div class="pr-row"><span>Visible (sec)</span><input type="number" step="0.5" min="0.3" max="30" data-blink="on_t" value="${p.blink.on ?? 2}"></div>
+      <div class="pr-row"><span>Hidden (sec)</span><input type="number" step="0.5" min="0.3" max="30" data-blink="off_t" value="${p.blink.off ?? 1.5}"></div>` : ''}
+      ${p.k === 'npc' ? `<div class="pr-sec">NPC</div>
+      <div class="pr-row"><span>Behavior</span><select data-f="enemy"><option value="0">😊 Friendly</option><option value="1"${p.enemy ? ' selected' : ''}>👹 Enemy (chases players)</option></select></div>
+      <div class="pr-row"><span>Dialog</span><input data-f="dialog" maxlength="200" placeholder="Hello!" value="${esc(p.dialog || '')}"></div>
+      <div class="pr-row"><span>Wander</span><input type="checkbox" data-f="wander" ${p.wander !== false ? 'checked' : ''}></div>` : ''}
+      <div class="pr-sec">Scripting — On Touch</div>
+      <div class="pr-row"><span>Action</span><select data-script="action">${scriptActions.map(a => `<option value="${a}" ${script.action === a ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+      <div class="pr-row"><span>Message</span><input data-script="text" placeholder="Hello!" value="${esc(script.text || '')}"></div>
+      <div class="pr-row"><span>FunTix</span><input type="number" data-script="amount" min="1" max="100" value="${script.amount || 5}"></div>
+      <div class="pr-row"><span>Teleport to</span><div class="pr-v3">${[0,1,2].map(i => `<input type="number" step="1" data-script-xyz="${i}" value="${[script.x ?? 0, script.y ?? 10, script.z ?? 0][i]}">`).join('')}</div></div>
+      <div class="pr-sec">Transform</div>
+      ${v3('p', 'Position')}${v3('s', 'Size')}`;
+    this.props.querySelectorAll('input,select').forEach(inp => inp.addEventListener('change', () => {
+      this.pushUndo();
+      if (inp.dataset.mv !== undefined) {
+        const k2 = inp.dataset.mv;
+        if (k2 === 'on') { if (inp.checked) p.mv = { a: 'x', d: 12, s: 1 }; else delete p.mv; }
+        else if (p.mv) { if (k2 === 'a') p.mv.a = inp.value; else if (k2 === 'd') p.mv.d = Math.max(-120, Math.min(120, parseFloat(inp.value) || 12)); else p.mv.s = Math.max(0.2, Math.min(4, parseFloat(inp.value) || 1)); }
+        this.markDirty(); this.renderProps(); return;
+      }
+      if (inp.dataset.blink !== undefined) {
+        const k2 = inp.dataset.blink;
+        if (k2 === 'on') { if (inp.checked) p.blink = { on: 2, off: 1.5 }; else delete p.blink; }
+        else if (p.blink) { p.blink[k2 === 'on_t' ? 'on' : 'off'] = Math.max(0.3, Math.min(30, parseFloat(inp.value) || 2)); }
+        this.markDirty(); this.renderProps(); return;
+      }
+      if (inp.dataset.script) {
+        const key = inp.dataset.script;
+        if (!p.script) p.script = { onTouch: { action: 'none' } };
+        if (!p.script.onTouch) p.script.onTouch = { action: 'none' };
+        if (key === 'action') {
+          p.script.onTouch.action = inp.value;
+          if (inp.value === 'none') delete p.script;
+        } else if (key === 'text') {
+          p.script.onTouch.text = String(inp.value).slice(0, 120);
+        } else if (key === 'amount') {
+          p.script.onTouch.amount = Math.max(1, Math.min(100, Math.floor(Number(inp.value) || 5)));
+        }
+        this.markDirty(); this.renderProps(); return;
+      }
+      if (inp.dataset.scriptXyz !== undefined) {
+        const i = +inp.dataset.scriptXyz;
+        if (!p.script) p.script = { onTouch: { action: 'teleport', x: 0, y: 10, z: 0 } };
+        if (!p.script.onTouch) p.script.onTouch = { action: 'teleport', x: 0, y: 10, z: 0 };
+        const v = parseFloat(inp.value) || 0;
+        if (i === 0) p.script.onTouch.x = v; if (i === 1) p.script.onTouch.y = v; if (i === 2) p.script.onTouch.z = v;
+        this.markDirty(); return;
+      }
+      if (inp.dataset.v3) { const v = parseFloat(inp.value); if (!isNaN(v)) p[inp.dataset.v3][+inp.dataset.i] = inp.dataset.v3 === 's' ? Math.max(0.05, v) : v; }
+      else { const f = inp.dataset.f; if (f === 'cc') { if (inp.checked) delete p.cc; else p.cc = false; } else if (f === 'sh') { if (inp.value === 'box') delete p.sh; else p.sh = inp.value; } else if (f === 'wander') { p.wander = inp.checked; } else if (f === 'enemy') { if (inp.value === '1') p.enemy = true; else delete p.enemy; } else if (f === 'dialog') { p.dialog = String(inp.value).slice(0, 200); } else if (f === 'tr') { const t = Math.max(0, Math.min(1, parseFloat(inp.value) || 0)); if (t) p.tr = t; else delete p.tr; } else p[f] = inp.value; }
+      this.refresh(p);
+    }));
+  }
+
+  // ---------- editing ----------
+  pushUndo() { this.undoStack.push(JSON.stringify(this.world.parts)); if (this.undoStack.length > 60) this.undoStack.shift(); this.redoStack = []; }
+  undo() { if (!this.undoStack.length) return; this.redoStack.push(JSON.stringify(this.world.parts)); this.world.parts = JSON.parse(this.undoStack.pop()); this.rebuildAll(); this.markDirty(); }
+  redo() { if (!this.redoStack.length) return; this.undoStack.push(JSON.stringify(this.world.parts)); this.world.parts = JSON.parse(this.redoStack.pop()); this.rebuildAll(); this.markDirty(); }
+  insert(kind) {
+    this.pushUndo();
+    const pr = PRESETS[kind];
+    this.ray.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+    const hit = this.ray.intersectObjects([...this.meshes.values()], false)[0];
+    const at = hit ? hit.point : this.camPos.clone().add(new THREE.Vector3(0, 0, -20).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ')));
+    const p = { id: this.newId(), name: pr.name, p: [Math.round(at.x), +(at.y + pr.s[1] / 2).toFixed(2), Math.round(at.z)], s: [...pr.s], c: pr.c, k: pr.k, m: pr.m };
+    if (pr.k === 'npc') { p.dialog = 'Hello!'; p.wander = true; }
+    if (pr.mv) p.mv = { ...pr.mv };
+    if (pr.blink) p.blink = { ...pr.blink };
+    this.world.parts.push(p); this.addMesh(p); this.renderExplorer(); this.select(p); this.markDirty();
+    if (this.tool === 'select') this.setTool('move');
+  }
+  stairs() {
+    const base = this.sel || { p: [0, 0, 0], s: [6, 1, 3], c: '#a3a2a5' };
+    this.pushUndo();
+    for (let i = 1; i <= 8; i++) {
+      const p = { id: this.newId(), name: 'Step', p: [base.p[0], base.p[1] + i * 1.2, base.p[2] - i * 3.5], s: [...base.s], c: base.c, k: 'part', m: 'plastic' };
+      this.world.parts.push(p); this.addMesh(p);
+    }
+    this.renderExplorer(); this.markDirty();
+  }
+  mirror() {
+    if (!this.multi.length) return; this.pushUndo();
+    const cx = this.multi.reduce((s, p) => s + p.p[0], 0) / this.multi.length;
+    for (const p of this.multi) { p.p[0] = 2 * cx - p.p[0]; this.refresh(p); }
+    this.markDirty();
+  }
+  duplicate() {
+    if (!this.multi.length) return; this.pushUndo();
+    const copies = this.multi.map(s => {
+      const p = { ...structuredClone(s), id: this.newId() }; p.p[1] += p.s[1];
+      this.world.parts.push(p); this.addMesh(p); return p;
+    });
+    this.multi = copies; this.sel = copies[copies.length - 1];
+    this.renderExplorer(); this._syncSel(); this.markDirty();
+  }
+  remove() {
+    if (!this.multi.length) return; this.pushUndo();
+    this.tc.detach();
+    const ids = new Set(this.multi.map(s => s.id));
+    for (const id of ids) { const m = this.meshes.get(id); if (m) { this.scene.remove(m); this.meshes.delete(id); } }
+    this.world.parts = this.world.parts.filter(p => !ids.has(p.id));
+    this.multi = []; this.sel = null;
+    this.renderExplorer(); this._syncSel(); this.markDirty();
+  }
+  liveTransform() {
+    const m = this.tc.object; if (!m) return; const p = m.userData.part;
+    if (this.tc.mode === 'translate') {
+      p.p = [m.position.x, m.position.y, m.position.z].map(v => +v.toFixed(3));
+      if (this._dragStart && this._dragStart.length > 1) {
+        const s0 = this._dragStart.find(s => s.id === p.id);
+        if (s0) {
+          const dx = m.position.x - s0.p[0], dy = m.position.y - s0.p[1], dz = m.position.z - s0.p[2];
+          for (const s of this._dragStart) {
+            if (s.id === p.id) continue;
+            const op = this.world.parts.find(x => x.id === s.id); if (!op) continue;
+            op.p = [s.p[0] + dx, s.p[1] + dy, s.p[2] + dz];
+            const om = this.meshes.get(s.id); if (om) om.position.set(op.p[0], op.p[1], op.p[2]);
+          }
+        }
+      }
+    }
+  }
+  bakeTransform() {
+    const m = this.tc.object; if (!m) return; const p = m.userData.part;
+    p.p = [m.position.x, m.position.y, m.position.z].map(v => +v.toFixed(3));
+    if (m.scale.x !== 1 || m.scale.y !== 1 || m.scale.z !== 1) {
+      if (p.k !== 'coin') p.s = [p.s[0] * Math.abs(m.scale.x), p.s[1] * Math.abs(m.scale.y), p.s[2] * Math.abs(m.scale.z)].map(v => Math.max(0.05, +v.toFixed(3)));
+      m.scale.set(1, 1, 1);
+    }
+    const moved = this._dragStart && this._dragStart.length > 1 ? this._dragStart.map(s => s.id) : [p.id];
+    for (const id of moved) {
+      const part = this.world.parts.find(x => x.id === id);
+      if (part) { part.p = part.p.map(v => +v.toFixed(3)); this.refresh(part); }
+    }
+  }
+
+  // ---------- input ----------
+  bind() {
+    let look = false, lx = 0, ly = 0, downAt = null;
+    this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+    this.canvas.addEventListener('pointerdown', e => {
+      this.canvas.focus();
+      if (e.button === 2) { look = true; lx = e.clientX; ly = e.clientY; this.canvas.setPointerCapture(e.pointerId); }
+      if (e.button === 0) downAt = [e.clientX, e.clientY];
+    });
+    this.canvas.addEventListener('pointermove', e => {
+      if (!look) return; this.yaw -= (e.clientX - lx) * 0.005; this.pitch = THREE.MathUtils.clamp(this.pitch - (e.clientY - ly) * 0.005, -1.5, 1.5); lx = e.clientX; ly = e.clientY;
+    });
+    this.canvas.addEventListener('pointerup', e => {
+      if (e.button === 2) look = false;
+      if (e.button === 0 && downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) < 5 && !this.tcDragging && !this.tc.axis) {
+        const r = this.canvas.getBoundingClientRect();
+        this.ray.setFromCamera(new THREE.Vector2((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1), this.camera);
+        const hit = this.ray.intersectObjects([...this.meshes.values()], false)[0];
+        this.select(hit ? hit.object.userData.part : null, e.shiftKey);
+      }
+      downAt = null;
+    });
+    this.canvas.addEventListener('wheel', e => { e.preventDefault(); const f = this.forward(); this.camPos.addScaledVector(f, e.deltaY > 0 ? -4 : 4); }, { passive: false });
+    this.onKey = e => {
+      if (!this.c.querySelector('.st-play').classList.contains('hidden')) return;
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+      const down = e.type === 'keydown'; this.keys[e.code] = down;
+      if (!down) return;
+      if (e.ctrlKey && e.code === 'KeyZ') { e.preventDefault(); this.undo(); }
+      else if (e.ctrlKey && e.code === 'KeyY') { e.preventDefault(); this.redo(); }
+      else if (e.ctrlKey && e.code === 'KeyD') { e.preventDefault(); this.duplicate(); }
+      else if (e.ctrlKey && e.code === 'KeyS') { e.preventDefault(); this.save(); }
+      else if (e.code === 'Delete' || e.code === 'Backspace') this.remove();
+      else if (e.code === 'Digit1') this.setTool('select');
+      else if (e.code === 'Digit2') this.setTool('move');
+      else if (e.code === 'Digit3') this.setTool('scale');       else if (e.code === 'Digit4') this.setTool('rotate');
+      else if (e.code === 'KeyF' && this.sel) { const p = new THREE.Vector3(...this.sel.p); const d = Math.max(...this.sel.s) * 1.5 + 8; this.camPos.copy(p).addScaledVector(this.forward(), -d); }
+      else if (e.code === 'F5') { e.preventDefault(); this.play(); }
+    };
+    addEventListener('keydown', this.onKey); addEventListener('keyup', this.onKey);
+    this.onResize = () => this.resize(); addEventListener('resize', this.onResize);
+    this.onUnload = e => { if (this.dirty) { e.preventDefault(); e.returnValue = ''; } }; addEventListener('beforeunload', this.onUnload);
+  }
+  forward() { return new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ')); }
+
+  loop(now) {
+    if (this.destroyed) return; this.raf = requestAnimationFrame(this.loop);
+    const dt = Math.min(0.05, (now - this.last) / 1000); this.last = now;
+    if (!this.c.querySelector('.st-play').classList.contains('hidden')) return;
+    const k = this.keys, sp = (k.ShiftLeft ? 120 : 40) * dt;
+    const f = this.forward(), r = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    if (!k.ControlLeft && !k.ControlRight) {
+      if (k.KeyW) this.camPos.addScaledVector(f, sp); if (k.KeyS) this.camPos.addScaledVector(f, -sp);
+      if (k.KeyD) this.camPos.addScaledVector(r, sp); if (k.KeyA) this.camPos.addScaledVector(r, -sp);
+      if (k.KeyE) this.camPos.y += sp; if (k.KeyQ) this.camPos.y -= sp;
+    }
+    this.camera.position.copy(this.camPos); this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+    if (this.sel) { const m = this.meshes.get(this.sel.id); if (m) this.selBox.box.setFromObject(m).expandByScalar(0.05); }
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  // ---------- play / save / publish ----------
+  async testObby() {
+    try {
+      const token = localStorage.getItem('token') || '';
+      const r = await fetch('/api/test-obby', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        body: JSON.stringify({ world: this.world })
+      });
+      const res = await r.json();
+      if (res.ok) alert(`Obby is completable!\n${res.checkpoints} checkpoints verified.`);
+      else alert(`Obby has issues:\n\n${res.issues.join('\n')}`);
+    } catch (e) { alert('Test failed: ' + e.message); }
+  }
+  play() {
+    const box = this.c.querySelector('.st-play'); box.classList.remove('hidden');
+    this.keys = {};
+    this.o.playTest(box, structuredClone(this.world), this.name, () => { box.classList.add('hidden'); this.resize(); });
+  }
+  // ---------- objectives ----------
+  // Picking an objective gives the game a goal, a timer and a score — the
+  // runtime (game.js) enforces it. Tap the picked one again to go back
+  // to classic mode (win pad wins, no timer). Difficulty scales enemy
+  // strength, timer tightness and hard-section size (see objectives.js).
+  setObjective(kind) {
+    if (this.world.objective?.kind === kind) this.world.objective = null;
+    else this.world.objective = defaultObjective(kind);
+    if (this.world.objective && !this.world.difficulty) this.world.difficulty = 'normal';
+    syncObjectiveEntry(this.world);
+    this.markDirty(); this.refreshObjectiveUI();
+    this.o.toast(this.world.objective ? `Objective set: ${this.world.objective.winCondition}` : 'Objective removed — classic win-pad mode');
+  }
+  setDifficulty(level) {
+    this.world.difficulty = DIFFICULTIES[level] ? level : 'normal';
+    syncObjectiveEntry(this.world);
+    this.markDirty(); this.refreshObjectiveUI();
+  }
+  addHardSection() {
+    const n = buildHardSection(this.world, this.world.difficulty || 'normal');
+    if (!n) { this.o.toast('Could not place a hard section here', true); return; }
+    this.rebuildAll(); this.markDirty();
+    this.o.toast(`Added a hard section (${n} parts) — try it with Playtest!`);
+  }
+  refreshObjectiveUI() {
+    this.c.querySelectorAll('[data-obj]').forEach(b => b.classList.toggle('active', this.world.objective?.kind === b.dataset.obj));
+    const sel = this.c.querySelector('.rb-diff'); if (sel) sel.value = this.world.difficulty || 'normal';
+    const sum = this.c.querySelector('.obj-sum'); if (sum) sum.textContent = this.world.objective ? shortObjectiveLabel(this.world.objective, this.world.difficulty) : 'Pick one to give this game a goal';
+  }
+  async save(extra = {}) {
+    syncObjectiveEntry(this.world); // objective (+difficulty) rides in the hidden scripts entry so it survives the server round-trip
+    const body = { name: this.name, description: this.description, world: this.world, icon: this.icon || '', ...extra };
+    try {
+      let createdStatus = null;
+      if (this.gameId) await this.o.api('PUT', '/api/games/' + this.gameId, body);
+      else { const r = await this.o.api('POST', '/api/games', body); this.gameId = r.id; createdStatus = r.status || 'pending'; this.o.onCreated?.(r.id); }
+      this.dirty = false; this.c.querySelector('.st-dirty').textContent = '';
+      this.o.toast(extra.publish ? (createdStatus === 'pending' ? 'Sent for review! Your game will appear in Discover once a moderator approves it.' : 'Published! Your game is live.') : 'Saved');
+      return true;
+    } catch (e) { this.o.toast(e.message, true); return false; }
+  }
+  // Download this game as a .fun file: JSON with the game's Name,
+  // description and world (parts + scripts). Load it back from Create.
+  downloadFun() {
+    syncObjectiveEntry(this.world);
+    const data = { format: 'fun', version: 1, name: this.name, description: this.description || '', world: this.world };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (this.name || 'game').replace(/[^a-z0-9 _-]+/gi, '').trim().replace(/\s+/g, '-') + '.fun';
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    this.o.toast('Downloaded ' + a.download);
+  }
+
+  publishDialog() {
+    const d = document.createElement('div'); d.className = 'modal-bg';
+    const ICONS = ['🏰', '🌋', '🏝️', '⚔️', '🏆', '🎢', '🚀', '👻', '🧟', '🏎️', '⚽', '🧩', '🎨', '🍕', '🐉', '🔮', '🌈', '⭐', '💎', '🍦', '🎃', '👽', '🤖', '🦖', '🏴‍☠️', '⚡', '🔥', '❄️', '🌊', '🏜️', '🎪', '🎯', '🛸', '🏀', '🎸', '🧸'];
+    d.innerHTML = `<div class="modal"><h2>Publish to Funtopia</h2>
+      <label>Name<input class="pd-name" maxlength="50" value="${esc(this.name)}"></label>
+      <label>Description<textarea class="pd-desc" maxlength="1000" rows="4">${esc(this.description)}</textarea></label>
+      <div class="pd-icons-wrap"><b>Game Icon</b><span class="muted small">Pick an emoji — it shows on your game's card.</span>
+        <div class="pd-icons"><button class="pd-icon ${!this.icon ? 'sel' : ''}" data-icon="" title="No icon">🚫</button>${ICONS.map(e => `<button class="pd-icon ${this.icon === e ? 'sel' : ''}" data-icon="${e}">${e}</button>`).join('')}</div></div>
+      <div class="pd-tools"><b>Game Tools</b><span class="muted small">Everyone who plays gets these in their toolbar.</span>
+        <div class="pd-gears">${GEARS.map(gr => `<label class="pd-gear"><input type="checkbox" data-gear="${gr.id}" ${(this.world.gears || []).includes(gr.id) ? 'checked' : ''}>${gr.emoji || '📦'} ${esc(gr.name)}</label>`).join('')}</div></div>
+      <div class="modal-actions"><button class="btn-secondary pd-cancel">Cancel</button><button class="btn-primary pd-ok">Publish</button></div></div>`;
+    document.body.appendChild(d);
+    d.querySelector('.pd-cancel').onclick = () => d.remove();
+    d.querySelectorAll('.pd-icon').forEach(b => b.onclick = () => { this.icon = b.dataset.icon; d.querySelectorAll('.pd-icon').forEach(x => x.classList.toggle('sel', x === b)); this.markDirty(); });
+    d.querySelector('.pd-ok').onclick = async () => {
+      this.name = d.querySelector('.pd-name').value.trim() || 'Untitled Game'; this.description = d.querySelector('.pd-desc').value;
+      const gg = [...d.querySelectorAll('[data-gear]:checked')].map(c => c.dataset.gear);
+      if (gg.length) this.world.gears = gg; else delete this.world.gears;
+      this.markDirty();
+      this.c.querySelector('.st-gname').textContent = this.name;
+      const thumb = worldThumbnail(this.world);
+      if (await this.save({ publish: true, thumbnail: thumb })) d.remove();
+    };
+  }
+  exit() {
+    if (this.dirty && !confirm('You have unsaved changes. Exit anyway?')) return;
+    this.destroy(); this.o.onExit?.(this.gameId);
+  }
+  destroy() {
+    this.destroyed = true; cancelAnimationFrame(this.raf);
+    removeEventListener('keydown', this.onKey); removeEventListener('keyup', this.onKey); removeEventListener('resize', this.onResize); removeEventListener('beforeunload', this.onUnload);
+    this.tc.dispose(); this.renderer.dispose(); this.c.innerHTML = '';
+  }
+}

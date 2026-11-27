@@ -1,0 +1,592 @@
+import { icons } from './icons.js?v=1aa0a4d3';
+import { refreshVerified } from './verified.js?v=4e9b72be';
+export async function adminPage(D, q = '', gq = '') {
+  const { api, mount, esc, avatarImgTag, toast, loadBadgeDefs, tix, CLUB, ADMIN } = D;
+  const me = D.me, BADGE_DEFS = D.BADGE_DEFS;
+  if (!me.admin && !me.owner) { location.hash = '#/home'; return; }
+  const users = await api('GET', '/api/admin/users?q=' + encodeURIComponent(q));
+  let games = [], gamesError = '';
+  try { games = await api('GET', '/api/admin/games?q=' + encodeURIComponent(gq)); }
+  catch (e) { gamesError = e.message || 'Could not load games'; }
+  const badgeOpts = Object.values(BADGE_DEFS).map(b => `<option value="${esc(b.id)}">${esc(b.icon || '')} ${esc(b.name)}${b.custom ? ' (custom)' : ''}</option>`).join('');
+  const status = u => u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
+  mount('admin', `<h1>Admin Panel</h1>
+    <p class="muted">Manage players: FriendClub, FunTix, badges and quick actions.${me.owner ? ` <a href="#/owner"><span class="ic">${icons.crown}</span> Owner Panel</a> has the owner-only tools.` : ''} <a href="#/moderation"><span class="ic">${icons.shield}</span> Moderation</a> handles bans and reports.</p>
+    <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
+    <section class="admin-section"><h3>Create Badge</h3>
+      <div class="badge-creator">
+        <input class="badge-name" placeholder="Badge name" maxlength="30">
+        <input class="badge-icon" placeholder="🏅" maxlength="4" title="Emoji icon (or upload image)">
+        <label class="btn-secondary btn-small" style="cursor:pointer">Upload image<input type="file" class="badge-file" accept="image/*" hidden></label>
+        <img class="badge-preview" style="display:none;width:32px;height:32px;border-radius:6px;vertical-align:middle">
+        <input type="color" class="badge-color" value="#888888" title="Color">
+        <input class="badge-desc" placeholder="Description" maxlength="100">
+        <button class="btn-primary badge-create">Create</button>
+      </div>
+      <div class="custom-badges">${Object.values(BADGE_DEFS).filter(b => b.custom).map(b => `
+        <span class="custom-badge-chip">${b.image ? `<img src="${b.image}" style="width:20px;height:20px;border-radius:4px;vertical-align:-4px">` : `<span style="font-size:20px">${b.icon}</span>`} ${esc(b.name)}
+        <button class="btn-danger btn-small badge-delete" data-id="${esc(b.id)}" title="Delete badge">×</button></span>`).join('') || '<span class="muted small">No custom badges yet</span>'}
+      </div>
+    </section>
+    <section class="admin-section"><h3><span class="ic">${icons.gamepad}</span> Games <span class="muted small">publish, feature & manage</span></h3>
+      ${gamesError ? `<p style="color:#ff6b6b"><span class="ic">${icons.alert}</span> Games list unavailable: ${esc(gamesError)} — the rest of the panel still works.</p>` : ''}
+      <form class="game-search admin-search"><input name="gq" placeholder="Search games" value="${esc(gq)}"><button class="btn-primary">Search</button></form>
+      <div class="lbp">${games.map(g => `
+      <div class="lbp-row admin-row-wrap">
+        <a class="lbp-name" href="#/play/${encodeURIComponent(g.id)}">${esc(g.name)}</a>
+        ${g.featured ? `<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>` : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
+        <span class="admin-status">by ${esc(g.creator)} &middot; <span class="ic">${icons.eye}</span> ${(g.visits ?? 0).toLocaleString()} &middot; <span class="ic">${icons.thumb}</span> ${g.likes ?? 0} <span class="ic flip">${icons.thumb}</span> ${g.dislikes ?? 0}</span>
+        <div class="admin-controls">
+          <button class="btn-secondary g-pub" data-id="${esc(g.id)}" title="Toggle Discover visibility">${g.unpublished ? 'Publish' : 'Unpublish'}</button>
+          <button class="btn-secondary g-feat" data-id="${esc(g.id)}" title="Pin to top of Discover">${g.featured ? 'Unfeature' : '<span class="ic">' + icons.star + '</span> Feature'}</button>
+          <button class="btn-secondary g-rename" data-id="${esc(g.id)}" title="Rename game">Rename</button>
+        </div>
+      </div>`).join('') || '<p class="muted">No games found.</p>'}</div>
+    </section>
+    <div class="lbp">${users.map(u => `
+      <div class="lbp-row admin-row-wrap">
+        ${avatarImgTag(u.avatar)}<a class="lbp-name" href="#/users/${encodeURIComponent(u.name)}">${u.club ? CLUB : ''}${esc(u.name)}${u.admin ? ADMIN : ''}</a>
+        <span class="role-tag role-${u.role || 'player'}">${esc((u.role || 'player').toUpperCase())}</span>
+        <span class="admin-status">${status(u)} &middot; ${tix} ${(u.funtix ?? 0).toLocaleString()}</span>
+        <div class="admin-controls">
+          ${u.admin ? '' : u.club
+            ? `<button class="btn-secondary club-toggle" data-name="${esc(u.name)}" data-on="0">Remove FriendClub</button>`
+            : `<button class="btn-primary club-toggle" data-name="${esc(u.name)}" data-on="1">Give FriendClub</button>`}
+          <span class="admin-inline">
+            <input type="number" class="tix-amt" data-name="${esc(u.name)}" value="100" min="1" max="10000" title="FunTix amount">
+            <button class="btn-secondary tix-give" data-name="${esc(u.name)}">Give FunTix</button>
+          </span>
+          <span class="admin-inline">
+            <select class="badge-sel" data-name="${esc(u.name)}">${badgeOpts}</select>
+            <button class="btn-secondary badge-grant" data-name="${esc(u.name)}">Grant badge</button>
+            <button class="btn-secondary badge-revoke" data-name="${esc(u.name)}">Revoke</button>
+          </span>
+          <span class="admin-inline">
+            <button class="btn-secondary items-give" data-name="${esc(u.name)}" title="Give every marketplace item">Give all items</button>
+            <button class="btn-secondary daily-reset" data-name="${esc(u.name)}" title="Reset daily reward">Reset daily</button>
+          </span>
+          <span class="admin-inline">
+            ${u.aiAccess
+              ? `<button class="btn-secondary ai-revoke" data-name="${esc(u.name)}" title="Remove AI coder access">Revoke AI</button>`
+              : `<button class="btn-primary ai-grant" data-name="${esc(u.name)}" title="Grant AI coder access">Grant AI</button>`}
+          </span>
+          <span class="admin-inline">
+            ${u.admin ? '' : u.banned
+              ? `<button class="btn-primary ban-revoke" data-name="${esc(u.name)}" title="Unban this user">Unban</button><span class="banned-tag" title="${esc(u.banReason || 'Banned')}">🚫 BANNED${u.bannedUntil ? ' until ' + new Date(u.bannedUntil).toLocaleDateString() : ''}</span>`
+              : `<button class="btn-danger ban-btn" data-name="${esc(u.name)}" title="Ban this user">Ban</button>`}
+          </span>
+        </div>
+      </div>`).join('') || '<p class="muted">No players found.</p>'}</div>`, () => {
+    app.querySelector('form.admin-search:not(.game-search)').onsubmit = e => { e.preventDefault(); adminPage(D, e.target.q.value.trim(), gq); };
+    app.querySelector('form.game-search').onsubmit = e => { e.preventDefault(); adminPage(D, q, e.target.gq.value.trim()); };
+    const gcmd = async (id, command, extra = {}) => {
+      try {
+        const r = await api('POST', '/api/admin/games/' + encodeURIComponent(id) + '/command', { command, ...extra });
+        toast(r.message || 'Done'); adminPage(D, q, gq);
+      } catch (e) { toast(e.message, true); }
+    };
+    app.querySelectorAll('.g-pub').forEach(b => b.onclick = () => gcmd(b.dataset.id, 'toggle_publish'));
+    app.querySelectorAll('.g-feat').forEach(b => b.onclick = () => gcmd(b.dataset.id, b.textContent.includes('Unfeature') ? 'unfeature' : 'feature'));
+    app.querySelectorAll('.g-rename').forEach(b => b.onclick = () => {
+      const v = prompt('Rename game to:');
+      if (v && v.trim()) gcmd(b.dataset.id, 'rename', { name: v.trim() });
+    });
+    const cmd = async (name, command, extra = {}) => {
+      try {
+        const r = await api('POST', '/api/admin/users/' + encodeURIComponent(name) + '/command', { command, ...extra });
+        toast(r.message || 'Done'); adminPage(D, q, gq);
+      } catch (e) { toast(e.message, true); }
+    };
+    app.querySelectorAll('.club-toggle').forEach(b => b.onclick = async () => {
+      const on = b.dataset.on === '1';
+      try { const r = await api('POST', '/api/admin/club/' + encodeURIComponent(b.dataset.name), { on }); toast(on ? `Gave FriendClub to ${b.dataset.name}` : `Removed FriendClub from ${b.dataset.name}`); adminPage(D, q, gq); }
+      catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('.tix-give').forEach(b => b.onclick = () => {
+      const inp = app.querySelector(`.tix-amt[data-name="${CSS.escape(b.dataset.name)}"]`);
+      cmd(b.dataset.name, 'grant_tix', { amount: Math.max(1, Math.floor(Number(inp?.value) || 100)) });
+    });
+    app.querySelectorAll('.items-give').forEach(b => b.onclick = () => cmd(b.dataset.name, 'give_all_items'));
+    app.querySelectorAll('.daily-reset').forEach(b => b.onclick = () => cmd(b.dataset.name, 'reset_daily'));
+    app.querySelectorAll('.badge-create').forEach(b => b.onclick = async () => {
+      const name = app.querySelector('.badge-name')?.value.trim();
+      const icon = app.querySelector('.badge-icon')?.value.trim();
+      const color = app.querySelector('.badge-color')?.value;
+      const desc = app.querySelector('.badge-desc')?.value.trim();
+      const file = app.querySelector('.badge-file')?.files?.[0];
+      if (!name) { toast('Badge needs a name', true); return; }
+      try {
+        let image = '';
+        if (file) image = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+        await api('POST', '/api/admin/badges', { name, icon, color, desc, image });
+        toast('Badge created'); await loadBadgeDefs(); adminPage(D, q, gq);
+      } catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('.badge-delete').forEach(b => b.onclick = async () => {
+      if (!confirm('Delete this badge?')) return;
+      try { await api('DELETE', '/api/admin/badges/' + encodeURIComponent(b.dataset.id)); toast('Badge deleted'); await loadBadgeDefs(); adminPage(D, q, gq); }
+      catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('.badge-grant').forEach(b => b.onclick = () => {
+      const sel = app.querySelector(`.badge-sel[data-name="${CSS.escape(b.dataset.name)}"]`);
+      cmd(b.dataset.name, 'grant_badge', { badge: sel?.value });
+    });
+    app.querySelectorAll('.badge-revoke').forEach(b => b.onclick = () => {
+      const sel = app.querySelector(`.badge-sel[data-name="${CSS.escape(b.dataset.name)}"]`);
+      cmd(b.dataset.name, 'revoke_badge', { badge: sel?.value });
+    });
+    app.querySelectorAll('.ai-grant').forEach(b => b.onclick = () => cmd(b.dataset.name, 'grant_ai', {}));
+    app.querySelectorAll('.ai-revoke').forEach(b => b.onclick = () => cmd(b.dataset.name, 'revoke_ai', {}));
+    app.querySelectorAll('.ban-btn').forEach(b => b.onclick = async () => {
+      const reason = prompt(`Ban ${b.dataset.name}? Enter reason:`) || '';
+      if (reason === null) return;
+      const daysStr = prompt('Ban duration in days (0 = permanent):', '0');
+      if (daysStr === null) return;
+      const days = Math.max(0, parseInt(daysStr) || 0);
+      if (!confirm(`STEP 1 of 2: start a ban of ${b.dataset.name}${days ? ` for ${days} days` : ' permanently'}? A DIFFERENT moderator or admin must confirm on the Moderation page before it takes effect.`)) return;
+      try {
+        await api('POST', '/api/mod/ban/initiate', { name: b.dataset.name, reason, days });
+        toast('First confirmation recorded. A different moderator or admin must confirm in Moderation.');
+      } catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('.ban-revoke').forEach(b => b.onclick = () => {
+      if (!confirm(`Unban ${b.dataset.name}?`)) return;
+      cmd(b.dataset.name, 'unban', {});
+    });
+  });
+}
+
+export async function ownerPage(D, q = '') {
+  const { api, mount, esc, avatarImgTag, toast, tix, CLUB, ADMIN, ensureAvatar3d } = D;
+  const me = D.me;
+  if (!me.owner) { location.hash = '#/home'; return; }
+  const users = await api('GET', '/api/admin/users?q=' + encodeURIComponent(q));
+  let games = [], gamesError = '';
+  try { games = await api('GET', '/api/admin/games'); }
+  catch (e) { gamesError = e.message || 'Could not load games'; }
+  let playerCount = 0, party = { active: false, games: [], count: 0, goal: 100 };
+  try { const pc = await api('GET', '/api/player-count'); playerCount = pc.count || 0; } catch {}
+  try { party = await api('GET', '/api/event/party'); } catch {}
+  let verifiedList = [], verifiedTable = true;
+  try { const v = await api('GET', '/api/verified'); verifiedList = v.verified || []; verifiedTable = v.table !== false; } catch {}
+  let siteVersion = '1.0';
+  try { const v = await api('GET', '/api/version'); siteVersion = v.version || '1.0'; } catch {}
+  const verifiedSet = new Set(verifiedList.map(n => String(n).toLowerCase()));
+  const partyCount = party.count || playerCount;
+  const partyGoal = party.goal || 100;
+  const partyPct = Math.min(100, Math.round(partyCount / partyGoal * 100));
+  const status = u => u.owner ? 'Owner' : u.admin ? 'Admin' : u.clubForever ? 'FriendClub (free)' : u.club ? `FriendClub (${Math.ceil((u.clubUntil - Date.now()) / 86400000)} days left)` : 'Not a member';
+  mount('owner', `<h1><span class="ic">${icons.crown}</span> Owner Panel</h1>
+    <p class="muted">Owner-only tools.</p>
+    <p><a class="btn-secondary" href="https://muse.ai" target="_blank" rel="noopener"><span class="ic">${icons.sparkles}</span> Muse AI</a> <a class="btn-secondary" href="#/admin"><span class="ic">${icons.shield}</span> Admin Panel</a> <a class="btn-secondary" href="#/moderation"><span class="ic">${icons.shield}</span> Moderation</a></p>
+    <form class="admin-search"><input name="q" placeholder="Search players" value="${esc(q)}"><button class="btn-primary">Search</button></form>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.bell}</span> Site Tools <span class="muted small">site-wide</span></h3>
+      <div class="owner-grid">
+        <span class="admin-inline"><input class="announce-text" placeholder="Broadcast announcement..." maxlength="200" style="min-width:220px"><button class="btn-primary announce-send">📢 Broadcast</button><button class="btn-secondary announce-clear">Clear</button></span>
+        <span class="admin-inline"><button class="btn-secondary maint-toggle"><span class="ic">${icons.wrench}</span> Maintenance: OFF</button></span>
+        <span class="admin-inline"><input class="version-input" placeholder="Version — e.g. 1.0" maxlength="16" style="min-width:140px" value="${esc(siteVersion)}"><button class="btn-primary version-save">Save version</button></span>
+        <span class="admin-inline"><button class="btn-danger kick-all">Kick all players</button></span>
+        <span class="admin-inline"><input type="number" class="rain-amt" value="50" min="1" max="1000" title="FunTix per online player"><button class="btn-primary funtix-rain"><span class="ic">${icons.cloud}</span> FunTix Rain</button></span>
+      </div>
+      <div class="site-state muted small"></div>
+    </section>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.sparkles}</span> 100 Players Party <span class="muted small">milestone event</span></h3>
+      <p class="muted">${party.active ? '<b style="color:#ff2d95">🎉 THE PARTY IS LIVE!</b>' : party.alreadyHappened ? '<b>🎉 The party already happened — it was one-time only, and the Neon Party Hat will never come back.</b>' : `We're at <b>${partyCount} / ${partyGoal} players</b> — start the party when we hit 100!`}</p>
+      <div class="party100-bar"><div class="party100-bar-fill" style="width:${partyPct}%"></div></div>
+      <p class="muted small">${partyPct}% to ${partyGoal} players</p>
+      <div class="owner-grid">
+        ${party.active
+          ? `<span class="admin-inline"><a class="btn-primary" href="#/play/g_party100">▶ Open the Party</a><button class="btn-danger party-stop">End the Party</button></span>`
+          : party.alreadyHappened
+            ? `<span class="muted small">The party can never be started again.</span>`
+            : `<span class="admin-inline"><button class="btn-primary party-start"><span class="ic">${icons.sparkles}</span> Start the Party</button></span>`}
+      </div>
+      <p class="muted small">Starting the party creates the 🎉 100 Players Party plaza (disco floor, DJ, cake) and gives every player the free Neon Party Hat 🎉 while it lasts. One-time only: once the party ends, it can never be started again — and neither can the Neon Party Hat.</p>
+    </section>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.check}</span> Verified accounts <span class="muted small">blue ✓ next to their name</span></h3>
+      ${!verifiedTable ? `<p style="color:#ffd54a">⚠️ Verified list is not set up yet — run supabase_verified.sql in Supabase, then refresh.</p>` : ''}
+      <span class="admin-inline"><input class="verify-name" placeholder="Username to verify..." style="min-width:200px"><button class="btn-primary verify-add">✓ Verify</button></span>
+      <div class="lbp" style="margin-top:10px">${verifiedList.map(n => `<div class="lbp-row"><span class="lbp-name">✓ @${esc(n)}</span>${['fun', 'funtopia'].includes(n.toLowerCase()) ? '<span class="muted small">always verified</span>' : `<button class="btn-secondary verify-remove" data-name="${esc(n)}">Unverify</button>`}</div>`).join('') || '<p class="muted">Nobody verified yet.</p>'}</div>
+    </section>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.crown}</span> FriendClub <span class="muted small">danger zone</span></h3>
+      <button class="btn-danger club-reset-all">Remove FriendClub from everyone except @fun</button>
+    </section>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.alert}</span> Farm Scanner <span class="muted small">auto-scans every 5 min</span></h3>
+      <div class="farm-reports"><p class="muted">Scanning...</p></div>
+    </section>
+    <section class="admin-section owner-tools"><h3><span class="ic">${icons.news}</span> News Maker <span class="muted small">AI anchor broadcast</span></h3>
+      <div class="news-maker">
+        <div class="nm-preview"><canvas class="nm-canvas" width="300" height="300"></canvas><div class="muted small">Anchor preview</div></div>
+        <div class="nm-panel">
+          <label>Headline<input class="nm-title" maxlength="80" placeholder="Breaking News..."></label>
+          <label>Script<textarea class="nm-script" rows="4" maxlength="500" placeholder="Hello Funtopia! This is your news anchor..."></textarea></label>
+          <label>AI Voice<select class="nm-voice"></select></label>
+          <label>Anchor<select class="nm-anchor"><option value="me">My avatar</option><option value="bot">Newsbot</option></select></label>
+          <div class="nm-actions"><button class="btn-secondary nm-preview-btn"><span class="ic">${icons.volume}</span> Voice</button><button class="btn-secondary nm-fullpreview-btn"><span class="ic">${icons.eye}</span> Preview Broadcast</button><button class="btn-primary nm-broadcast">📡 Broadcast Live</button></div>
+          <div class="nm-status"></div>
+        </div>
+      </div>
+      <p class="muted small">Or broadcast a video file: <span class="admin-inline"><input class="news-video" placeholder="Video URL (.mp4)..." style="min-width:200px"><button class="btn-secondary news-send">📡 Video</button><button class="btn-secondary news-clear">Clear</button></span></p>
+    </section>
+    <section class="admin-section"><h3><span class="ic">${icons.gamepad}</span> Games <span class="muted small">danger zone</span></h3>
+      ${gamesError ? `<p style="color:#ff6b6b"><span class="ic">${icons.alert}</span> Games list unavailable: ${esc(gamesError)}</p>` : ''}
+      <div class="lbp">${games.map(g => `
+      <div class="lbp-row admin-row-wrap">
+        <a class="lbp-name" href="#/play/${encodeURIComponent(g.id)}">${esc(g.name)}</a>
+        ${g.featured ? `<span class="feat-tag"><span class="ic">${icons.star}</span> FEATURED</span>` : ''}${g.unpublished ? '<span class="unpub-tag">HIDDEN</span>' : ''}
+        <span class="admin-status">by ${esc(g.creator)} &middot; <span class="ic">${icons.eye}</span> ${(g.visits ?? 0).toLocaleString()}</span>
+        <div class="admin-controls">
+          <button class="btn-secondary g-resetv" data-id="${esc(g.id)}" title="Reset visit count">Reset visits</button>
+          <button class="btn-danger g-del" data-id="${esc(g.id)}" title="Permanently delete">Delete</button>
+        </div>
+      </div>`).join('') || '<p class="muted">No games found.</p>'}</div>
+    </section>
+    <div class="lbp">${users.map(u => `
+      <div class="lbp-row admin-row-wrap">
+        ${avatarImgTag(u.avatar)}<a class="lbp-name" href="#/users/${encodeURIComponent(u.name)}">${u.club ? CLUB : ''}${esc(u.name)}${u.admin ? ADMIN : ''}</a>
+        <span class="role-tag role-${u.role || 'player'}">${esc((u.role || 'player').toUpperCase())}</span>
+        <span class="admin-status">${status(u)} &middot; ${tix} ${(u.funtix ?? 0).toLocaleString()}</span>
+        <div class="admin-controls">
+          <span class="admin-inline">
+            ${u.owner ? '<span class="muted small">Owner</span>' : u.admin
+              ? `<button class="btn-secondary admin-revoke" data-name="${esc(u.name)}" title="Remove admin">Remove Admin</button>`
+              : `<button class="btn-danger admin-grant" data-name="${esc(u.name)}" title="Grant full admin powers">Make Admin</button>`}
+            ${!u.owner && u.name.toLowerCase() !== 'fun' ? `<button class="btn-primary owner-grant" data-name="${esc(u.name)}" title="Make them an owner (with AI access)">Make Owner</button>` : ''}
+            ${u.owner && u.name.toLowerCase() !== 'fun' && !u.envAdmin ? `<button class="btn-secondary owner-revoke" data-name="${esc(u.name)}" title="Remove owner">Remove Owner</button>` : ''}
+          </span>
+        </div>
+        <div class="admin-controls owner-controls"><span class="owner-label"><span class="ic">${icons.crown}</span> Owner</span>
+          <span class="admin-inline"><input type="number" class="tix-take-amt" data-name="${esc(u.name)}" value="100" min="1" title="FunTix amount"><button class="btn-primary tix-give" data-name="${esc(u.name)}" title="Add FunTix">Add FunTix</button><button class="btn-secondary tix-take" data-name="${esc(u.name)}" title="Take FunTix">Take FunTix</button></span>
+          <span class="admin-inline"><select class="token-pick" data-name="${esc(u.name)}" title="Token to give"><option value="token_common">🪙 Common Token</option><option value="token_uncommon">🎟️ Uncommon Token</option><option value="token_rare">🎫 Rare Token</option><option value="token_superrare">✨ Super Rare Token</option><option value="token_king">👑 King Token</option><option value="token_galactic">🌌 Galactic Token</option><option value="token_universal">🌠 Universal Token</option><option value="token_pumpkin">🎃 Pumpkin Shop Token</option><option value="token_scout">🌀 Scout Token (@scout only)</option><option value="token_drpepper">🥤 Dr. Pepper Token</option><option value="token_skull">💀 Skull Token (mystery roll)</option><option value="token_glitch">👾 Glitch Token (hacker tools)</option></select><button class="btn-primary token-give" data-name="${esc(u.name)}" title="Give them a wheel token">🪙 Give Token</button></span>
+          <button class="btn-secondary mod-toggle" data-name="${esc(u.name)}" data-on="${u.role === 'moderator' ? '0' : '1'}" title="Toggle moderator">${u.role === 'moderator' ? 'Remove Mod' : 'Make Mod'}</button>
+          ${['fun', 'funtopia'].includes(u.name.toLowerCase()) ? '<span class="muted small">✓ Verified</span>' : verifiedSet.has(u.name.toLowerCase()) ? `<button class="btn-secondary verify-toggle" data-name="${esc(u.name)}" data-on="0" title="Remove the blue verified check">Unverify</button>` : `<button class="btn-primary verify-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the blue verified check">✓ Verify</button>`}
+          ${u.funpanel ? `<button class="btn-secondary funpanel-toggle" data-name="${esc(u.name)}" data-on="0" title="Take back their FunPanel">Revoke FunPanel</button>` : (u.admin || u.owner || u.role === 'moderator' ? '' : `<button class="btn-primary funpanel-toggle" data-name="${esc(u.name)}" data-on="1" title="Give them the in-game FunPanel">🎁 Gift FunPanel</button>`)}
+          <span class="admin-inline"><input class="item-id" data-name="${esc(u.name)}" placeholder="item id" title="Catalog item id"><button class="btn-secondary item-grant" data-name="${esc(u.name)}" title="Give item">Grant Item</button><button class="btn-secondary item-revoke" data-name="${esc(u.name)}" title="Remove item">Remove Item</button></span>
+          <button class="btn-secondary inv-view" data-name="${esc(u.name)}" title="See everything they own">View Items</button>
+          <button class="btn-secondary club2-toggle" data-name="${esc(u.name)}" data-on="${u.clubForever ? '0' : '1'}" title="Toggle Club">${u.clubForever ? 'Revoke Club' : 'Give Club'}</button>
+          <button class="btn-secondary pw-reset" data-name="${esc(u.name)}" title="Temp password">Reset Password</button>
+          <button class="btn-secondary rename-btn" data-name="${esc(u.name)}" title="Rename user">Rename</button>
+          <button class="btn-secondary avatar-reset" data-name="${esc(u.name)}" title="Reset avatar">Reset Avatar</button>
+          <button class="btn-secondary unmute-btn" data-name="${esc(u.name)}" title="Unmute">Unmute</button>
+          <button class="btn-secondary sysdm-btn" data-name="${esc(u.name)}" title="System DM">System DM</button>
+          ${u.banned
+            ? `<button class="btn-primary ban-revoke" data-name="${esc(u.name)}" title="Unban this user">Unban</button><span class="banned-tag" title="${esc(u.banReason || 'Banned')}">🚫 BANNED${u.bannedUntil ? ' until ' + new Date(u.bannedUntil).toLocaleDateString() : ''}</span>`
+            : `<button class="btn-danger ban-btn" data-name="${esc(u.name)}" title="Ban user"><span class="ic">${icons.wrench}</span> Ban</button>`}
+          <button class="btn-danger wipe-games" data-name="${esc(u.name)}" title="Delete games">Wipe Games</button>
+          <button class="btn-secondary clear-friends" data-name="${esc(u.name)}" title="Clear friends">Clear Friends</button>
+          <button class="btn-secondary clear-badges" data-name="${esc(u.name)}" title="Clear badges">Clear Badges</button>
+        </div>
+      </div>`).join('') || '<p class="muted">No players found.</p>'}</div>`, () => {
+    app.querySelector('form.admin-search').onsubmit = e => { e.preventDefault(); ownerPage(D, e.target.q.value.trim()); };
+    const partyStart = app.querySelector('.party-start');
+    if (partyStart) partyStart.onclick = async () => {
+      if (!confirm('Start the 100 Players Party? This creates the party plaza and gives everyone the free Neon Party Hat.')) return;
+      try { const r = await api('POST', '/api/admin/party/start', {}); toast(`Party started! ${r.count ?? partyCount} players and counting!`); ownerPage(D, q); import('./partyfx.js?v=88bcd633').then(fx => fx.playPartyTransition()).catch(() => {}); }
+      catch (e) { toast(e.message, true); }
+    };
+    const partyStop = app.querySelector('.party-stop');
+    if (partyStop) partyStop.onclick = async () => {
+      if (!confirm('End the party? This is ONE-TIME ONLY — the party and the Neon Party Hat can never come back.')) return;
+      try { await api('POST', '/api/admin/party/stop', {}); toast('Party ended'); ownerPage(D, q); }
+      catch (e) { toast(e.message, true); }
+    };
+    const doVerify = async (name, on) => {
+      try {
+        await api('POST', '/api/admin/verify', { username: name, verified: on });
+        await refreshVerified();
+        toast(on ? `@${name} is now verified ✓` : `@${name} is no longer verified`);
+        ownerPage(D, q);
+      } catch (e) { toast(e.message, true); }
+    };
+    app.querySelectorAll('.verify-toggle').forEach(b => b.onclick = () => doVerify(b.dataset.name, b.dataset.on === '1'));
+    const vAdd = app.querySelector('.verify-add');
+    if (vAdd) vAdd.onclick = () => { const inp = app.querySelector('.verify-name'); const n = inp.value.trim(); if (n) doVerify(n, true); };
+    app.querySelectorAll('.verify-remove').forEach(b => b.onclick = () => { if (confirm(`Unverify @${b.dataset.name}?`)) doVerify(b.dataset.name, false); });
+    const gcmd = async (id, command, extra = {}) => {
+      try {
+        const r = await api('POST', '/api/admin/games/' + encodeURIComponent(id) + '/command', { command, ...extra });
+        toast(r.message || 'Done'); ownerPage(D, q);
+      } catch (e) { toast(e.message, true); }
+    };
+    app.querySelectorAll('.g-resetv').forEach(b => b.onclick = () => { if (confirm('Reset visit count to 0?')) gcmd(b.dataset.id, 'reset_visits'); });
+    app.querySelectorAll('.g-del').forEach(b => b.onclick = () => { if (confirm('PERMANENTLY delete this game? This cannot be undone.')) gcmd(b.dataset.id, 'delete'); });
+    const cmd = async (name, command, extra = {}) => {
+      try {
+        const r = await api('POST', '/api/admin/users/' + encodeURIComponent(name) + '/command', { command, ...extra });
+        toast(r.message || 'Done'); ownerPage(D, q);
+      } catch (e) { toast(e.message, true); }
+    };
+    app.querySelectorAll('.admin-grant').forEach(b => b.onclick = () => {
+      if (!confirm(`Grant FULL ADMIN to ${b.dataset.name}? They will have complete control.`)) return;
+      if (!confirm(`Are you REALLY sure? ${b.dataset.name} will be able to ban, grant admin, and more.`)) return;
+      cmd(b.dataset.name, 'grant_admin', {});
+    });
+    app.querySelectorAll('.admin-revoke').forEach(b => b.onclick = () => {
+      if (!confirm(`Remove admin from ${b.dataset.name}?`)) return;
+      cmd(b.dataset.name, 'revoke_admin', {});
+    });
+    app.querySelectorAll('.owner-grant').forEach(b => b.onclick = () => {
+      if (!confirm(`Make ${b.dataset.name} an OWNER? They will have complete control including AI access.`)) return;
+      if (!confirm(`Are you REALLY sure? Owners can grant admin, manage the site, and use the AI.`)) return;
+      cmd(b.dataset.name, 'grant_owner', {});
+    });
+    app.querySelectorAll('.owner-revoke').forEach(b => b.onclick = () => {
+      if (!confirm(`Remove owner from ${b.dataset.name}?`)) return;
+      cmd(b.dataset.name, 'revoke_owner', {});
+    });
+    const ownerCmd = (sel, command, extraFn, confirmMsg) => app.querySelectorAll(sel).forEach(b => b.onclick = () => {
+      if (confirmMsg && !confirm(typeof confirmMsg === 'function' ? confirmMsg(b) : confirmMsg)) return;
+      const extra = extraFn ? extraFn(b) : {};
+      if (extra === null) return;
+      cmd(b.dataset.name, command, extra);
+    });
+    ownerCmd('.tix-take', 'take_tix', b => {
+      const inp = app.querySelector(`.tix-take-amt[data-name="${CSS.escape(b.dataset.name)}"]`);
+      return { amount: Math.max(1, Math.floor(Number(inp?.value) || 100)) };
+    });
+    ownerCmd('.tix-give', 'grant_tix', b => {
+      const inp = app.querySelector(`.tix-take-amt[data-name="${CSS.escape(b.dataset.name)}"]`);
+      return { amount: Math.max(1, Math.floor(Number(inp?.value) || 100)) };
+    });
+    app.querySelectorAll('.mod-toggle').forEach(b => b.onclick = () => {
+      const on = b.dataset.on === '1';
+      cmd(b.dataset.name, on ? 'grant_moderator' : 'revoke_moderator', {});
+    });
+    app.querySelectorAll('.funpanel-toggle').forEach(b => b.onclick = () => {
+      const on = b.dataset.on === '1';
+      if (!on && !confirm(`Revoke FunPanel from ${b.dataset.name}?`)) return;
+      cmd(b.dataset.name, on ? 'grant_funpanel' : 'revoke_funpanel', {});
+    });
+    ownerCmd('.token-give', 'grant_item', b => {
+      const sel = app.querySelector(`.token-pick[data-name="${CSS.escape(b.dataset.name)}"]`);
+      const item = sel?.value || 'token_common';
+      return { item };
+    });
+    ownerCmd('.item-grant', 'grant_item', b => {
+      const inp = app.querySelector(`.item-id[data-name="${CSS.escape(b.dataset.name)}"]`);
+      const item = (inp?.value || '').trim();
+      if (!item) { toast('Enter an item id', true); return null; }
+      return { item };
+    });
+    ownerCmd('.item-revoke', 'revoke_item', b => {
+      const inp = app.querySelector(`.item-id[data-name="${CSS.escape(b.dataset.name)}"]`);
+      const item = (inp?.value || '').trim();
+      if (!item) { toast('Enter an item id', true); return null; }
+      return { item };
+    });
+    app.querySelectorAll('.inv-view').forEach(b => b.onclick = async () => {
+      try {
+        const r = await api('GET', '/api/admin/users/' + encodeURIComponent(b.dataset.name) + '/inventory');
+        toast(`${r.name} owns ${r.items.length} items`, false);
+        alert(`${r.name}'s inventory (${r.items.length}):\n` + (r.items.map(i => `• ${i.name} (${i.id})`).join('\n') || 'Empty'));
+      } catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('.club2-toggle').forEach(b => b.onclick = () => cmd(b.dataset.name, b.dataset.on === '1' ? 'give_club' : 'revoke_club', {}));
+    app.querySelectorAll('.pw-reset').forEach(b => b.onclick = async () => {
+      if (!confirm(`Reset ${b.dataset.name}'s password?`)) return;
+      try { const r = await api('POST', '/api/admin/users/' + encodeURIComponent(b.dataset.name) + '/command', { command: 'reset_password' }); alert(r.message); } catch (e) { toast(e.message, true); }
+    });
+    app.querySelectorAll('.rename-btn').forEach(b => b.onclick = () => {
+      const v = prompt(`Rename ${b.dataset.name} to:`, b.dataset.name);
+      if (v && v.trim()) cmd(b.dataset.name, 'rename', { newName: v.trim() });
+    });
+    ownerCmd('.avatar-reset', 'reset_avatar', null, b => `Reset ${b.dataset.name}'s avatar to default?`);
+    ownerCmd('.unmute-btn', 'unmute', null);
+    app.querySelectorAll('.sysdm-btn').forEach(b => b.onclick = () => {
+      const v = prompt(`System DM to ${b.dataset.name}:`);
+      if (v && v.trim()) cmd(b.dataset.name, 'system_dm', { text: v.trim() });
+    });
+    app.querySelectorAll('.ban-btn').forEach(b => b.onclick = async () => {
+      const reason = prompt(`Ban ${b.dataset.name}? Enter reason:`, 'Making FunTix farms');
+      if (!reason) return;
+      if (!confirm(`Ban ${b.dataset.name} for: ${reason}?`)) return;
+      try {
+        const r = await api('POST', `/api/admin/users/${b.dataset.name}/command`, { command: 'ban', reason });
+        if (r.user?.banned) { toast(`${b.dataset.name} banned`); ownerPage(D, q); }
+        else toast(`Ban may have failed - check user`, true);
+      } catch (e) {
+        toast(`Ban failed: ${e.message}`, true);
+      }
+    });
+    app.querySelectorAll('.ban-revoke').forEach(b => b.onclick = async () => {
+      if (!confirm(`Unban ${b.dataset.name}?`)) return;
+      try {
+        await api('POST', `/api/admin/users/${b.dataset.name}/command`, { command: 'unban' });
+        toast(`${b.dataset.name} unbanned`); ownerPage(D, q);
+      } catch (e) {
+        toast(`Unban failed: ${e.message}`, true);
+      }
+    });
+    ownerCmd('.wipe-games', 'wipe_games', null, b => `DELETE ALL games by ${b.dataset.name}? This cannot be undone.`);
+    ownerCmd('.clear-friends', 'clear_friends', null, b => `Clear all friends of ${b.dataset.name}?`);
+    ownerCmd('.clear-badges', 'clear_badges', null, b => `Clear all badges of ${b.dataset.name}?`);
+    const siteCmd = async (command, extra = {}) => {
+      try { const r = await api('POST', '/api/admin/site/command', { command, ...extra }); toast(r.message || 'Done'); refreshSiteState(); }
+      catch (e) { toast(e.message, true); }
+    };
+    const refreshSiteState = async () => {
+      const el = app.querySelector('.site-state'); if (!el) return;
+      try {
+        const s = await api('GET', '/api/site');
+        el.textContent = `Announcement: ${s.announce ? `"${s.announce.text}" (by ${s.announce.by})` : 'none'} · Maintenance: ${s.maintenance ? 'ON' : 'OFF'}`;
+        const mt = app.querySelector('.maint-toggle'); if (mt) mt.textContent = `Maintenance: ${s.maintenance ? 'ON' : 'OFF'}`;
+      } catch {}
+    };
+    refreshSiteState();
+    const versionBtn = app.querySelector('.version-save');
+    if (versionBtn) versionBtn.onclick = async () => {
+      const v = app.querySelector('.version-input').value.trim();
+      try {
+        const r = await api('POST', '/api/admin/version', { version: v });
+        toast('Version set to Beta ' + r.version + ' — it shows next to the logo');
+      } catch (e) { toast(e.message, true); }
+    };
+    const announceBtn = app.querySelector('.announce-send');
+    if (announceBtn) announceBtn.onclick = () => {
+      const v = app.querySelector('.announce-text')?.value.trim();
+      if (!v) { toast('Type an announcement first', true); return; }
+      siteCmd('announce', { text: v });
+    };
+    const announceClear = app.querySelector('.announce-clear');
+    if (announceClear) announceClear.onclick = () => siteCmd('clear_announce');
+    // 📡 News Maker wiring
+    const nmVoice = app.querySelector('.nm-voice');
+    const loadNmVoices = () => {
+      try {
+        const vs = speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+        nmVoice.innerHTML = vs.map(v => `<option value="${esc(v.name)}">${esc(v.name)} (${v.lang})</option>`).join('') || '<option>Default</option>';
+      } catch {}
+    };
+    if (nmVoice) { loadNmVoices(); try { speechSynthesis.onvoiceschanged = loadNmVoices; } catch {} }
+    // 3D anchor preview
+    const nmCanvas = app.querySelector('.nm-canvas');
+    const nmAnchorSel = app.querySelector('.nm-anchor');
+    let nmAlive = true;
+    const buildNmPreview = async () => {
+      if (!nmCanvas || !nmAlive) return;
+      try {
+        const A3 = await ensureAvatar3d().catch(() => null);
+        if (!A3 || !nmAlive) return;
+        const av = nmAnchorSel?.value === 'bot' ? { skin: '#c0c0c0', shirt: '#1a1a2e', pants: '#0f0f1a', hat: 'hat_tophat' } : me.avatar;
+        const THREE = await import('three');
+        const r = new THREE.WebGLRenderer({ canvas: nmCanvas, alpha: true, antialias: true });
+        const sc = new THREE.Scene();
+        const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 100); cam.position.set(0, 4, 14); cam.lookAt(0, 3, 0);
+        sc.add(new THREE.AmbientLight(0xffffff, 1.2));
+        const ch = A3.buildCharacter(av); sc.add(ch);
+        const tick = () => { if (!nmAlive) return; requestAnimationFrame(tick); ch.rotation.y = Math.sin(Date.now() / 2000) * 0.2; r.render(sc, cam); };
+        tick();
+      } catch {}
+    };
+    buildNmPreview();
+    if (nmAnchorSel) nmAnchorSel.onchange = () => { nmAlive = false; setTimeout(() => { nmAlive = true; buildNmPreview(); }, 50); };
+    const nmPreviewBtn = app.querySelector('.nm-preview-btn');
+    if (nmPreviewBtn) nmPreviewBtn.onclick = () => {
+      const t = app.querySelector('.nm-script')?.value.trim();
+      if (!t) { toast('Write a script first', true); return; }
+      try {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(t);
+        const v = speechSynthesis.getVoices().find(v => v.name === nmVoice.value);
+        if (v) u.voice = v;
+        speechSynthesis.speak(u); toast('Previewing...');
+      } catch { toast('Voice not available', true); }
+    };
+    const nmStatus = app.querySelector('.nm-status');
+    const refreshNmStatus = async () => {
+      if (!nmStatus || !document.body.contains(nmStatus)) return;
+      try {
+        const r = await api('GET', '/api/news');
+        if (r.broadcast) {
+          nmStatus.innerHTML = `<p><span class="ic">${icons.news}</span> <b>Live:</b> ${esc(r.broadcast.title)} <button class="btn-secondary btn-sm nm-replay"><span class="ic">${icons.eye}</span> View</button></p>`;
+          nmStatus.querySelector('.nm-replay').onclick = async () => {
+            const m = await import('./news-player.js?v=60138d7b');
+            m.showNewsBroadcast({ esc, me, ensureAvatar3d }, r.broadcast);
+          };
+        } else nmStatus.innerHTML = '<p class="muted small">No broadcast live.</p>';
+      } catch {}
+    };
+    refreshNmStatus();
+    const nmFullPreview = app.querySelector('.nm-fullpreview-btn');
+    if (nmFullPreview) nmFullPreview.onclick = async () => {
+      const title = app.querySelector('.nm-title')?.value.trim() || 'Breaking News';
+      const script = app.querySelector('.nm-script')?.value.trim();
+      if (!script) { toast('Write a script first', true); return; }
+      try {
+        const m = await import('./news-player.js?v=60138d7b');
+        m.showNewsBroadcast({ esc, me, ensureAvatar3d }, { type: 'live', title, script, voice: nmVoice?.value, anchor: nmAnchorSel?.value, avatar: me.avatar });
+      } catch (e) { toast('Preview failed', true); }
+    };
+    const nmBroadcast = app.querySelector('.nm-broadcast');
+    if (nmBroadcast) nmBroadcast.onclick = async () => {
+      const title = app.querySelector('.nm-title')?.value.trim() || 'Breaking News';
+      const script = app.querySelector('.nm-script')?.value.trim();
+      if (!script) { toast('Write a script first', true); return; }
+      if (!confirm('Broadcast this to EVERYONE online?')) return;
+      try {
+        await api('POST', '/api/owner/news', { type: 'live', title, script, voice: nmVoice?.value, anchor: nmAnchorSel?.value });
+        toast('News broadcast sent!'); refreshNmStatus();
+      } catch (e) { toast(e.message, true); }
+    };
+    const newsSend = app.querySelector('.news-send');
+    if (newsSend) newsSend.onclick = async () => {
+      const video = app.querySelector('.news-video')?.value.trim();
+      if (!video) { toast('Paste a video URL first', true); return; }
+      try { await api('POST', '/api/owner/news', { video }); toast('Video broadcast sent!'); refreshNmStatus(); }
+      catch (e) { toast(e.message, true); }
+    };
+    const newsClear = app.querySelector('.news-clear');
+    if (newsClear) newsClear.onclick = async () => { try { await api('POST', '/api/owner/news/clear'); toast('News cleared'); refreshNmStatus(); } catch (e) { toast(e.message, true); } };
+    const maintBtn = app.querySelector('.maint-toggle');
+    if (maintBtn) maintBtn.onclick = async () => {
+      try {
+        const s = await api('GET', '/api/site');
+        if (s.maintenance || confirm('Turn ON maintenance mode? Only owners will be able to log in.')) siteCmd('maintenance', { on: !s.maintenance });
+      } catch (e) { toast(e.message, true); }
+    };
+    const kickAll = app.querySelector('.kick-all');
+    if (kickAll) kickAll.onclick = () => { if (confirm('Kick EVERYONE out of all games right now?')) siteCmd('kick_all'); };
+    // Farm reports
+    const farmDiv = app.querySelector('.farm-reports');
+    async function loadFarms() {
+      try {
+        const r = await api('GET', '/api/admin/farms');
+        if (!r.reports.length) { farmDiv.innerHTML = '<p class="muted">No farms detected.</p>'; return; }
+        farmDiv.innerHTML = r.reports.map(f => `
+          <div class="farm-report">
+            <div><strong>${esc(f.gameName)}</strong> by ${esc(f.creator)}</div>
+            <div class="muted small">${f.reasons.map(esc).join(' • ')}</div>
+            <div class="row">
+              <button class="btn-danger farm-del" data-id="${f.gameId}" data-name="${esc(f.gameName)}"><span class="ic">${icons.trash}</span> Delete Game</button>
+              <button class="btn-secondary farm-ban" data-user="${esc(f.creator)}"><span class="ic">${icons.wrench}</span> Ban Creator</button>
+            </div>
+          </div>`).join('');
+        farmDiv.querySelectorAll('.farm-del').forEach(b => b.onclick = async () => {
+          if (!confirm(`Delete "${b.dataset.name}"?`)) return;
+          await api('POST', `/api/admin/farms/${b.dataset.id}/delete`);
+          toast('Game deleted'); loadFarms();
+        });
+        farmDiv.querySelectorAll('.farm-ban').forEach(b => b.onclick = async () => {
+          const user = b.dataset.user;
+          if (!confirm(`Ban ${user}? Reason: Making FunTix farms`)) return;
+          await api('POST', `/api/admin/users/${user}/command`, { command: 'ban', reason: 'Making FunTix farms' });
+          toast(`${user} banned`); loadFarms();
+        });
+      } catch { farmDiv.innerHTML = '<p class="muted">Failed to load.</p>'; }
+    }
+    loadFarms();
+    setInterval(loadFarms, 60000);
+    const clubResetBtn = app.querySelector('.club-reset-all');
+    if (clubResetBtn) clubResetBtn.onclick = async () => {
+      if (!confirm('Remove FriendClub from EVERYONE except @fun? This cannot be undone.')) return;
+      if (!confirm('Are you absolutely sure?')) return;
+      const r = await api('POST', '/api/admin/club/reset-all');
+      toast(`Cleared FriendClub from ${r.cleared} users`);
+    };
+    const rainBtn = app.querySelector('.funtix-rain');
+    if (rainBtn) rainBtn.onclick = () => {
+      const amount = Math.max(1, Math.min(1000, Math.floor(Number(app.querySelector('.rain-amt')?.value) || 50)));
+      siteCmd('funtix_rain', { amount });
+    };
+  });
+}

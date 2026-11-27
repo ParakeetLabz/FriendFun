@@ -1,0 +1,976 @@
+import * as THREE from 'three';
+import { ITEM, BADGES, PET_MODELS, GEAR_MODELS } from './catalog.js?v=03de3e72';
+import { renderToDataURL } from './three-util.js?v=88ba247e';
+import { isVerified } from './verified.js?v=4e9b72be';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const faceCache = {}, shirtCache = {};
+function faceTexture(id) {
+  if (faceCache[id]) return faceCache[id];
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'); g.scale(2, 2); // draw in the old 128 space, render at 256 for crisper faces
+  g.fillStyle = '#111'; g.strokeStyle = '#111'; g.lineWidth = 7; g.lineCap = 'round';
+  const st = id.slice(5).split('_')[0];
+  const eyes = (h = 18) => { g.beginPath(); g.ellipse(44, 50, 7, h / 2, 0, 0, Math.PI * 2); g.ellipse(84, 50, 7, h / 2, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(46.5, 47, 2.2, 0, Math.PI * 2); g.arc(86.5, 47, 2.2, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; };
+  const smile = (y = 66, r = 26) => { g.beginPath(); g.arc(64, y, r, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke(); };
+  const closedHappy = () => { g.beginPath(); g.arc(44, 56, 10, 1.15 * Math.PI, 1.85 * Math.PI); g.arc(84, 56, 10, 1.15 * Math.PI, 1.85 * Math.PI); g.stroke(); };
+  const heart = (x, y, s) => { g.beginPath(); g.moveTo(x, y + s); g.bezierCurveTo(x - s * 1.6, y, x - s * 0.7, y - s * 1.4, x, y - s * 0.5); g.bezierCurveTo(x + s * 0.7, y - s * 1.4, x + s * 1.6, y, x, y + s); g.fill(); };
+  switch (st) {
+    case 'grin': eyes(); g.beginPath(); g.moveTo(34, 76); g.quadraticCurveTo(64, 120, 94, 76); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(40, 78, 48, 8); break;
+    case 'cool': g.fillRect(26, 40, 34, 18); g.fillRect(68, 40, 34, 18); g.fillRect(56, 44, 16, 5); g.beginPath(); g.moveTo(44, 86); g.quadraticCurveTo(70, 100, 88, 80); g.stroke(); break;
+    case 'wink': g.beginPath(); g.ellipse(44, 50, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(74, 52); g.lineTo(94, 50); g.stroke(); g.beginPath(); g.arc(64, 70, 24, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke(); break;
+    case 'shock': eyes(22); g.beginPath(); g.ellipse(64, 90, 10, 14, 0, 0, Math.PI * 2); g.fill(); break;
+    case 'mad': eyes(14); g.beginPath(); g.moveTo(32, 32); g.lineTo(54, 42); g.moveTo(96, 32); g.lineTo(74, 42); g.stroke(); g.beginPath(); g.arc(64, 104, 22, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke(); break;
+    case 'buckteeth': eyes(); g.beginPath(); g.moveTo(30, 72); g.quadraticCurveTo(64, 114, 98, 72); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(50, 78, 13, 28); g.fillRect(65, 78, 13, 28); g.fillStyle = '#e8e8e8'; g.fillRect(50, 78, 13, 7); g.fillRect(65, 78, 13, 7); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(50, 78, 13, 28); g.strokeRect(65, 78, 13, 28); g.beginPath(); g.moveTo(64, 78); g.lineTo(64, 106); g.stroke(); break;
+    case 'bubbles': eyes(); smile(); g.fillStyle = '#4fc3f7'; for (const [x, y, r] of [[104, 28, 9], [112, 46, 5], [22, 30, 7], [30, 48, 4]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#fff'; for (const [x, y, r] of [[101, 25, 3], [20, 27, 2.5]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } break;
+    case 'giggle': closedHappy(); g.beginPath(); g.ellipse(64, 88, 18, 14, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f48fb1'; g.beginPath(); g.roundRect(56, 88, 16, 14, 7); g.fill(); g.fillStyle = '#111'; break;
+    case 'wow': g.beginPath(); g.ellipse(44, 50, 10, 14, 0, 0, Math.PI * 2); g.ellipse(84, 50, 10, 14, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(47, 46, 3, 0, Math.PI * 2); g.arc(87, 46, 3, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.lineWidth = 6; g.beginPath(); g.ellipse(64, 88, 8, 11, 0, 0, Math.PI * 2); g.stroke(); break;
+    case '3dglasses': g.fillStyle = '#e53935'; g.fillRect(28, 40, 32, 20); g.fillStyle = '#26c6da'; g.fillRect(68, 40, 32, 20); g.strokeStyle = '#111'; g.lineWidth = 4; g.strokeRect(28, 40, 32, 20); g.strokeRect(68, 40, 32, 20); smile(); break;
+    case 'alien': g.beginPath(); g.ellipse(40, 48, 10, 18, -0.4, 0, Math.PI * 2); g.ellipse(88, 48, 10, 18, 0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(64, 92, 12, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); break;
+    case 'angel': closedHappy(); smile(72, 18); g.strokeStyle = '#ffd400'; g.lineWidth = 5; g.beginPath(); g.arc(64, 22, 16, 0, Math.PI * 2); g.stroke(); break;
+    case 'angry': eyes(12); g.lineWidth = 9; g.beginPath(); g.moveTo(30, 30); g.lineTo(56, 42); g.moveTo(98, 30); g.lineTo(72, 42); g.stroke(); g.lineWidth = 7; g.beginPath(); g.arc(64, 108, 20, 1.25 * Math.PI, 1.75 * Math.PI); g.stroke(); break;
+    case 'bandit': g.fillStyle = '#111'; g.fillRect(24, 38, 80, 26); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(44, 51, 8, 6, 0, 0, Math.PI * 2); g.ellipse(84, 51, 8, 6, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(52, 84); g.quadraticCurveTo(76, 96, 92, 78); g.stroke(); break;
+    case 'beard': eyes(); smile(); g.fillStyle = '#6d4c41'; g.beginPath(); g.moveTo(30, 70); g.quadraticCurveTo(64, 128, 98, 70); g.quadraticCurveTo(64, 92, 30, 70); g.fill(); break;
+    case 'blush': eyes(); smile(); g.fillStyle = '#f48fb1'; g.beginPath(); g.arc(32, 66, 9, 0, Math.PI * 2); g.arc(96, 66, 9, 0, Math.PI * 2); g.fill(); break;
+    case 'clown': eyes(); g.fillStyle = '#e53935'; g.beginPath(); g.arc(64, 62, 10, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(30, 70, 8, 0, Math.PI * 2); g.arc(98, 70, 8, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#e53935'; g.lineWidth = 6; g.beginPath(); g.arc(64, 66, 30, 0.25 * Math.PI, 0.75 * Math.PI); g.stroke(); break;
+    case 'coolwink': g.fillRect(26, 40, 34, 18); g.fillRect(68, 40, 34, 18); g.fillRect(56, 44, 16, 5); g.beginPath(); g.moveTo(50, 88); g.quadraticCurveTo(74, 98, 90, 80); g.stroke(); break;
+    case 'cry': eyes(); g.fillStyle = '#29b6f6'; g.beginPath(); g.moveTo(38, 58); g.quadraticCurveTo(44, 78, 38, 92); g.quadraticCurveTo(32, 78, 38, 58); g.fill(); g.beginPath(); g.moveTo(90, 58); g.quadraticCurveTo(96, 78, 90, 92); g.quadraticCurveTo(84, 78, 90, 58); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(64, 100, 14, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke(); break;
+    case 'cyclops': g.beginPath(); g.ellipse(64, 52, 14, 18, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(64, 52, 5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; smile(); break;
+    case 'demon': g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(44, 50, 9, 7, -0.3, 0, Math.PI * 2); g.ellipse(84, 50, 9, 7, 0.3, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(32, 34); g.lineTo(54, 44); g.moveTo(96, 34); g.lineTo(74, 44); g.stroke(); g.beginPath(); g.arc(64, 106, 20, 1.25 * Math.PI, 1.75 * Math.PI); g.stroke(); break;
+    case 'derp': g.beginPath(); g.ellipse(42, 44, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(86, 58, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(50, 84); g.quadraticCurveTo(70, 92, 84, 82); g.stroke(); g.fillStyle = '#f48fb1'; g.fillRect(72, 84, 12, 18); break;
+    case 'dizzy': g.lineWidth = 6; for (const x of [44, 84]) { g.beginPath(); g.moveTo(x - 8, 42); g.lineTo(x + 8, 58); g.moveTo(x + 8, 42); g.lineTo(x - 8, 58); g.stroke(); } g.beginPath(); g.moveTo(40, 88); for (let x = 40; x <= 88; x += 8) g.lineTo(x + 4, 84); g.stroke(); break;
+    case 'eyepatch': g.beginPath(); g.ellipse(44, 50, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.ellipse(84, 50, 14, 12, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(24, 34); g.lineTo(104, 66); g.stroke(); g.beginPath(); g.moveTo(52, 86); g.quadraticCurveTo(72, 94, 86, 82); g.stroke(); break;
+    case 'fire': g.fillStyle = '#ff9800'; g.beginPath(); g.ellipse(44, 50, 9, 12, 0, 0, Math.PI * 2); g.ellipse(84, 50, 9, 12, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#e53935'; g.beginPath(); g.ellipse(44, 54, 4, 6, 0, 0, Math.PI * 2); g.ellipse(84, 54, 4, 6, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(36, 80); g.quadraticCurveTo(64, 110, 92, 80); g.closePath(); g.fill(); break;
+    case 'freckles': eyes(); smile(); g.fillStyle = '#8d6e63'; for (const [x, y] of [[34, 62], [42, 66], [94, 62], [86, 66], [52, 60], [76, 60]]) { g.beginPath(); g.arc(x, y, 2.5, 0, Math.PI * 2); g.fill(); } break;
+    case 'gold': g.strokeStyle = '#c9a227'; g.fillStyle = '#c9a227'; eyes(); g.lineWidth = 7; smile(); break;
+    case 'happy': closedHappy(); g.beginPath(); g.moveTo(38, 74); g.quadraticCurveTo(64, 112, 90, 74); g.closePath(); g.fill(); break;
+    case 'hearteyes': g.fillStyle = '#e53935'; heart(44, 52, 12); heart(84, 52, 12); g.fillStyle = '#111'; smile(); break;
+    case 'hero': g.fillStyle = '#1565c0'; g.fillRect(26, 40, 76, 24); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(44, 52, 8, 7, 0, 0, Math.PI * 2); g.ellipse(84, 52, 8, 7, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; smile(74, 20); break;
+    case 'ice': g.fillStyle = '#4fc3f7'; eyes(); g.fillStyle = '#111'; smile(); g.strokeStyle = '#4fc3f7'; g.lineWidth = 4; g.beginPath(); g.moveTo(20, 20); g.lineTo(30, 30); g.moveTo(108, 20); g.lineTo(98, 30); g.stroke(); break;
+    case 'laugh': closedHappy(); g.beginPath(); g.ellipse(64, 88, 20, 16, 0, 0, Math.PI * 2); g.fill(); break;
+    case 'love': g.fillStyle = '#f48fb1'; heart(44, 52, 12); heart(84, 52, 12); g.fillStyle = '#111'; g.beginPath(); g.moveTo(44, 80); g.quadraticCurveTo(64, 102, 84, 80); g.stroke(); break;
+    case 'money': g.fillStyle = '#43a047'; g.font = 'bold 26px Arial'; g.textAlign = 'center'; g.fillText('$', 44, 60); g.fillText('$', 84, 60); g.fillStyle = '#111'; g.beginPath(); g.moveTo(36, 78); g.quadraticCurveTo(64, 112, 92, 78); g.closePath(); g.fill(); g.fillStyle = '#fff'; g.fillRect(42, 80, 44, 7); break;
+    case 'monocle': eyes(); smile(); g.strokeStyle = '#c9a227'; g.lineWidth = 4; g.beginPath(); g.arc(84, 50, 16, 0, Math.PI * 2); g.stroke(); g.beginPath(); g.moveTo(96, 62); g.lineTo(104, 96); g.stroke(); break;
+    case 'mustache': eyes(); smile(); g.fillStyle = '#111'; g.beginPath(); g.ellipse(48, 74, 16, 7, -0.25, 0, Math.PI * 2); g.ellipse(80, 74, 16, 7, 0.25, 0, Math.PI * 2); g.fill(); break;
+    case 'nerd': g.strokeStyle = '#111'; g.lineWidth = 4; g.strokeRect(28, 38, 30, 24); g.strokeRect(70, 38, 30, 24); g.beginPath(); g.moveTo(58, 48); g.lineTo(70, 48); g.stroke(); eyes(12); g.fillStyle = '#fff'; g.fillRect(54, 76, 20, 14); g.strokeStyle = '#111'; g.lineWidth = 3; g.strokeRect(54, 76, 20, 14); g.beginPath(); g.moveTo(64, 76); g.lineTo(64, 90); g.stroke(); break;
+    case 'ninja': g.fillStyle = '#111'; g.fillRect(24, 36, 80, 30); g.fillStyle = '#fff'; g.beginPath(); g.ellipse(44, 51, 10, 7, 0, 0, Math.PI * 2); g.ellipse(84, 51, 10, 7, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.ellipse(44, 51, 4, 5, 0, 0, Math.PI * 2); g.ellipse(84, 51, 4, 5, 0, 0, Math.PI * 2); g.fill(); break;
+    case 'rainbow': eyes(); const cols = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5']; g.lineWidth = 6; cols.forEach((cc, i) => { g.strokeStyle = cc; g.beginPath(); g.arc(64, 78, 30 - i * 6, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke(); }); break;
+    case 'robot': g.fillStyle = '#78909c'; g.fillRect(34, 40, 20, 18); g.fillRect(74, 40, 20, 18); g.fillStyle = '#111'; for (let x = 40; x <= 88; x += 12) g.fillRect(x, 80, 6, 14); break;
+    case 'sad': g.beginPath(); g.ellipse(44, 54, 7, 9, 0, 0, Math.PI * 2); g.ellipse(84, 54, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.beginPath(); g.arc(64, 108, 22, 1.2 * Math.PI, 1.8 * Math.PI); g.stroke(); g.fillStyle = '#29b6f6'; g.beginPath(); g.arc(38, 66, 4, 0, Math.PI * 2); g.fill(); break;
+    case 'sick': eyes(10); g.strokeStyle = '#43a047'; g.lineWidth = 6; g.beginPath(); g.moveTo(40, 88); for (let x = 40; x <= 88; x += 8) g.lineTo(x + 4, 92); g.stroke(); g.strokeStyle = '#111'; break;
+    case 'silver': g.strokeStyle = '#9aa0a6'; g.fillStyle = '#9aa0a6'; eyes(); g.lineWidth = 7; smile(); break;
+    case 'sleepy': g.beginPath(); g.moveTo(34, 52); g.lineTo(54, 52); g.moveTo(74, 52); g.lineTo(94, 52); g.stroke(); g.beginPath(); g.ellipse(64, 92, 8, 10, 0, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#111'; g.font = 'bold 22px Arial'; g.fillText('z', 96, 30); break;
+    case 'starstruck': g.fillStyle = '#fdd835'; const st5 = (x, y) => { g.beginPath(); for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 4 : 10; g.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r); } g.closePath(); g.fill(); }; st5(44, 50); st5(84, 50); g.fillStyle = '#111'; g.beginPath(); g.ellipse(64, 90, 12, 15, 0, 0, Math.PI * 2); g.fill(); break;
+    case 'shades': g.fillStyle = '#111'; g.beginPath(); g.roundRect(26, 38, 34, 22, 6); g.roundRect(68, 38, 34, 22, 6); g.fill(); g.fillStyle = '#fff'; g.fillRect(32, 42, 14, 4); g.fillRect(74, 42, 14, 4); g.beginPath(); g.moveTo(60, 48); g.lineTo(68, 48); g.stroke(); g.beginPath(); g.moveTo(48, 88); g.quadraticCurveTo(70, 96, 86, 82); g.stroke(); break;
+    case 'sly': g.beginPath(); g.ellipse(44, 50, 7, 9, 0, 0, Math.PI * 2); g.ellipse(84, 50, 7, 9, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(48, 50, 2.5, 0, Math.PI * 2); g.arc(88, 50, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(52, 88); g.quadraticCurveTo(74, 82, 88, 88); g.stroke(); break;
+    case 'nervous': g.beginPath(); g.ellipse(44, 50, 8, 10, 0, 0, Math.PI * 2); g.ellipse(84, 50, 8, 10, 0, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(40, 90); for (let x = 40; x <= 88; x += 8) g.lineTo(x + 4, 86); g.stroke(); g.fillStyle = '#29b6f6'; g.beginPath(); g.moveTo(104, 30); g.quadraticCurveTo(112, 44, 104, 56); g.quadraticCurveTo(96, 44, 104, 30); g.fill(); break;
+    case 'sparkle': eyes(); smile(); g.fillStyle = '#fff'; const sp = (x, y, r) => { g.beginPath(); g.moveTo(x, y - r); g.quadraticCurveTo(x, y, x + r, y); g.quadraticCurveTo(x, y, x, y + r); g.quadraticCurveTo(x, y, x - r, y); g.quadraticCurveTo(x, y, x, y - r); g.fill(); }; g.fillStyle = '#fdd835'; sp(28, 30, 10); sp(100, 28, 8); sp(108, 78, 7); break;
+    case 'glitch': g.fillStyle = '#e53935'; g.fillRect(36, 44, 16, 12); g.fillStyle = '#26c6da'; g.fillRect(44, 44, 16, 12); g.fillStyle = '#e53935'; g.fillRect(76, 44, 16, 12); g.fillStyle = '#26c6da'; g.fillRect(68, 44, 16, 12); g.fillStyle = '#111'; g.lineWidth = 5; g.beginPath(); g.moveTo(40, 86); g.lineTo(52, 80); g.lineTo(64, 88); g.lineTo(76, 80); g.lineTo(88, 86); g.stroke(); break;
+    case 'kitty': eyes(); g.fillStyle = '#f48fb1'; g.beginPath(); g.moveTo(58, 66); g.lineTo(70, 66); g.lineTo(64, 72); g.closePath(); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 3; for (const y of [64, 70, 76]) { g.beginPath(); g.moveTo(24, y); g.lineTo(52, y + 2); g.moveTo(104, y); g.lineTo(76, y + 2); g.stroke(); } g.beginPath(); g.moveTo(64, 72); g.lineTo(64, 78); g.moveTo(64, 78); g.quadraticCurveTo(56, 86, 48, 82); g.moveTo(64, 78); g.quadraticCurveTo(72, 86, 80, 82); g.stroke(); break;
+    case 'smile': default: eyes(); smile(); g.fillStyle = 'rgba(244,143,177,0.45)'; g.beginPath(); g.arc(30, 66, 8, 0, Math.PI * 2); g.arc(98, 66, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; break;
+    case 'stareyes': g.fillStyle = '#fdd835'; const star2 = (x, y) => { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 5 : 11; g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } g.closePath(); g.fill(); }; star2(44, 50); star2(84, 50); g.fillStyle = '#111'; smile(); break;
+    case 'sus': g.beginPath(); g.ellipse(44, 52, 9, 6, 0, 0, Math.PI * 2); g.ellipse(84, 52, 9, 6, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(46, 50, 2.5, 0, Math.PI * 2); g.arc(86, 50, 2.5, 0, Math.PI * 2); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.moveTo(48, 88); g.lineTo(80, 88); g.stroke(); break;
+    case 'terminator': g.fillStyle = '#e53935'; g.beginPath(); g.arc(44, 50, 9, 0, Math.PI * 2); g.fill(); g.fillStyle = '#78909c'; g.fillRect(70, 42, 26, 16); g.fillStyle = '#111'; for (let x = 74; x <= 92; x += 9) g.fillRect(x, 78, 5, 14); g.beginPath(); g.moveTo(44, 86); g.lineTo(60, 86); g.stroke(); break;
+    case 'tongue': eyes(); smile(); g.fillStyle = '#f48fb1'; g.beginPath(); g.roundRect(56, 78, 16, 26, 8); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.moveTo(64, 82); g.lineTo(64, 100); g.stroke(); break;
+    case 'unibrow': g.fillRect(30, 32, 68, 10); eyes(); smile(); break;
+    case 'vr': g.fillStyle = '#263238'; g.beginPath(); g.roundRect(26, 36, 76, 30, 10); g.fill(); g.fillStyle = '#4fc3f7'; g.fillRect(36, 46, 56, 6); g.fillStyle = '#111'; smile(76, 22); break;
+    case 'warpaint': eyes(14); g.strokeStyle = '#e53935'; g.lineWidth = 8; g.beginPath(); g.moveTo(24, 66); g.lineTo(52, 66); g.moveTo(76, 66); g.lineTo(104, 66); g.stroke(); g.strokeStyle = '#111'; g.lineWidth = 7; g.beginPath(); g.moveTo(48, 90); g.lineTo(80, 90); g.stroke(); break;
+    case 'zzz': g.beginPath(); g.moveTo(36, 52); g.quadraticCurveTo(44, 56, 52, 50); g.moveTo(76, 52); g.quadraticCurveTo(84, 56, 92, 50); g.stroke(); g.fillStyle = '#111'; g.font = 'bold 20px Arial'; g.fillText('z', 92, 28); g.fillText('z', 100, 48); g.beginPath(); g.ellipse(64, 92, 8, 10, 0, 0, Math.PI * 2); g.stroke(); break;
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return (faceCache[id] = t);
+}
+
+function shirtTexture(id) {
+  if (shirtCache[id]) return shirtCache[id];
+  const it = ITEM[id];
+  const ugcT = (id.startsWith('ugc_') && it && it.template) ? it.template : null;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const C = (it && it.color) || '#aaaaaa';
+  const st = ugcT ? ugcT.slice(6).split('_')[0] : id.slice(6).split('_')[0];
+  const star = (cx, cy, R, r) => { g.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rad = i % 2 ? r : R; g.lineTo(cx + Math.cos(a) * rad, cy + Math.sin(a) * rad); } g.closePath(); g.fill(); };
+  g.fillStyle = C; g.fillRect(0, 0, 128, 128);
+  switch (st) {
+    case 'star': g.fillStyle = '#fff'; star(64, 64, 40, 17); break;
+    case 'heart': g.fillStyle = '#fff'; g.beginPath(); g.moveTo(64, 100); g.bezierCurveTo(10, 60, 30, 18, 64, 44); g.bezierCurveTo(98, 18, 118, 60, 64, 100); g.fill(); break;
+    case 'ff': g.fillStyle = '#fff'; g.beginPath(); g.roundRect(24, 34, 80, 60, 12); g.fill(); g.fillStyle = '#e2231a'; g.font = 'bold 40px Arial'; g.textAlign = 'center'; g.fillText('FF', 64, 78); break;
+    case 'stripes': for (let y = 0; y < 128; y += 32) { g.fillStyle = '#ffffff'; g.fillRect(0, y, 128, 16); g.fillStyle = '#e53935'; g.fillRect(0, y + 16, 128, 16); } break;
+    case 'vampcape': g.fillStyle = '#7b1e1e'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#5a1414'; g.beginPath(); g.moveTo(18, 0); g.lineTo(46, 0); g.lineTo(34, 46); g.closePath(); g.fill(); g.beginPath(); g.moveTo(110, 0); g.lineTo(82, 0); g.lineTo(94, 46); g.closePath(); g.fill(); g.fillStyle = '#ffd400'; g.beginPath(); g.arc(64, 32, 9, 0, Math.PI * 2); g.fill(); g.fillStyle = '#7b1e1e'; g.beginPath(); g.arc(64, 32, 4, 0, Math.PI * 2); g.fill(); break;
+    case 'mummy': g.fillStyle = '#e8e0c8'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#b8ab8a'; g.lineWidth = 3; for (let y = 6; y < 128; y += 18) { g.beginPath(); g.moveTo(-4, y); g.lineTo(132, y + 8); g.stroke(); g.beginPath(); g.moveTo(-4, y + 10); g.lineTo(132, y + 2); g.stroke(); } break;
+    case 'suit': case 'tux': case 'goldsuit': g.fillStyle = st === 'goldsuit' ? '#c9a227' : '#263238'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(40, 0); g.lineTo(88, 0); g.lineTo(64, 70); g.fill(); g.fillStyle = '#c62828'; g.beginPath(); g.moveTo(58, 6); g.lineTo(70, 6); g.lineTo(72, 50); g.lineTo(64, 62); g.lineTo(56, 50); g.fill(); break;
+    case 'camo': g.fillStyle = '#558b2f'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#33691e'; for (const [x, y, r] of [[30, 30, 18], [90, 50, 22], [50, 90, 16], [100, 100, 14]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#8d6e63'; g.beginPath(); g.arc(64, 60, 12, 0, Math.PI * 2); g.fill(); break;
+    case 'flannel': g.fillStyle = '#b71c1c'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#212121'; g.lineWidth = 8; for (let x = 0; x < 128; x += 32) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 128); g.stroke(); } for (let y = 0; y < 128; y += 32) { g.beginPath(); g.moveTo(0, y); g.lineTo(128, y); g.stroke(); } break;
+    case 'hawaiian': g.fillStyle = '#00838f'; g.fillRect(0, 0, 128, 128); const fl = ['#f48fb1', '#fff176', '#ffffff']; [[30, 40], [90, 30], [60, 80], [100, 95], [25, 100]].forEach(([x, y], i) => { g.fillStyle = fl[i % 3]; for (let p = 0; p < 5; p++) { const a = p / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 8, y + Math.sin(a) * 8, 6, 0, Math.PI * 2); g.fill(); } g.fillStyle = '#ff9800'; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill(); }); break;
+    case 'rainbow': case 'tiedye': const rc = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa']; rc.forEach((cc, i) => { g.fillStyle = cc; g.fillRect(0, i * 22, 128, 22); }); break;
+    case 'referee': for (let x = 0; x < 128; x += 32) { g.fillStyle = '#111'; g.fillRect(x, 0, 16, 128); g.fillStyle = '#fff'; g.fillRect(x + 16, 0, 16, 128); } break;
+    case 'skeleton': g.fillStyle = '#111'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#eee'; for (let y = 20; y < 120; y += 24) g.fillRect(30, y, 68, 8); g.fillRect(58, 8, 12, 112); break;
+    case 'armor': g.fillStyle = '#78909c'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#546e7a'; g.fillRect(0, 0, 128, 18); g.fillRect(0, 55, 128, 18); g.fillRect(0, 92, 128, 18); g.fillStyle = '#ffd400'; g.beginPath(); g.arc(64, 40, 8, 0, Math.PI * 2); g.fill(); break;
+    case 'astronaut': g.fillStyle = '#eceff1'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#ff6f00'; g.fillRect(0, 50, 128, 10); g.fillRect(0, 80, 128, 10); g.fillStyle = '#1e88e5'; g.beginPath(); g.arc(64, 28, 12, 0, Math.PI * 2); g.fill(); break;
+    case 'labcoat': case 'chefcoat': g.fillStyle = '#fafafa'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#bdbdbd'; g.lineWidth = 4; g.beginPath(); g.moveTo(64, 0); g.lineTo(64, 128); g.stroke(); g.fillStyle = '#9e9e9e'; for (let y = 24; y < 128; y += 28) { g.beginPath(); g.arc(52, y, 4, 0, Math.PI * 2); g.arc(76, y, 4, 0, Math.PI * 2); g.fill(); } break;
+    case 'vest': g.fillStyle = '#6d4c41'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#4e342e'; g.fillRect(56, 0, 16, 128); g.fillStyle = '#ffd400'; for (let y = 20; y < 128; y += 26) { g.beginPath(); g.arc(64, y, 5, 0, Math.PI * 2); g.fill(); } break;
+    case 'scuba': g.fillStyle = '#212121'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#00acc1'; g.fillRect(48, 0, 32, 128); break;
+    case 'safari': g.fillStyle = '#c5a880'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#8d6e63'; g.lineWidth = 4; g.strokeRect(24, 50, 30, 26); g.strokeRect(74, 50, 30, 26); break;
+    case 'poncho': g.fillStyle = '#8d6e63'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#e53935'; g.fillRect(0, 40, 128, 12); g.fillStyle = '#fdd835'; g.fillRect(0, 76, 128, 12); break;
+    case 'turtle': g.fillStyle = '#43a047'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#1b5e20'; g.lineWidth = 5; for (let y = 16; y < 128; y += 32) for (let x = 16; x < 128; x += 32) { g.strokeRect(x - 12, y - 12, 24, 24); } break;
+    case 'jersey': g.fillStyle = '#fff'; g.font = 'bold 56px Arial'; g.textAlign = 'center'; g.fillText('7', 64, 88); g.fillStyle = '#e53935'; g.fillRect(0, 0, 128, 10); break;
+    case 'hoodie': g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.roundRect(34, 78, 60, 34, 8); g.fill(); g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(34, 70, 60, 6); break;
+    case 'jacket': g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(60, 0, 8, 128); g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(0, 0, 128, 8); break;
+    case 'sweater': g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(0, 0, 128, 14); for (let x = 8; x < 128; x += 16) { g.fillRect(x, 14, 4, 114); } break;
+    case 'polo': g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.moveTo(48, 0); g.lineTo(80, 0); g.lineTo(64, 26); g.fill(); break;
+    case 'dress': g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(0, 64, 128, 10); break;
+    case 'band': g.fillStyle = '#212121'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#fff'; g.font = 'bold 30px Arial'; g.textAlign = 'center'; g.fillText('ROCK', 64, 74); g.strokeStyle = '#e53935'; g.lineWidth = 4; g.strokeRect(14, 40, 100, 48); break;
+    case 'checker': for (let y = 0; y < 128; y += 32) for (let x = 0; x < 128; x += 32) { g.fillStyle = ((x + y) / 32) % 2 ? '#111' : '#fff'; g.fillRect(x, y, 32, 32); } break;
+    case 'plaid': g.fillStyle = '#2e7d32'; g.fillRect(0, 0, 128, 128); g.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 0; x < 128; x += 32) g.fillRect(x, 0, 8, 128); for (let y = 0; y < 128; y += 32) g.fillRect(0, y, 128, 8); g.fillStyle = 'rgba(255,235,59,.5)'; for (let x = 16; x < 128; x += 32) g.fillRect(x, 0, 3, 128); break;
+    case 'denim': g.fillStyle = '#1e5aa8'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#ffeb3b'; g.lineWidth = 3; g.strokeRect(28, 44, 30, 34); g.strokeRect(70, 44, 30, 34); g.beginPath(); g.moveTo(0, 96); g.lineTo(128, 96); g.stroke(); g.fillStyle = 'rgba(255,255,255,.18)'; for (let y = 8; y < 128; y += 24) g.fillRect(0, y, 128, 2); break;
+    case 'comet': g.fillStyle = '#fff'; star(64, 56, 26, 11); g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 5; g.lineCap = 'round'; for (const [x1, y1, x2, y2] of [[28, 96, 50, 76], [18, 108, 44, 84], [44, 104, 60, 88]]) { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); } g.fillStyle = '#fff176'; star(96, 30, 10, 4); break;
+    case 'bubble': g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 4; for (const [x, y, r] of [[30, 40, 14], [92, 30, 10], [64, 72, 18], [102, 92, 12], [26, 96, 9]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.stroke(); } g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath(); g.arc(25, 35, 4, 0, Math.PI * 2); g.arc(59, 66, 5, 0, Math.PI * 2); g.fill(); break;
+    case 'galaxy': g.fillStyle = '#1a1033'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#7b1fa2'; g.beginPath(); g.arc(40, 50, 26, 0, Math.PI * 2); g.arc(90, 90, 20, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; for (const [x, y, r] of [[20, 24, 2], [60, 30, 3], [100, 40, 2], [30, 90, 2], [80, 60, 3], [110, 100, 2], [50, 110, 2]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); } break;
+
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return (shirtCache[id] = t);
+}
+// Flat 2D preview of a shirt's design (for shop thumbnails) — the 3D garment itself is solid colors.
+export function shirtDesignImage(id) {
+  const t = shirtTexture(id);
+  try { return t.image.toDataURL(); } catch { return ''; }
+}
+
+function mat(color) { return new THREE.MeshStandardMaterial({ color, roughness: 0.75 }); }
+// Darken (f < 1) or lighten (f > 1) a hex color — used for soles, cuffs,
+// grooves and noses so detail reads as a shade of the part it sits on.
+function shade(hex, f) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  const c = (v) => Math.max(0, Math.min(255, Math.round(v * f)));
+  return '#' + [c((n >> 16) & 255), c((n >> 8) & 255), c(n & 255)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function box(w, h, d, color) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color)); m.castShadow = true; m.receiveShadow = true; return m; }
+// Rounded box — same blocky proportions, softened edges that catch the light.
+function rbox(w, h, d, color, r = 0.09, rough = 0.65) { const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 4, Math.min(r, Math.min(w, h, d) / 2 - 0.01)), new THREE.MeshStandardMaterial({ color, roughness: rough })); m.castShadow = true; m.receiveShadow = true; return m; }
+function attachExtras(root, avatar, opts = {}) {
+  const petSpec = opts.pet === false ? null : PET_MODELS[avatar.pet];
+  if (petSpec) {
+    const pet = new THREE.Group();
+    for (const b of petSpec.boxes) {
+      const m = box(b[3], b[4], b[5], b[6]);
+      m.position.set(b[0], b[1], b[2]);
+      if (b[7]) m.rotation.z = b[7];
+      pet.add(m);
+    }
+    pet.position.set(1.9, 0, 0.6);
+    pet.rotation.y = -0.4;
+    root.add(pet);
+    root.userData.pet = pet;
+  }
+  const gearIt = ITEM[avatar.gear];
+  const gearGlb = opts.gear === false ? null : (gearIt && gearIt.model_url);
+  const gearBoxes = opts.gear === false ? null : (GEAR_MODELS[avatar.gear] && GEAR_MODELS[avatar.gear].boxes);
+  // Held gear hangs from the end of the right arm (no hands — gear
+  // anchors to the arm pivot on both rigs).
+  const handAnchor = root.userData.limbs?.rarm;
+  const gearY = -2;
+  if (gearGlb) {
+    const gear = new THREE.Group();
+    gear.position.set(0, gearY, 0.5);
+    (handAnchor || root).add(gear);
+    loadUgcGlb(gearGlb, 1.1, gearIt.model_transform).then(g => { if (gear.parent) gear.add(g); }).catch(() => {});
+    root.userData.gear = gear;
+  } else if (gearBoxes) {
+    const gear = new THREE.Group();
+    for (const b of gearBoxes) {
+      const m = box(b[3], b[4], b[5], b[6]);
+      m.position.set(b[0], b[1], b[2]);
+      if (b[7]) m.rotation.z = b[7];
+      gear.add(m);
+    }
+    gear.scale.setScalar(0.5);
+    gear.position.set(0, gearY, 0.5);
+    (handAnchor || root).add(gear);
+    root.userData.gear = gear;
+  }
+}
+// UGC custom 3D models (.glb). Loads async, cached per URL; each use gets a
+// fresh clone normalized so its longest dimension equals targetSize, centered.
+const gltfLoader = new GLTFLoader();
+const glbCache = new Map();
+function getGlbScene(url) {
+  if (!glbCache.has(url)) {
+    glbCache.set(url, new Promise((resolve, reject) => {
+      gltfLoader.load(url, gltf => resolve(gltf.scene), undefined,
+        err => { glbCache.delete(url); reject(err); });
+    }));
+  }
+  return glbCache.get(url);
+}
+export function loadUgcGlb(url, targetSize = 2, t = null) {
+  return getGlbScene(url).then(raw => {
+    const obj = raw.clone(true);
+    const bbox = new THREE.Box3().setFromObject(obj);
+    const size = bbox.getSize(new THREE.Vector3());
+    const s = targetSize / (Math.max(size.x, size.y, size.z) || 1);
+    const center = bbox.getCenter(new THREE.Vector3()).multiplyScalar(s);
+    obj.scale.setScalar(s);
+    obj.position.sub(center);
+    if (t) {
+      obj.scale.multiplyScalar(Math.min(3, Math.max(0.2, Number(t.s) || 1)));
+      obj.rotation.y = ((Number(t.ry) || 0) * Math.PI) / 180;
+      obj.position.x += Number(t.dx) || 0; obj.position.y += Number(t.dy) || 0; obj.position.z += Number(t.dz) || 0;
+    }
+    obj.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    return obj;
+  });
+}
+// Attach a GLB to a parent; adds the model when it finishes loading (no-op if
+// the anchor was removed meanwhile).
+function attachUgcGlb(parent, url, targetSize, y = 0, t = null) {
+  const anchor = new THREE.Group();
+  anchor.position.y = y;
+  parent.add(anchor);
+  loadUgcGlb(url, targetSize, t).then(g => { if (anchor.parent) anchor.add(g); }).catch(() => {});
+  return anchor;
+}
+
+function hatStyle(id) {
+  if (id.startsWith('ugc_')) { const u = ITEM[id]; return u && u.template ? hatStyle(u.template) : 'cap'; }
+  const s = id.slice(4);
+  const styles = ['tophat', 'clubhat', 'bunnyears', 'ducktuft', 'catears', 'bearears', 'foxears', 'wolfears', 'flowercrown', 'propeller', 'beanie', 'crown', 'wizard', 'pirate', 'cowboy', 'santa', 'party', 'sombrero', 'ninja', 'chef', 'ushanka', 'beret', 'detective', 'visor', 'sun', 'fez', 'frog', 'shark', 'chicken', 'pizza', 'burger', 'taco', 'donut', 'icecream', 'popcorn', 'helm', 'cap', 'cone', 'horns', 'halo', 'headphones', 'witch', 'scarecrow', 'devilhorns', 'tiara', 'sunflower'];
+  for (const k of styles) if (s === k || s.startsWith(k + '_')) return k;
+  return 'cap';
+}
+function buildHat(id) {
+  const it = ITEM[id]; if (!it || id === 'hat_none') return null;
+  const st = hatStyle(id);
+  const g = new THREE.Group(), M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5, metalness: st === 'crown' ? 0.8 : 0 });
+  const add = (geo, color, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  const C = it.color || '#aaaaaa', W = '#ffffff', D = '#212121';
+  switch (st) {
+    case 'cap': add(new THREE.SphereGeometry(0.68, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0.05); add(new THREE.BoxGeometry(1.1, 0.08, 0.6), C, 0, 0.05, 0.75); break;
+    case 'tophat': add(new THREE.CylinderGeometry(0.95, 0.95, 0.08, 24), C); add(new THREE.CylinderGeometry(0.55, 0.55, 1.1, 24), C, 0, 0.55); add(new THREE.CylinderGeometry(0.56, 0.56, 0.18, 24), it.band || '#b71c1c', 0, 0.15); break;
+    case 'tiara': {
+      add(new THREE.CylinderGeometry(0.58, 0.58, 0.22, 24, 1, true), C, 0, 0.14);
+      for (let i = 0; i < 3; i++) { const a = -0.5 + i * 0.5; add(new THREE.ConeGeometry(0.09, 0.3 - Math.abs(i - 1) * 0.08, 6), C, Math.sin(a) * 0.56, 0.36, Math.cos(a) * 0.56); }
+      add(new THREE.SphereGeometry(0.1), '#f48fb1', 0, 0.48, 0.56);
+      add(new THREE.SphereGeometry(0.07), '#4fc3f7', -0.5, 0.3, 0.34);
+      add(new THREE.SphereGeometry(0.07), '#4fc3f7', 0.5, 0.3, 0.34);
+      break; }
+    case 'sunflower': {
+      const ring = add(new THREE.TorusGeometry(0.6, 0.08, 8, 24), '#43a047', 0, 0.28); ring.rotation.x = Math.PI / 2;
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const p = add(new THREE.SphereGeometry(0.13, 8, 6), '#fdd835', Math.cos(a) * 0.62, 0.3, Math.sin(a) * 0.62); p.scale.set(1.5, 0.45, 1); }
+      add(new THREE.SphereGeometry(0.24, 12, 10), '#6d4c41', 0, 0.44);
+      break; }
+    case 'crown': add(new THREE.CylinderGeometry(0.62, 0.62, 0.35, 24, 1, true), C, 0, 0.15); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; add(new THREE.ConeGeometry(0.13, 0.35, 8), C, Math.cos(a) * 0.6, 0.48, Math.sin(a) * 0.6); } add(new THREE.SphereGeometry(0.1), '#e53935', 0, 0.15, 0.63); break;
+    case 'horns': { const l = add(new THREE.ConeGeometry(0.14, 0.6, 12), C, -0.38, 0.22); l.rotation.z = 0.4; const r = add(new THREE.ConeGeometry(0.14, 0.6, 12), C, 0.38, 0.22); r.rotation.z = -0.4; break; }
+    case 'halo': { const h = add(new THREE.TorusGeometry(0.5, 0.07, 8, 32), C, 0, 0.55); h.rotation.x = Math.PI / 2; h.material.emissive = new THREE.Color('#fff176'); break; }
+    case 'headphones': { add(new THREE.TorusGeometry(0.7, 0.07, 8, 24, Math.PI), C, 0, -0.45); add(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16).rotateZ(Math.PI / 2), '#222', -0.68, -0.6); add(new THREE.CylinderGeometry(0.3, 0.3, 0.2, 16).rotateZ(Math.PI / 2), '#222', 0.68, -0.6); break; }
+    case 'clubhat': { add(new THREE.SphereGeometry(0.7, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), C); add(new THREE.CylinderGeometry(0.95, 0.95, 0.07, 28), C, 0, 0.03); const r = add(new THREE.TorusGeometry(0.66, 0.07, 6, 24, Math.PI), '#f2c200'); r.rotation.y = Math.PI / 2; break; }
+    case 'cone': add(new THREE.ConeGeometry(0.6, 1.4, 20), C, 0, 0.65); add(new THREE.CylinderGeometry(0.36, 0.44, 0.22, 20), W, 0, 0.75); add(new THREE.BoxGeometry(1.3, 0.1, 1.3), C, 0, 0); break;
+    case 'beanie': add(new THREE.SphereGeometry(0.68, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, -0.05); add(new THREE.CylinderGeometry(0.69, 0.69, 0.22, 20), '#004d40', 0, 0); add(new THREE.SphereGeometry(0.18), W, 0, 0.68); break;
+    case 'bunnyears': {
+      for (const sx of [-1, 1]) {
+        const base = add(new THREE.CapsuleGeometry(0.17, 0.7, 6, 12), '#9e9e9e', sx * 0.3, 0.55);
+        base.rotation.z = sx * -0.13;
+        const tip = add(new THREE.CapsuleGeometry(0.15, 0.55, 6, 12), '#9e9e9e', sx * 0.44, 1.22);
+        tip.rotation.z = sx * -0.42;
+        const inner = add(new THREE.CapsuleGeometry(0.075, 0.85, 6, 12), '#f8bbd0', sx * 0.37, 0.88, 0.1);
+        inner.rotation.z = sx * -0.27;
+      } break; }
+    case 'ducktuft': {
+      for (let i = -2; i <= 2; i++) { const f = add(new THREE.ConeGeometry(0.15, 0.75, 8), D, i * 0.22, 0.42 - Math.abs(i) * 0.06); f.rotation.z = -i * 0.34; f.rotation.x = -0.3; }
+      const ring = add(new THREE.TorusGeometry(0.72, 0.12, 10, 28), W, 0, -1.02);
+      ring.rotation.x = Math.PI / 2;
+      break; }
+    case 'witch': {
+      add(new THREE.CylinderGeometry(0.95, 0.95, 0.08, 24), C, 0, 0.02);
+      const cone = add(new THREE.ConeGeometry(0.55, 1.35, 20), C, 0.06, 0.72);
+      cone.rotation.z = -0.1;
+      add(new THREE.CylinderGeometry(0.57, 0.6, 0.16, 20), '#ff9800', 0.02, 0.14);
+      const tip = add(new THREE.ConeGeometry(0.16, 0.4, 10), C, 0.32, 1.42);
+      tip.rotation.z = -0.7;
+      break; }
+    case 'scarecrow': {
+      add(new THREE.CylinderGeometry(1.0, 1.0, 0.08, 20), '#c9a227', 0, 0.02);
+      add(new THREE.SphereGeometry(0.55, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), '#d4a017', 0, 0.05);
+      break; }
+    case 'devilhorns': {
+      for (const sx of [-1, 1]) { const h = add(new THREE.ConeGeometry(0.18, 0.7, 10), '#c62828', sx * 0.45, 0.5); h.rotation.z = sx * -0.4; }
+      break; }
+    case 'catears': { for (const sx of [-1, 1]) { const e = add(new THREE.ConeGeometry(0.2, 0.55, 4), C, sx * 0.4, 0.35); e.rotation.y = Math.PI / 4; e.rotation.z = sx * -0.15; } break; }
+    case 'bearears': for (const sx of [-1, 1]) { add(new THREE.SphereGeometry(0.24, 12, 10), C, sx * 0.45, 0.28); add(new THREE.SphereGeometry(0.12, 10, 8), '#f8bbd0', sx * 0.45, 0.28, 0.16); } break;
+    case 'foxears': { for (const sx of [-1, 1]) { const e = add(new THREE.ConeGeometry(0.18, 0.7, 6), C, sx * 0.38, 0.42); e.rotation.z = sx * -0.12; add(new THREE.ConeGeometry(0.07, 0.2, 6), D, sx * 0.4, 0.72); } break; }
+    case 'wolfears': { for (const sx of [-1, 1]) { const e = add(new THREE.ConeGeometry(0.16, 0.85, 6), C, sx * 0.36, 0.5); e.rotation.z = sx * -0.1; } break; }
+    case 'helm': add(new THREE.SphereGeometry(0.72, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, -0.05); add(new THREE.BoxGeometry(0.9, 0.12, 0.1), D, 0, 0.1, 0.62); add(new THREE.ConeGeometry(0.1, 0.5, 8), '#e53935', 0, 0.85); break;
+    case 'wizard': add(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 24), C, 0, 0.02); { const c = add(new THREE.ConeGeometry(0.5, 1.5, 18), C, 0.05, 0.75); c.rotation.z = -0.12; } add(new THREE.SphereGeometry(0.09), '#fff176', -0.25, 0.5, 0.45); add(new THREE.SphereGeometry(0.07), '#fff176', 0.35, 0.95, 0.3); break;
+    case 'pirate': add(new THREE.CylinderGeometry(0.85, 0.85, 0.12, 3), C, 0, 0.12); { const r = add(new THREE.CylinderGeometry(0.85, 0.85, 0.12, 3), C, 0, 0.12); r.rotation.y = Math.PI / 3; } add(new THREE.SphereGeometry(0.5, 16, 12), C, 0, 0.05); add(new THREE.SphereGeometry(0.12), W, 0, 0.35, 0.5); break;
+    case 'cowboy': add(new THREE.CylinderGeometry(1.0, 1.0, 0.07, 26), C, 0, 0.02); add(new THREE.SphereGeometry(0.55, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0.02); add(new THREE.CylinderGeometry(0.57, 0.57, 0.12, 18), D, 0, 0.28); break;
+    case 'santa': { const c = add(new THREE.ConeGeometry(0.55, 1.0, 18), '#d32f2f', 0.1, 0.5); c.rotation.z = -0.35; } add(new THREE.CylinderGeometry(0.68, 0.68, 0.2, 20), W, 0, 0.02); add(new THREE.SphereGeometry(0.16), W, 0.55, 0.85); break;
+    case 'party': { const c = add(new THREE.ConeGeometry(0.35, 0.8, 14), C, 0, 0.4); c.rotation.z = 0.15; } add(new THREE.SphereGeometry(0.12), W, -0.12, 0.82); add(new THREE.CylinderGeometry(0.5, 0.55, 0.1, 14), C, 0, 0); break;
+    case 'sombrero': add(new THREE.CylinderGeometry(1.15, 1.25, 0.06, 26), C, 0, 0); add(new THREE.SphereGeometry(0.5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0); add(new THREE.TorusGeometry(0.55, 0.05, 8, 20), '#ffd400', 0, 0.35); break;
+    case 'ninja': add(new THREE.SphereGeometry(0.7, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), D, 0, -0.08); add(new THREE.BoxGeometry(1.45, 0.12, 0.12), D, 0, 0.1, -0.1); break;
+    case 'chef': add(new THREE.CylinderGeometry(0.55, 0.5, 0.55, 18), W, 0, 0.45); add(new THREE.SphereGeometry(0.55, 16, 10), W, 0, 0.7); add(new THREE.CylinderGeometry(0.62, 0.62, 0.14, 18), W, 0, 0.05); break;
+    case 'propeller': add(new THREE.SphereGeometry(0.68, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0.05); add(new THREE.CylinderGeometry(0.04, 0.04, 0.4, 8), '#9e9e9e', 0, 0.85); { const b = add(new THREE.BoxGeometry(1.3, 0.06, 0.18), '#ffd400', 0, 1.05); b.rotation.y = 0.5; } break;
+    case 'flowercrown': { const t = add(new THREE.TorusGeometry(0.62, 0.09, 8, 26), '#43a047', 0, 0.25); t.rotation.x = Math.PI / 2; for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; add(new THREE.SphereGeometry(0.11, 8, 6), ['#f48fb1', '#fff176', '#ffffff'][i % 3], Math.cos(a) * 0.62, 0.3, Math.sin(a) * 0.62); } break; }
+    case 'ushanka': add(new THREE.SphereGeometry(0.7, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, -0.05); add(new THREE.BoxGeometry(0.18, 0.5, 0.5), C, -0.68, -0.2); add(new THREE.BoxGeometry(0.18, 0.5, 0.5), C, 0.68, -0.2); break;
+    case 'beret': { const b = add(new THREE.SphereGeometry(0.62, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0.12, 0.1); b.scale.set(1.15, 0.55, 1.15); b.rotation.z = -0.18; } add(new THREE.SphereGeometry(0.07), C, 0.12, 0.48); break;
+    case 'detective': add(new THREE.CylinderGeometry(0.8, 0.8, 0.06, 22), C, 0, 0.02); add(new THREE.CylinderGeometry(0.42, 0.48, 0.5, 18), C, 0, 0.28); add(new THREE.CylinderGeometry(0.49, 0.49, 0.1, 18), D, 0, 0.12); break;
+    case 'visor': { const v = add(new THREE.CylinderGeometry(0.72, 0.72, 0.07, 20, 1, false, -Math.PI / 2.6, Math.PI / 1.3), C, 0, 0.05, 0.1); break; }
+    case 'sun': add(new THREE.CylinderGeometry(1.05, 1.05, 0.05, 24), C, 0, 0.05); add(new THREE.SphereGeometry(0.5, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0.05); break;
+    case 'fez': add(new THREE.CylinderGeometry(0.42, 0.55, 0.65, 18), C, 0, 0.35); add(new THREE.SphereGeometry(0.06), '#ffd400', 0, 0.7); break;
+    case 'frog': add(new THREE.SphereGeometry(0.68, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), '#43a047', 0, -0.02); for (const sx of [-1, 1]) { add(new THREE.SphereGeometry(0.16, 10, 8), '#43a047', sx * 0.3, 0.62); add(new THREE.SphereGeometry(0.07, 8, 6), D, sx * 0.3, 0.62, 0.12); } break;
+    case 'shark': add(new THREE.SphereGeometry(0.68, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), '#78909c', 0, -0.02); { const f = add(new THREE.ConeGeometry(0.18, 0.55, 4), '#546e7a', 0, 0.75); f.scale.z = 0.4; } for (const sx of [-1, 1]) { add(new THREE.SphereGeometry(0.08, 8, 6), D, sx * 0.25, 0.25, 0.6); } break;
+    case 'chicken': add(new THREE.SphereGeometry(0.66, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2), W, 0, -0.02); for (let i = 0; i < 3; i++) add(new THREE.SphereGeometry(0.14, 8, 6), '#e53935', 0, 0.72 + (i === 1 ? 0.12 : 0), -0.25 + i * 0.25); add(new THREE.ConeGeometry(0.12, 0.25, 8), '#ff9800', 0, 0.15, 0.68); break;
+    case 'pizza': add(new THREE.CylinderGeometry(0.75, 0.75, 0.1, 20), '#f5c04e', 0, 0.35); for (const [px, pz] of [[-0.3, 0.1], [0.25, -0.2], [0.1, 0.35]]) add(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 10), '#d32f2f', px, 0.36, pz); break;
+    case 'burger': add(new THREE.SphereGeometry(0.6, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), '#e8a94e', 0, 0.25); add(new THREE.CylinderGeometry(0.62, 0.62, 0.14, 16), '#6d4c41', 0, 0.22); add(new THREE.CylinderGeometry(0.58, 0.58, 0.1, 16), '#7cb342', 0, 0.32); break;
+    case 'taco': { const s = add(new THREE.TorusGeometry(0.55, 0.28, 10, 18, Math.PI), '#f5c04e', 0, 0.3); s.rotation.z = 0; } add(new THREE.SphereGeometry(0.16, 8, 6), '#7cb342', -0.2, 0.55); add(new THREE.SphereGeometry(0.16, 8, 6), '#e53935', 0.2, 0.55); break;
+    case 'donut': { const d = add(new THREE.TorusGeometry(0.5, 0.28, 12, 22), '#e8a94e', 0, 0.45); d.rotation.x = Math.PI / 2; const f = add(new THREE.TorusGeometry(0.5, 0.29, 12, 22), '#f48fb1', 0, 0.5); f.rotation.x = Math.PI / 2; f.scale.z = 0.6; } break;
+    case 'icecream': { const c = add(new THREE.ConeGeometry(0.4, 0.7, 14), '#d7a86e', 0, 0.35); c.rotation.x = Math.PI; } add(new THREE.SphereGeometry(0.42, 14, 10), '#f8bbd0', 0, 0.75); add(new THREE.SphereGeometry(0.1), '#d32f2f', 0, 1.15); break;
+    case 'popcorn': add(new THREE.BoxGeometry(0.8, 0.5, 0.8), '#d32f2f', 0, 0.3); for (let i = 0; i < 5; i++) add(new THREE.SphereGeometry(0.14, 8, 6), '#fff8e1', -0.25 + (i % 3) * 0.25, 0.62 + (i > 2 ? 0.12 : 0), (i % 2) * 0.2 - 0.1); break;
+    default: add(new THREE.SphereGeometry(0.68, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), C, 0, 0.05); add(new THREE.BoxGeometry(1.1, 0.08, 0.6), C, 0, 0.05, 0.75);
+  }
+  return g;
+}
+
+function buildBugsHead(g) {
+  const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 });
+  const add = (geo, color, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  const grey = '#9e9e9e', pink = '#f8bbd0';
+  const skull = add(new THREE.SphereGeometry(0.62, 24, 18), grey, 0, 0.62); skull.scale.set(1, 1.12, 0.95);
+  const mz = add(new THREE.SphereGeometry(0.36, 18, 14), '#f2f2f2', 0, 0.38, 0.44); mz.scale.set(1.2, 0.85, 0.9);
+  const nose = add(new THREE.SphereGeometry(0.1, 10, 8), '#212121', 0, 0.54, 0.7); nose.scale.set(1.4, 0.85, 0.7);
+  add(new THREE.BoxGeometry(0.12, 0.26, 0.06), '#ffffff', -0.065, 0.16, 0.64);
+  add(new THREE.BoxGeometry(0.12, 0.26, 0.06), '#ffffff', 0.065, 0.16, 0.64);
+  for (const sx of [-1, 1]) {
+    const eye = add(new THREE.SphereGeometry(0.17, 14, 12), '#ffffff', sx * 0.25, 0.94, 0.42); eye.scale.set(1, 1.3, 0.6);
+    add(new THREE.SphereGeometry(0.075, 10, 8), '#212121', sx * 0.25, 0.94, 0.55);
+    const ear = add(new THREE.CapsuleGeometry(0.16, 0.95, 6, 12), grey, sx * 0.27, 1.62);
+    ear.rotation.z = sx * -0.16;
+    const inner = add(new THREE.CapsuleGeometry(0.075, 0.68, 6, 12), pink, sx * 0.3, 1.58, 0.09);
+    inner.rotation.z = sx * -0.16;
+  }
+}
+function buildDaffyHead(g) {
+  const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 });
+  const add = (geo, color, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(color)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  const black = '#212121';
+  const skull = add(new THREE.SphereGeometry(0.62, 24, 18), black, 0, 0.62); skull.scale.set(1, 1.12, 0.95);
+  const bill = add(new THREE.SphereGeometry(0.32, 18, 14), '#ff9800', 0, 0.44, 0.6); bill.scale.set(1.5, 0.42, 1.15);
+  const billLo = add(new THREE.SphereGeometry(0.3, 16, 12), '#fb8c00', 0, 0.36, 0.62); billLo.scale.set(1.35, 0.3, 1.0);
+  add(new THREE.BoxGeometry(0.55, 0.03, 0.05), '#e65100', 0, 0.58, 0.78);
+  for (const sx of [-1, 1]) {
+    const eye = add(new THREE.SphereGeometry(0.18, 14, 12), '#ffffff', sx * 0.22, 1.04, 0.4); eye.scale.set(1, 1.25, 0.6);
+    add(new THREE.SphereGeometry(0.08,  10, 8), '#212121', sx * 0.22, 1.04, 0.54);
+  }
+  for (let i = -2; i <= 2; i++) {
+    const f = add(new THREE.ConeGeometry(0.13, 0.7 - Math.abs(i) * 0.09, 8), black, i * 0.19, 1.48);
+    f.rotation.z = -i * 0.32; f.rotation.x = -0.22;
+  }
+  const ring = add(new THREE.TorusGeometry(0.55, 0.1, 10, 24), '#ffffff', 0, 0.02);
+  ring.rotation.x = Math.PI / 2;
+}
+function buildSlimeHead(g) {
+  const green = '#66bb6a', dark = '#43a047';
+  const M = (c, r = 0.22) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+  const add = (geo, color, x = 0, y = 0, z = 0, rough) => { const m = new THREE.Mesh(geo, M(color, rough)); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  const blob = add(new THREE.SphereGeometry(0.66, 24, 18), green, 0, 0.6); blob.scale.set(1.06, 0.92, 1);
+  // gooey drips on top
+  add(new THREE.SphereGeometry(0.17, 12, 10), green, -0.32, 1.14);
+  add(new THREE.SphereGeometry(0.13, 12, 10), green, 0.02, 1.24);
+  add(new THREE.SphereGeometry(0.15, 12, 10), green, 0.34, 1.12);
+  // drip sliding down the side
+  const drip = add(new THREE.SphereGeometry(0.1, 10, 8), green, 0.64, 0.42, 0.12); drip.scale.set(0.8, 1.7, 0.8);
+  // big cute eyes
+  for (const sx of [-1, 1]) {
+    add(new THREE.SphereGeometry(0.17, 14, 12), '#ffffff', sx * 0.25, 0.76, 0.5, 0.4);
+    add(new THREE.SphereGeometry(0.075, 10, 8), '#212121', sx * 0.25, 0.76, 0.64, 0.4);
+  }
+  // smile
+  const smile = add(new THREE.TorusGeometry(0.15, 0.032, 8, 16, Math.PI), dark, 0, 0.5, 0.56, 0.5);
+  smile.rotation.z = Math.PI;
+  // glossy highlight
+  const hi = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.45 }));
+  hi.position.set(-0.32, 0.92, 0.5); hi.scale.set(1, 1.5, 0.5); g.add(hi);
+}
+// Visible soft rounding for blocky characters (u137): R6 blocks read as
+// soft/rounded while staying clearly blocky; same radius for both rigs.
+const ROUND_BEV = 0.22;
+const HEADS = {
+  head_bugs: { h: 1.3, custom: buildBugsHead },
+  head_daffy: { h: 1.3, custom: buildDaffyHead },
+  head_slimebody: { h: 1.35, custom: buildSlimeHead },
+  head_classic: { h: 1.2, fz: 0.63, fw: 1, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) }, // u134 cylinder head restored (u141) — the classic head is a cylinder again, not a rounded box
+  head_block: { h: 1.2, fz: 0.611, fw: 1.05, geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
+  head_round: { h: 1.36, r: 0.68, round: true, geo: () => new THREE.SphereGeometry(0.68, 28, 20) },
+  head_tall: { h: 1.6, fz: 0.56, fw: 0.95, hs: 0.9, geo: () => new THREE.CylinderGeometry(0.55, 0.55, 1.6, 24) },
+  head_wide: { h: 1.05, fz: 0.63, fw: 1.1, hs: 1.15, geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.05, 24).scale(1.4, 1, 1) },
+  head_alien: { h: 1.5, fz: 0.6, color: '#7cb342', geo: () => new THREE.SphereGeometry(0.62, 24, 18).scale(1, 1.35, 0.95) },
+  head_brick: { h: 1.2, fz: 0.61, color: '#a6492f', geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
+  head_cactus: { h: 1.3, fz: 0.56, color: '#43a047', geo: () => new THREE.CylinderGeometry(0.5, 0.55, 1.3, 20) },
+  head_cloud: { h: 1.1, fz: 0.6, color: '#f5f5f5', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(1.3, 0.9, 1) },
+  head_cone: { h: 1.3, fz: 0.55, color: '#ff9800', geo: () => new THREE.ConeGeometry(0.62, 1.3, 20) },
+  head_cookie: { h: 0.9, fz: 0.66, color: '#c98f4e', geo: () => new THREE.CylinderGeometry(0.65, 0.65, 0.9, 22) },
+  head_cube: { h: 1.2, fz: 0.61, color: '#9aa0a6', geo: () => new THREE.BoxGeometry(1.2, 1.2, 1.2) },
+  head_cylinder: { h: 1.2, fz: 0.63, color: '#b0bec5', geo: () => new THREE.CylinderGeometry(0.62, 0.62, 1.2, 24) },
+  head_diamond: { h: 1.3, fz: 0.55, color: '#4fc3f7', geo: () => new THREE.OctahedronGeometry(0.75) },
+  head_egg: { h: 1.45, fz: 0.6, color: '#fafafa', geo: () => new THREE.SphereGeometry(0.62, 22, 16).scale(1, 1.25, 1) },
+  head_fishbowl: { h: 1.4, fz: 0.68, color: '#b3e5fc', geo: () => new THREE.SphereGeometry(0.7, 22, 16) },
+  head_football: { h: 1.35, fz: 0.55, color: '#8d5a2b', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(0.85, 1.1, 0.85) },
+  head_gold: { h: 1.36, fz: 0.66, color: '#ffd400', geo: () => new THREE.SphereGeometry(0.68, 24, 18) },
+  head_heart: { h: 1.25, fz: 0.5, color: '#e53935', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(1.15, 1, 0.8) },
+  head_moon: { h: 1.24, fz: 0.6, color: '#fff9c4', geo: () => new THREE.SphereGeometry(0.62, 22, 16) },
+  head_mushroom: { h: 1.0, fz: 0.7, color: '#d32f2f', geo: () => new THREE.SphereGeometry(0.62, 20, 12).scale(1.25, 0.8, 1.25) },
+  head_robot: { h: 1.1, fz: 0.56, color: '#90a4ae', geo: () => new THREE.BoxGeometry(1.1, 1.1, 1.1) },
+  head_skull: { h: 1.24, fz: 0.6, color: '#f5f5f5', geo: () => new THREE.SphereGeometry(0.62, 22, 16) },
+  head_slime: { h: 1.1, fz: 0.65, color: '#7cb342', geo: () => new THREE.SphereGeometry(0.62, 20, 14).scale(1.1, 0.9, 1.1) },
+  head_snowman: { h: 1.24, fz: 0.6, color: '#ffffff', geo: () => new THREE.SphereGeometry(0.62, 22, 16) },
+  head_sphere: { h: 1.36, fz: 0.66, geo: () => new THREE.SphereGeometry(0.68, 24, 18) },
+  head_star: { h: 1.3, fz: 0.6, color: '#fdd835', geo: () => new THREE.IcosahedronGeometry(0.7) },
+  head_tv: { h: 1.0, fz: 0.46, color: '#37474f', geo: () => new THREE.BoxGeometry(1.3, 1.0, 0.9) },
+  head_watermelon: { h: 1.4, fz: 0.64, color: '#43a047', geo: () => new THREE.SphereGeometry(0.66, 22, 16).scale(1, 1.1, 1) },
+  head_wood: { h: 1.2, fz: 0.63, color: '#8d6e63', geo: () => new THREE.CylinderGeometry(0.6, 0.62, 1.2, 20) },
+};
+
+// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs = { larm, rarm, lleg, rleg, head, torso }
+const BODY_SUITS = { head_bugs: '#9e9e9e', head_daffy: '#212121', head_slimebody: '#66bb6a' };
+
+// ---------- Player rig ----------
+// Two rigs, one builder. R6 (rig 'r6'): classic shape language, exactly
+// SIX rigid parts — Head, Torso, Left Arm, Right Arm, Left Leg, Right Leg.
+// Single-piece blocky limbs that pivot at the shoulder/hip, torso 2x2x1,
+// head sitting straight on the torso (no neck, no waist, no elbows/knees,
+// no separate hands/shoes). R15 (rig 'r15'): modern Roblox-style — the
+// same blocky language and total height, but arms and legs are two
+// segments with elbow/knee pivots and no hands or feet either — the
+// lower segment extends to the ground instead.
+// smooth=true softens the finish (visible soft edge rounding + glossier material). Both rigs build smooth by default now.
+function buildRig(avatar, opts = {}, smooth = false, rig = 'r6') {
+  const C = { ...avatar.colors };
+  const suitColor = BODY_SUITS[avatar.head];
+  if (suitColor) for (const k of Object.keys(C)) C[k] = suitColor;
+  const suit = avatar.shirt === 'shirt_suit' && !suitColor;
+  const isBugs = avatar.head === 'head_bugs', isDaffy = avatar.head === 'head_daffy';
+  const root = new THREE.Group();
+  // Both rigs get the same soft, glossy finish now — R15 used to be
+  // built sharp (smooth=false) while R6 got the rounded look, which is
+  // why R15 looked worse. Same rounding + gloss for both; the radius is
+  // big enough to read as soft/rounded at a glance, while the parts stay
+  // clearly blocky (classic R6 look, not human proportions).
+  const bev = ROUND_BEV;
+  const gls = 0.45;
+  const part = smooth
+    ? (w, h, d, color) => rbox(w, h, d, color, bev, gls)
+    : box;
+  const torsoW = isBugs ? 1.8 : 2;
+  const torso = part(torsoW, 2, 1, suit ? '#263238' : C.torso); torso.position.y = 3; root.add(torso);
+  const shirtIt = ITEM[avatar.shirt];
+  const shirtOn = avatar.shirt && avatar.shirt !== 'shirt_none' && !(shirtIt && shirtIt.model_url);
+  const shirtColor = (shirtIt && shirtIt.color) || '#aaaaaa';
+  // complex 3D garment in solid colors (no copied textures): torso + collar + placket + buttons + hem
+  const clothPart = (w, h, d, material) => {
+    const r = Math.max(0.01, Math.min(bev, Math.min(w, h, d) / 2 - 0.01));
+    const g = smooth ? new RoundedBoxGeometry(w, h, d, 4, r) : new THREE.BoxGeometry(w, h, d);
+    const m = new THREE.Mesh(g, material);
+    m.castShadow = true; m.receiveShadow = true;
+    return m;
+  };
+  const shirtMat = shirtOn ? new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.8 }) : null;
+  const trimMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#f5f5f5', roughness: 0.8 }) : null;
+  const btnMat = shirtOn ? new THREE.MeshStandardMaterial({ color: '#37474f', roughness: 0.6 }) : null;
+  // pants mirror the shirt approach: a shell over each leg in the pants
+  // item's color, plus a darker waistband trim at the hips.
+  const pantsIt = ITEM[avatar.pants];
+  const pantsOn = avatar.pants && avatar.pants !== 'pants_none' && !(pantsIt && pantsIt.model_url);
+  const pantsColor = (pantsIt && pantsIt.color) || '#aaaaaa';
+  const pantsMat = pantsOn ? new THREE.MeshStandardMaterial({ color: pantsColor, roughness: 0.8 }) : null;
+  const pantsTrimMat = pantsOn ? new THREE.MeshStandardMaterial({ color: shade(pantsColor, 0.7), roughness: 0.8 }) : null;
+  // every shirt gets its own garment layout: archetype from the shirt style + hashed variations
+  const garmentLayout = (id) => {
+    const it = ITEM[id];
+    const ugcT = (id.startsWith('ugc_') && it && it.template) ? it.template : null;
+    const st = ugcT ? ugcT.slice(6).split('_')[0] : id.slice(6).split('_')[0];
+    let h = 7; for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0;
+    const ah = Math.abs(h);
+    const arch = st === 'hoodie' ? 'hoodie'
+      : ['suit', 'tux', 'goldsuit', 'dress', 'referee', 'labcoat', 'chefcoat'].includes(st) ? 'dress'
+      : st === 'polo' ? 'polo' : st === 'jacket' ? 'jacket' : st === 'vest' ? 'vest'
+      : st === 'vampcape' ? 'cape' : 'tee';
+    return { arch, buttons: 3 + (ah % 3), pointedCollar: ((ah >> 3) & 1) === 1, pocket: ((ah >> 5) & 1) === 1, cuffs: ((ah >> 7) & 1) === 1 };
+  };
+  const GL = shirtOn ? garmentLayout(avatar.shirt) : null;
+  const buildGarment = () => {
+    const a = GL.arch;
+    torso.add(clothPart(torsoW + 0.08, 2.04, 1.08, shirtMat)); // torso shell
+    if (a === 'hoodie') {
+      const hood = clothPart(1.3, 0.85, 0.6, shirtMat);
+      hood.position.set(0, 1.05, -0.32); torso.add(hood);
+      const rim = clothPart(1.0, 0.18, 0.18, trimMat);
+      rim.position.set(0, 0.78, 0.28); torso.add(rim);
+    } else if (a === 'dress' || a === 'polo' || a === 'jacket') {
+      if (GL.pointedCollar) {
+        for (const s of [-1, 1]) {
+          const cp = clothPart(0.5, 0.26, 0.12, trimMat);
+          cp.position.set(s * 0.3, 0.95, 0.4); cp.rotation.z = s * -0.3; cp.rotation.x = -0.2;
+          torso.add(cp);
+        }
+      } else {
+        const band = clothPart(torsoW * 0.62, 0.2, 0.5, trimMat);
+        band.position.set(0, 0.96, 0.1); torso.add(band);
+      }
+      const back = clothPart(torsoW * 0.6, 0.22, 0.12, trimMat);
+      back.position.set(0, 0.95, -0.42); torso.add(back);
+    }
+    if (a === 'dress') {
+      const placket = clothPart(0.2, 1.7, 0.06, trimMat);
+      placket.position.set(0, -0.05, 0.55); torso.add(placket);
+      for (let i = 0; i < GL.buttons; i++) {
+        const b = clothPart(0.13, 0.13, 0.06, btnMat);
+        b.position.set(0, 0.55 - i * (1.1 / Math.max(1, GL.buttons - 1)), 0.56); torso.add(b);
+      }
+    } else if (a === 'polo') {
+      const placket = clothPart(0.2, 0.7, 0.06, trimMat);
+      placket.position.set(0, 0.6, 0.55); torso.add(placket);
+      for (let i = 0; i < 2; i++) {
+        const b = clothPart(0.13, 0.13, 0.06, btnMat);
+        b.position.set(0, 0.75 - i * 0.35, 0.56); torso.add(b);
+      }
+    } else if (a === 'jacket' || a === 'vest') {
+      for (const s of [-1, 1]) { // open front panels
+        const p = clothPart(torsoW * 0.4, 1.85, 0.1, shirtMat);
+        p.position.set(s * torsoW * 0.3, -0.05, 0.5); torso.add(p);
+      }
+    }
+    if (GL.pocket && (a === 'dress' || a === 'tee' || a === 'polo')) {
+      const pk = clothPart(0.42, 0.5, 0.08, trimMat);
+      pk.position.set(-0.58, 0.28, 0.55); torso.add(pk);
+    }
+    if (a === 'cape') {
+      const cape = clothPart(torsoW + 0.35, 2.3, 0.12, shirtMat);
+      cape.position.set(0, -0.15, -0.68); cape.rotation.x = 0.1; torso.add(cape);
+    } else {
+      const hem = clothPart(torsoW + 0.12, 0.2, 1.12, shirtMat);
+      hem.position.y = -0.95; torso.add(hem);
+    }
+  };
+  if (shirtIt && shirtIt.model_url) { attachUgcGlb(torso, shirtIt.model_url, 2.2, 0, shirtIt.model_transform); }
+  else if (shirtOn) buildGarment();
+  const headPivot = new THREE.Group(); headPivot.position.y = 4; root.add(headPivot);
+  const H = HEADS[avatar.head] || HEADS.head_classic;
+  if (H.custom) { H.custom(headPivot); }
+  else {
+    const head = new THREE.Mesh(H.geo(), smooth ? new THREE.MeshStandardMaterial({ color: H.color || C.head, roughness: 0.4, metalness: 0.05 }) : mat(H.color || C.head));
+    // Rounded head: plain box heads get the same soft bevel as the body blocks.
+    // (RoundedBoxGeometry reports type 'BoxGeometry' in three r160 and keeps
+    // unit-box parameters, so test by class — head_classic is already rounded.)
+    if (smooth && head.geometry instanceof THREE.BoxGeometry && !(head.geometry instanceof RoundedBoxGeometry)) {
+      const p = head.geometry.parameters;
+      head.geometry = new RoundedBoxGeometry(p.width, p.height, p.depth, 4, Math.min(bev, Math.min(p.width, p.height, p.depth) / 2 - 0.01));
+    }
+    head.position.y = H.h / 2; head.castShadow = true; headPivot.add(head);
+    const faceMat = new THREE.MeshBasicMaterial({ map: faceTexture(avatar.face), transparent: true });
+    const face = H.round
+      ? new THREE.Mesh(new THREE.SphereGeometry(H.r + 0.01, 24, 16, Math.PI / 2 - 0.75, 1.5, Math.PI / 2 - 0.75, 1.5), faceMat)
+      : new THREE.Mesh(new THREE.PlaneGeometry(H.fw, H.fw), faceMat);
+    face.position.set(0, H.h / 2, H.round ? 0 : H.fz); headPivot.add(face);
+    // No ears or nose — classic R6 heads are just the block + face.
+  }
+  const hatIt = ITEM[avatar.hat];
+  if (hatIt && hatIt.model_url) { const hg = attachUgcGlb(headPivot, hatIt.model_url, 1.5, H.h, hatIt.model_transform); hg.scale.setScalar(H.hs || 1); }
+  else { const hat = buildHat(avatar.hat); if (hat) { hat.position.y = H.h; hat.scale.setScalar(H.hs || 1); headPivot.add(hat); } }
+  // Limbs. R6: classic one-piece limbs — a single rigid block per limb,
+  // no elbow/knee pivots. R15: two segments per limb with elbow/knee
+  // pivots (bendy). Both rigs: no hands, no feet.
+  const limb = (x, y, color, w = 1) => { const pv = new THREE.Group(); pv.position.set(x, y, 0); pv.userData.w = w; const m = part(w, 2, w, color); m.position.y = -1; pv.add(m); root.add(pv); return pv; };
+  // A two-segment limb — upper + lower with an elbow/knee pivot. R15
+  // (and the Bugs/Daffy variants) use it; classic R6 is one-piece again.
+  // No hands or feet: the lower segment extends to the ground instead.
+  // Returns { upper, lower, end } pivots (end is an empty pivot, kept
+  // for compatibility). Same blocky
+  // language and same total height (hips at y=2, shoulders at y=4,
+  // limb ends at y=0).
+  const limb2 = (x, y, color, wUp, hUp, wLow, hLow, endW, endH, endD, endZ = 0, endColor = null, shadeAmt = 0.88, overlap = 0) => {
+    const upper = new THREE.Group(); upper.position.set(x, y, 0); upper.userData.w = wUp;
+    const um = part(wUp, hUp, wUp, color); um.position.y = -hUp / 2; upper.add(um); root.add(upper);
+    const lower = new THREE.Group(); lower.position.set(0, -hUp, 0); lower.userData.w = wLow; lower.userData.overlap = overlap;
+    // Lower segment a touch darker than the upper (R15), so the elbow/knee
+    // joint reads. R6 passes shadeAmt 1 to keep both segments the same color.
+    // overlap extends the lower mesh up past the joint, inside the upper
+    // mesh, so the two rounded boxes read as one continuous column at rest
+    // instead of a groove ring at the joint. (R15/Bugs/Daffy pass 0.)
+    const lm = part(wLow, hLow + endH + overlap, wLow, shade(color, shadeAmt)); lm.position.y = -(hLow + endH - overlap) / 2; lower.add(lm); upper.add(lower);
+    const end = new THREE.Group(); end.position.set(0, -hLow, 0); lower.add(end);
+    return { upper, lower, end };
+  };
+  let larm, rarm, lleg, rleg, larmLow, rarmLow, llegLow, rlegLow;
+  if (rig === 'r15') {
+    if (isBugs) {
+      const aL = limb2(-1.35, 4, C.larm, 0.8, 0.85, 0.72, 0.8, 0.7, 0.3, 0.75);
+      const aR = limb2(1.35, 4, C.rarm, 0.8, 0.85, 0.72, 0.8, 0.7, 0.3, 0.75);
+      larm = aL.upper; larmLow = aL.lower;
+      rarm = aR.upper; rarmLow = aR.lower;
+      const gL = limb2(-0.45, 2, C.lleg, 0.9, 0.85, 0.82, 0.7, 0.95, 0.45, 1.7, 0.45, '#9e9e9e');
+      const gR = limb2(0.45, 2, C.rleg, 0.9, 0.85, 0.82, 0.7, 0.95, 0.45, 1.7, 0.45, '#9e9e9e');
+      lleg = gL.upper; llegLow = gL.lower;
+      rleg = gR.upper; rlegLow = gR.lower;
+      const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
+      tail.position.set(0, 2.3, -0.62); tail.castShadow = true; root.add(tail);
+      const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
+      belly.position.set(0, 2.9, 0.5); root.add(belly);
+    } else if (isDaffy) {
+      const aL = limb2(-1.35, 4, C.larm, 0.75, 0.85, 0.68, 0.8, 0.66, 0.3, 0.7);
+      const aR = limb2(1.35, 4, C.rarm, 0.75, 0.85, 0.68, 0.8, 0.66, 0.3, 0.7);
+      larm = aL.upper; larmLow = aL.lower;
+      rarm = aR.upper; rarmLow = aR.lower;
+      const gL = limb2(-0.4, 2, '#ff9800', 0.55, 0.9, 0.5, 0.82, 1.15, 0.28, 1.5, 0.5, '#ff9800');
+      const gR = limb2(0.4, 2, '#ff9800', 0.55, 0.9, 0.5, 0.82, 1.15, 0.28, 1.5, 0.5, '#ff9800');
+      lleg = gL.upper; llegLow = gL.lower;
+      rleg = gR.upper; rlegLow = gR.lower;
+      for (let i = -1; i <= 1; i++) {
+        const f = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), mat('#212121'));
+        f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
+      }
+    } else {
+      // Roblox R15 limbs: two-segment arms and legs (elbow/knee pivots),
+      // straight at rest like R6 — upper and lower segments the SAME width
+      // and the SAME color, so each limb reads as one straight R15 limb.
+      // The joints are pivots, not a taper: they stay straight at rest and
+      // bend when walking or emoting. Arms flush against the torso sides
+      // (upper-arm inner edge meets the torso edge, like R6) so the arms
+      // hang straight down instead of floating out. Same total height,
+      // feet still at y=0. NOT one-piece R6 limbs — R15 keeps its own
+      // two-segment limbs.
+      const armC = suit ? '#263238' : null;
+      const aL = limb2(-1.45, 4, armC || C.larm, 0.9, 0.9, 0.9, 0.95, 0.75, 0.25, 0.8, 0, C.larm, 1);
+      const aR = limb2(1.45, 4, armC || C.rarm, 0.9, 0.9, 0.9, 0.95, 0.75, 0.25, 0.8, 0, C.rarm, 1);
+      larm = aL.upper; larmLow = aL.lower;
+      rarm = aR.upper; rarmLow = aR.lower;
+      const gL = limb2(-0.5, 2, C.lleg, 0.95, 0.9, 0.95, 0.95, 0.85, 0.15, 1.25, 0.2, null, 1);
+      const gR = limb2(0.5, 2, C.rleg, 0.95, 0.9, 0.95, 0.95, 0.85, 0.15, 1.25, 0.2, null, 1);
+      lleg = gL.upper; llegLow = gL.lower;
+      rleg = gR.upper; rlegLow = gR.lower;
+    }
+  } else if (isBugs) {
+    larm = limb(-1.35, 4, C.larm, 0.8); rarm = limb(1.35, 4, C.rarm, 0.8);
+    lleg = limb(-0.45, 2, C.lleg, 0.9); rleg = limb(0.45, 2, C.rleg, 0.9);
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 12), mat('#ffffff'));
+    tail.position.set(0, 2.3, -0.62); tail.castShadow = true; root.add(tail);
+    const belly = new THREE.Mesh(new THREE.BoxGeometry(1.15, 1.5, 0.15), mat('#f5f5f5'));
+    belly.position.set(0, 2.9, 0.5); root.add(belly);
+  } else if (isDaffy) {
+    larm = limb(-1.35, 4, C.larm, 0.75); rarm = limb(1.35, 4, C.rarm, 0.75);
+    lleg = limb(-0.4, 2, '#ff9800', 0.55); rleg = limb(0.4, 2, '#ff9800', 0.55);
+    for (let i = -1; i <= 1; i++) {
+      const f = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.7, 8), mat('#212121'));
+      f.position.set(i * 0.3, 2.2, -0.7); f.rotation.x = 1.9; f.castShadow = true; root.add(f);
+    }
+  } else {
+    // Classic R6: one-piece limbs, the old look — a single rigid block
+    // per limb, no elbow/knee pivots. Same total length, feet at y=0,
+    // no hands or feet. The Low pivots stay unset, so this rig never
+    // bends when walking or emoting.
+    larm = limb(-1.5, 4, suit ? '#263238' : C.larm); rarm = limb(1.5, 4, suit ? '#263238' : C.rarm);
+    lleg = limb(-0.5, 2, C.lleg); rleg = limb(0.5, 2, C.rleg);
+  }
+  // ---- Additive character detail (same silhouette, same height) ----
+  // Collar on a bare torso, wrist cuffs when no shirt covers the arms.
+  // No hands or feet anywhere: no finger grooves, no toe grooves, no
+  // shoe soles on either rig.
+  // Every piece is a child of a limb pivot, so animations move it for
+  // free. On two-segment rigs (R15) the cuffs/sleeves ride the forearm
+  // pivot like the limb itself; on one-piece R6 they ride the rigid limb.
+  // Still no grooves, no soles, no hands or feet.
+  // Sizes come from bounding boxes, not geometry internals, so this
+  // works for rounded and sharp parts alike.
+  const endMesh = (g) => g && g.children.find(c => c.isMesh);
+  const meshHex = (m) => '#' + m.material.color.getHexString();
+  const meshSize = (m) => new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+  // Neckline collar on a bare torso (shirts already bring their own).
+  if (!avatar.shirt || avatar.shirt === 'shirt_none') {
+    const collar = part(torsoW + 0.04, 0.14, 1.04, shade(meshHex(torso), 0.85));
+    collar.position.y = 0.94;
+    torso.add(collar);
+  }
+  if (larmLow && rarmLow) {
+    // Two-segment limbs (R15 + Bugs/Daffy variants): wrist cuffs ride the
+    // forearm pivot, so they follow the wrist when the elbow bends.
+    if (!shirtOn) {
+      for (const low of [larmLow, rarmLow]) {
+        const m = endMesh(low); if (!m) continue;
+        const s = meshSize(m);
+        const cuff = part(s.x + 0.06, 0.2, s.x + 0.06, shade(meshHex(m), 0.82));
+        cuff.position.y = -s.y + 0.1;
+        low.add(cuff);
+      }
+    }
+  } else {
+    // One-piece limbs (classic R6) — no grooves, no soles, no hands or feet.
+    if (!shirtOn) {
+      for (const arm of [larm, rarm]) {
+        const m = endMesh(arm); if (!m) continue;
+        const s = meshSize(m);
+        const cuff = part(s.x + 0.06, 0.25, s.x + 0.06, shade(meshHex(m), 0.82));
+        cuff.position.y = -1.85;
+        arm.add(cuff);
+      }
+    }
+  }
+  if (shirtOn && GL.arch !== 'vest') {
+    // sleeves riding the arm pivots, so they swing with every animation.
+    // R15 arms are two segments, so each gets its own sleeve, plus a cuff
+    // at the forearm end.
+    const pairs = (larmLow && rarmLow) ? [[larm, larmLow], [rarm, rarmLow]] : [[larm], [rarm]];
+    for (const [upper, lower] of pairs) {
+      const w = (upper.userData.w || 1) + 0.16;
+      if (lower) {
+        const sleeve = clothPart(w, 0.95, w, shirtMat);
+        sleeve.position.y = -0.45; upper.add(sleeve);
+        const wLow = (lower.userData.w || 0.8) + 0.14;
+        const sleeveLow = clothPart(wLow, 0.85, wLow, shirtMat);
+        sleeveLow.position.y = -0.42; lower.add(sleeveLow);
+        if (GL.cuffs) {
+          const cuff = clothPart(wLow + 0.08, 0.28, wLow + 0.08, trimMat);
+          cuff.position.y = -0.82; lower.add(cuff);
+        }
+      } else {
+        const sleeve = clothPart(w, 1.1, w, shirtMat);
+        sleeve.position.y = -0.55; upper.add(sleeve);
+        if (GL.cuffs) {
+          const cuff = clothPart(w + 0.08, 0.3, w + 0.08, trimMat);
+          cuff.position.y = -1.0; upper.add(cuff);
+        }
+      }
+    }
+  }
+  if (pantsOn) {
+    // Pants shells ride the leg pivots, so they swing with every animation.
+    // R15 legs are two segments, so each gets its own shell; R6 one-piece
+    // legs get a single shell. Sizes come from bounding boxes, so this
+    // works for both rigs and the Bugs/Daffy variants.
+    const legPairs = (llegLow && rlegLow) ? [[lleg, llegLow], [rleg, rlegLow]] : [[lleg], [rleg]];
+    for (const [upper, lower] of legPairs) {
+      const um = endMesh(upper);
+      if (um) { const s = meshSize(um); const shell = clothPart(s.x + 0.08, s.y + 0.04, s.z + 0.08, pantsMat); shell.position.copy(um.position); upper.add(shell); }
+      if (lower) { const lm = endMesh(lower); if (lm) { const s = meshSize(lm); const shell = clothPart(s.x + 0.08, s.y + 0.04, s.z + 0.08, pantsMat); shell.position.copy(lm.position); lower.add(shell); } }
+    }
+    // waistband trim around the hips
+    const waist = clothPart(torsoW + 0.14, 0.22, 1.14, pantsTrimMat);
+    waist.position.y = 2; root.add(waist);
+  }
+  root.userData.rig = rig;
+  root.userData.limbs = (larmLow && rarmLow && llegLow && rlegLow)
+    ? { larm, rarm, larmLow, rarmLow, lleg, rleg, llegLow, rlegLow, head: headPivot, torso }
+    : { larm, rarm, lleg, rleg, head: headPivot, torso };
+  if (smooth) { root.userData.headPivot = headPivot; root.userData.smooth = true; }
+  attachExtras(root, avatar, opts);
+  // inner wrapper so the spin emote can rotate the body without fighting player facing
+  const spinG = new THREE.Group();
+  while (root.children.length) spinG.add(root.children[0]);
+  root.add(spinG);
+  root.userData.spin = spinG;
+  return root;
+}
+
+// Returns a THREE.Group; feet at y=0, facing +z. userData.limbs carries the
+// upper pivots (larm, rarm, lleg, rleg, head, torso) plus the lower pivots
+// (larmLow, rarmLow, llegLow, rlegLow) on any rig with bendy limbs — R15
+// only. No hands or feet on either rig — the R15 lower segments run
+// straight to the ground, and R6 is one-piece again.
+// Modern Roblox-style rig: articulated limbs (elbows, knees) in the same
+// blocky language. The R6 builder is kept as the fallback
+// (buildCharacterR6 below).
+// R6 always gets the smooth finish now — the same six chunky one-piece
+// parts, softer edges and a glossier plastic. R15 keeps its
+// look (the advanced-graphics toggle still smooths it via
+// buildCharacterSmooth). R6 is the default rig: an avatar with no rig set
+// builds as classic blocky R6.
+export function buildCharacter(avatar, opts = {}) { const r15 = avatar?.rig === 'r15'; return buildRig(avatar, opts, true, r15 ? 'r15' : 'r6'); }
+
+// Advanced graphics: same R15 shapes, smoother finish (soft rounding + gloss).
+export function buildCharacterSmooth(avatar, opts = {}) { return buildRig(avatar, opts, true, avatar?.rig === 'r15' ? 'r15' : 'r6'); }
+
+// Classic R6, one-piece limbs, kept as a fallback.
+export function buildCharacterR6(avatar, opts = {}) { return buildRig(avatar, opts, true, 'r6'); }
+
+export function animateCharacter(ch, state, t, dt) {
+  const L = ch.userData.limbs; if (!L) return;
+  // Animation: upper limbs swing; the elbows/knees bend too (laf/raf/llf/rlf)
+  // on any rig with lower pivots — R15 only. One-piece variants
+  // (classic R6, Bugs/Daffy R6) ignore the joints.
+  // Classic Roblox style: idle is statue-still, walk swings big, jump = arms straight up, fall = arms out
+  // rotation.x > 0 swings a limb backwards (character faces +z); arms up ~ -PI
+  if (L.torso.userData.baseY === undefined) L.torso.userData.baseY = L.torso.position.y;
+  let la = 0, ra = 0, ll = 0, rl = 0, laz = 0, raz = 0, bob = 0, tp = 0, hp = 0, tr = 0; // tr = torso roll (side sway)
+  // R15 joint angles: laf/raf = elbow bend, llf/rlf = knee bend.
+  // Rest pose is straight: no elbow/knee bend at idle — the joints only
+  // bend when a walk or emote sets them. (The limbs are built vertical;
+  // the old 0.15/0.08 rest bend is what made R15 look crooked.)
+  let laf = 0, raf = 0, llf = 0, rlf = 0;
+  const spin = ch.userData.spin;
+  if (state === 'walk') {
+    const w = t * 10, s = Math.sin(w), c = Math.cos(w);
+    // legs swing opposite, arms counter-swing; elbows trail the arm swing
+    la = s * 1.15; ra = -s * 1.15; ll = -s * 1.1; rl = s * 1.1;
+    laz = 0.16 + Math.max(0, s) * 0.1; raz = -0.16 - Math.max(0, -s) * 0.1;
+    laf = 0.2 + Math.max(0, -s) * 0.55; raf = 0.2 + Math.max(0, s) * 0.55;
+    // knee bends sharpest as the leg lifts through the forward swing
+    llf = 0.08 + Math.pow(Math.max(0, Math.sin(w + 0.7)), 1.6) * 1.15;
+    rlf = 0.08 + Math.pow(Math.max(0, Math.sin(w + Math.PI + 0.7)), 1.6) * 1.15;
+    // two bobs per stride (one per footfall), torso leans in and sways
+    bob = Math.abs(c) * 0.16;
+    tp = 0.1 + Math.sin(w * 2) * 0.03;
+    tr = s * 0.07;
+    hp = -0.05;
+  }
+  else if (state === 'jump') {
+    const j = Math.sin(t * 9);
+    la = ra = -Math.PI + 0.25 + j * 0.12; // arms up, pumping slightly
+    laz = 0.35 + j * 0.08; raz = -0.35 - j * 0.08;
+    laf = raf = 0.45;
+    // one leg tucks, the other kicks out — they swap as you rise
+    ll = -0.55 + j * 0.25; rl = 0.25 - j * 0.25;
+    llf = 0.9 + j * 0.25; rlf = 0.45 - j * 0.2;
+    tp = -0.12; hp = -0.15; bob = 0.08;
+  }
+  else if (state === 'fall') {
+    const f = Math.sin(t * 14), f2 = Math.sin(t * 14 + Math.PI);
+    // arms flail: one up, one out, swapping fast
+    la = -2.4 + f * 0.5; ra = -2.4 + f2 * 0.5;
+    laz = 0.9 + f * 0.45; raz = -0.9 - f2 * 0.45;
+    laf = raf = 0.5;
+    // legs kick and bicycle
+    ll = 0.35 + f * 0.4; rl = 0.35 + f2 * 0.4;
+    llf = 0.6 + Math.max(0, f) * 0.5; rlf = 0.6 + Math.max(0, f2) * 0.5;
+    tp = 0.18 + f * 0.06; tr = f * 0.08; hp = 0.25;
+  }
+  else if (state === 'wave') { const w = Math.sin(t * 12); ra = -(Math.PI * 0.85 + w * 0.3); raf = -1.0 + w * 0.35; la = 0.25; laz = 0.3; hp = 0.18; tp = 0.06; bob = Math.abs(Math.sin(t * 6)) * 0.05; }
+  else if (state === 'dance') { const s = Math.sin(t * 8); la = -Math.PI * 0.5 - s * 1.1; ra = -Math.PI * 0.5 + s * 1.1; ll = s * 0.5; rl = -s * 0.5; laf = raf = 0.5; llf = rlf = 0.3 + Math.abs(s) * 0.35; bob = Math.abs(Math.sin(t * 8)) * 0.2; tp = s * 0.12; hp = Math.sin(t * 8) * 0.1; }
+  else if (state === 'floss') { const s = Math.sin(t * 10); la = -Math.PI * 0.35 + s * 0.9; ra = -Math.PI * 0.35 - s * 0.9; laz = 0.5 + s * 0.35; raz = -0.5 - s * 0.35; laf = raf = 0.4; tp = s * 0.18; hp = -s * 0.08; bob = Math.abs(Math.sin(t * 10)) * 0.12; ll = s * 0.25; rl = -s * 0.25; }
+  else if (state === 'sit') { ll = rl = -Math.PI / 2; la = ra = -0.9; llf = rlf = Math.PI / 2; laf = raf = 0.6; hp = Math.sin(t * 1.5) * 0.25; tp = 0.15; }
+  else if (state === 'spin') { if (spin) spin.rotation.y += dt * 9; la = -0.7; ra = 0.7; laz = 0.6; raz = -0.6; laf = raf = 0.3; llf = rlf = 0.2; tp = 0.12; bob = Math.abs(Math.sin(t * 9)) * 0.08; hp = -0.1; }
+  else if (state === 'bow') { const b = Math.sin(t * 2.5); tp = 0.7 + b * 0.12; hp = 0.4 + b * 0.08; la = ra = 0.5 + b * 0.1; laf = raf = 0.3; ll = rl = 0.1; llf = rlf = 0.15; }
+  else if (state === 'cheer') { const c = Math.sin(t * 10); la = ra = -Math.PI + 0.35 + c * 0.25; bob = Math.abs(c) * 0.35; laf = raf = 0.4; llf = rlf = 0.3; ll = rl = Math.abs(c) * 0.25; hp = -0.18; tp = -0.08; }
+  else if (state === 'laugh') { const s = Math.sin(t * 14); tp = 0.16 + s * 0.12; hp = -0.12 + s * 0.08; la = ra = -0.7; laf = raf = 0.85; ll = rl = 0.18; llf = rlf = 0.3; bob = Math.abs(s) * 0.06; }
+  else if (state === 'dab') { la = -2.7; laz = -0.4; ra = -0.85; raz = 1.25; tp = 0.3; hp = 0.2; ll = -0.15; rl = 0.15; laf = -1.6; raf = 0.2; llf = rlf = 0.2; bob = Math.abs(Math.sin(t * 8)) * 0.1; }
+  else if (state === 'rock') { const s = Math.sin(t * 12); la = -0.8; laz = 0.6; laf = 0.9; ra = -0.5 + s * 0.45; raf = 0.7; hp = 0.2 + Math.sin(t * 6) * 0.18; tp = 0.15 + Math.sin(t * 6) * 0.1; bob = Math.abs(Math.sin(t * 6)) * 0.14; ll = 0.2; rl = -0.2; llf = rlf = 0.25; }
+  else if (state === 'crouch') { ll = rl = -1.1; tp = 0.4; la = ra = 0.3; llf = rlf = 1.1; laf = raf = 0.4; }
+  else if (state === 'salute') { ra = -Math.PI * 0.95; raz = 0.55; la = 0.05; raf = -2.1; hp = -0.06; tp = -0.04; }
+  else if (state === 'shrug') { const s = Math.sin(t * 6); la = ra = -0.9; laz = 0.55; raz = -0.55; tp = 0.12; laf = raf = 0.7; hp = s * 0.18; bob = Math.abs(s) * 0.05; }
+  else { la = Math.sin(t * 2) * 0.05; ra = -Math.sin(t * 2) * 0.05; } // idle: a gentle sway so characters feel alive, not statue-still
+  const k = Math.min(1, dt * 15);
+  L.larm.rotation.x += (la - L.larm.rotation.x) * k;
+  L.rarm.rotation.x += (ra - L.rarm.rotation.x) * k;
+  L.lleg.rotation.x += (ll - L.lleg.rotation.x) * k;
+  L.rleg.rotation.x += (rl - L.rleg.rotation.x) * k;
+  L.larm.rotation.z += (laz - L.larm.rotation.z) * k;
+  L.rarm.rotation.z += (raz - L.rarm.rotation.z) * k;
+  if (L.larmLow) {
+    L.larmLow.rotation.x += (laf - L.larmLow.rotation.x) * k;
+    L.rarmLow.rotation.x += (raf - L.rarmLow.rotation.x) * k;
+    L.llegLow.rotation.x += (llf - L.llegLow.rotation.x) * k;
+    L.rlegLow.rotation.x += (rlf - L.rlegLow.rotation.x) * k;
+  }
+  L.torso.position.y += ((L.torso.userData.baseY + bob) - L.torso.position.y) * k;
+  L.torso.rotation.x += (tp - L.torso.rotation.x) * k;
+  L.torso.rotation.z += (tr - L.torso.rotation.z) * k;
+  if (L.head) L.head.rotation.x += (hp - L.head.rotation.x) * k;
+  if (spin && state !== 'spin') {
+    const twoPi = Math.PI * 2;
+    const home = Math.round(spin.rotation.y / twoPi) * twoPi;
+    spin.rotation.y += (home - spin.rotation.y) * k;
+  }
+}
+
+export const CLUB_PATH = 'M2 17h20v3H2zM4 16a8 8 0 0 1 16 0zM10.5 7h3v5h-3z';
+// Blocky drivable vehicles. Returns a THREE.Group facing +Z. Style from catalog (car/truck/kart/race).
+export function buildVehicle(id) {
+  const spec = ITEM[id] || {};
+  const color = spec.color || '#e53935';
+  const style = spec.style || 'car';
+  const g = new THREE.Group();
+  const dims = {
+    kart: { w: 3, l: 4.5, bh: 0.8, by: 0.95, cab: false, wr: 0.5 },
+    car: { w: 4, l: 7, bh: 1.1, by: 1.35, cab: true, wr: 0.65 },
+    truck: { w: 4, l: 7, bh: 1.6, by: 1.9, cab: true, wr: 0.85 },
+    race: { w: 4, l: 7.5, bh: 0.9, by: 1.15, cab: true, wr: 0.65, spoiler: true },
+  }[style] || { w: 4, l: 7, bh: 1.1, by: 1.35, cab: true, wr: 0.65 };
+  const body = box(dims.w, dims.bh, dims.l, color); body.position.y = dims.by; g.add(body);
+  if (dims.cab) {
+    const cab = box(dims.w - 0.6, 1.0, dims.l * 0.42, '#b0bec5');
+    cab.position.set(0, dims.by + dims.bh / 2 + 0.4, -dims.l * 0.08); g.add(cab);
+    const shield = box(dims.w - 1.0, 0.7, 0.15, '#e1f5fe');
+    shield.position.set(0, cab.position.y + 0.1, cab.position.z + dims.l * 0.21); g.add(shield);
+  } else {
+    const seat = box(1.6, 0.9, 1.6, '#212121'); seat.position.set(0, dims.by + dims.bh / 2 + 0.35, -0.8); g.add(seat);
+    const col = box(0.3, 0.3, 2.2, '#212121'); col.position.set(0, dims.by + 0.5, 1.4); col.rotation.x = 0.5; g.add(col);
+  }
+  if (dims.spoiler) {
+    const sz = -dims.l / 2 + 0.6;
+    const sp = box(dims.w - 0.4, 0.25, 1.0, color); sp.position.set(0, dims.by + dims.bh + 0.9, sz); g.add(sp);
+    for (const x of [-1.2, 1.2]) { const sup = box(0.25, 0.9, 0.25, '#212121'); sup.position.set(x, dims.by + dims.bh + 0.45, sz); g.add(sup); }
+  }
+  const wheelG = new THREE.CylinderGeometry(dims.wr, dims.wr, 0.6, 12);
+  const wheelM = mat('#212121');
+  const wheels = [];
+  const wx = dims.w / 2 + 0.1, wz = dims.l / 2 - 1.1;
+  for (const [x, z] of [[-wx, wz], [wx, wz], [-wx, -wz], [wx, -wz]]) {
+    const w = new THREE.Mesh(wheelG, wheelM); w.rotation.z = Math.PI / 2;
+    w.position.set(x, dims.wr, z); w.castShadow = true;
+    g.add(w); wheels.push(w);
+  }
+  const lightM = new THREE.MeshStandardMaterial({ color: '#fff9c4', emissive: '#ffeb3b', emissiveIntensity: 0.8 });
+  for (const x of [-dims.w / 4, dims.w / 4]) {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.15), lightM);
+    l.position.set(x, dims.by, dims.l / 2 + 0.05); g.add(l);
+  }
+  g.userData.wheels = wheels;
+  return g;
+}
+export function makeNameTag(name, badge) {
+  const b = BADGES[badge];
+  const verified = isVerified(name);
+  const c = document.createElement('canvas'); c.width = 512; c.height = 96;
+  const g = c.getContext('2d');
+  g.font = 'bold 48px "Source Sans Pro", Arial'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const nameW = g.measureText(name).width;
+  const x = (b ? 278 : 256) - (verified ? 20 : 0);
+  g.lineWidth = 8; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.strokeText(name, x, 48);
+  g.fillStyle = '#fff'; g.fillText(name, x, 48);
+  if (b) {
+    const p = new Path2D(b.path);
+    g.save(); g.translate(x - nameW / 2 - 54, 22); g.scale(2, 2);
+    g.lineWidth = 3; g.stroke(p); g.fillStyle = b.color; g.fill(p); g.restore();
+  }
+  if (verified) {
+    // blue verified check after the name
+    const cx = x + nameW / 2 + 26, cy = 48;
+    g.beginPath(); g.arc(cx, cy, 17, 0, Math.PI * 2);
+    g.fillStyle = '#1d9bf0'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,0.6)'; g.stroke();
+    g.fillStyle = '#fff'; g.font = 'bold 24px Arial';
+    g.fillText('✓', cx, cy + 1);
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+  s.scale.set(6, 1.125, 1); s.position.y = 6.6; s.renderOrder = 999;
+  return s;
+}
+
+// ---------- 2D avatar images ----------
+const imgCache = new Map();
+export function avatarImage(avatar, mode = 'headshot') {
+  const k = mode + JSON.stringify(avatar);
+  if (imgCache.has(k)) return imgCache.get(k);
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight('#ffffff', '#888888', 1.6));
+  const d = new THREE.DirectionalLight('#ffffff', 1.6); d.position.set(3, 6, 8); scene.add(d);
+  const ch = buildCharacter(avatar);
+  ch.rotation.y = -0.35;
+  const L = ch.userData.limbs;
+  L.larm.rotation.x = 0.15; L.rarm.rotation.x = -0.15; L.lleg.rotation.x = -0.1; L.rleg.rotation.x = 0.1;
+  scene.add(ch);
+  const cam = new THREE.PerspectiveCamera(mode === 'headshot' ? 30 : 32, 1, 0.1, 100);
+  if (mode === 'headshot') { cam.position.set(0, 5, 5.2); cam.lookAt(0, 4.7, 0); }
+  else { cam.position.set(0, 3.6, 12.5); cam.lookAt(0, 3, 0); }
+  const url = renderToDataURL(scene, cam, mode === 'headshot' ? 150 : 300, mode === 'headshot' ? 150 : 300);
+  imgCache.set(k, url);
+  return url;
+}
