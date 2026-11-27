@@ -360,7 +360,7 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 app.use((req, res, next) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') return next();
   const p = req.path.replace(/\/+/g, '/').replace(/\/$/, '').toLowerCase();
-  if (!['/itch.io/embed', '/poki/embed', '/crazygames/embed', '/crazygames.com/embed'].includes(p)) return next();
+  if (!['/games/embed', '/poki/embed', '/crazygames/embed', '/crazygames.com/embed'].includes(p)) return next();
   res.sendFile(path.join(__dirname, 'public', 'itch-embed.html'));
 });
 
